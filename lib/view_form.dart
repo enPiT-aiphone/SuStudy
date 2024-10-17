@@ -1805,6 +1805,50 @@ ExpansionTile(
             ExpansionTile(
   title: Text('プログラミングスキル'),
   children: <Widget>[
+    ExpansionTile(
+  title: Text('     試験'),
+  children: <Widget>[
+    ListTile(
+      title: Text('                 ITパスポート'),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Center(
+              child: Text('試験 - ITパスポートのデータ確認ページ'),
+            ),
+          ),
+        );
+      },
+    ),
+    ListTile(
+      title: Text('                 基本情報技術者試験'),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Center(
+              child: Text('試験 - 基本情報技術者試験のデータ確認ページ'),
+            ),
+          ),
+        );
+      },
+    ),
+    ListTile(
+      title: Text('                 C言語プログラミング能力認定試験'),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Center(
+              child: Text('試験 - C言語プログラミング能力認定試験のデータ確認ページ'),
+            ),
+          ),
+        );
+      },
+    ),
+  ],
+),
     ListTile(
       title: Text('     C'),
       onTap: () {
@@ -1961,50 +2005,6 @@ ExpansionTile(
         );
       },
     ),
-    ExpansionTile(
-  title: Text('     試験'),
-  children: <Widget>[
-    ListTile(
-      title: Text('                 ITパスポート'),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => Center(
-              child: Text('試験 - ITパスポートのデータ確認ページ'),
-            ),
-          ),
-        );
-      },
-    ),
-    ListTile(
-      title: Text('                 基本情報技術者試験'),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => Center(
-              child: Text('試験 - 基本情報技術者試験のデータ確認ページ'),
-            ),
-          ),
-        );
-      },
-    ),
-    ListTile(
-      title: Text('                 C言語プログラミング能力認定試験'),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => Center(
-              child: Text('試験 - C言語プログラミング能力認定試験のデータ確認ページ'),
-            ),
-          ),
-        );
-      },
-    ),
-  ],
-),
   ],
 ),
 
