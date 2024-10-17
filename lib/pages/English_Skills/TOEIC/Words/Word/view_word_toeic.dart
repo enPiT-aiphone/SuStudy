@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'add_word_toeic.dart';  // 追加フォームへのアクセスのためにインポート
-import 'view_word_deteil_toeic.dart';  // 詳細ページ用のインポート
+import 'add_word_toeic.dart'; 
+import 'view_word_deteil_toeic.dart'; 
 
 class ViewToeicWord extends StatelessWidget {
-  final String level;  // レベルを動的に渡す
+  final String level; 
 
   ViewToeicWord({required this.level});
 
@@ -21,7 +21,7 @@ class ViewToeicWord extends StatelessWidget {
             .collection(level)
             .doc('Words')
             .collection('Word')
-            .orderBy('Word_id')  // Word_idで昇順に並べる
+            .orderBy('Word_id')
             .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
@@ -34,15 +34,15 @@ class ViewToeicWord extends StatelessWidget {
             return Center(child: Text('No words available'));
           }
 
-          return ListView.separated( // ListView.builder を ListView.separated に変更
+          return ListView.separated( 
             itemCount: documents.length,
             itemBuilder: (context, index) {
               var wordData = documents[index];
-              var docId = wordData.id;  // ドキュメントIDの取得
+              var docId = wordData.id;
 
               return Dismissible(
                 key: Key(docId),
-                direction: DismissDirection.endToStart,  // 右から左へのスワイプ
+                direction: DismissDirection.endToStart, 
                 background: Container(
                   color: Colors.red,
                   padding: EdgeInsets.only(right: 20),
@@ -87,8 +87,8 @@ class ViewToeicWord extends StatelessWidget {
                   );
                 },
                 child: ListTile(
-                  title: Text(wordData['Word'] ?? 'No Word'),
-                  subtitle: Text('ID: ${wordData['Word_id'] ?? 'No ID'}'),
+                  title: Text('${wordData['Word_id']}, ${wordData['Word'] ?? 'No Word'}'),
+                  subtitle: Text('      ${wordData['ENG_to_JPN_Answer'] ?? 'No Translation'}'),
                   trailing: Icon(Icons.arrow_forward),
                   onTap: () {
                     Navigator.push(

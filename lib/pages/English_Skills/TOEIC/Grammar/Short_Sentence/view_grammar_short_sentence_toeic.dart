@@ -96,8 +96,8 @@ class ViewShortSentences extends StatelessWidget {
                   );
                 },
                 child: ListTile(
-                  title: Text(sentenceData['Question'] ?? 'No Question'),
-                  subtitle: Text('ID: ${sentenceData['Question_id'] ?? 'No ID'}'),
+                  title: Text('${sentenceData['Question_id']}, ${sentenceData['Question'] ?? 'No Question'}'),
+                  subtitle: Text('      ${sentenceData['JPN_Translation'] ?? 'No Translation'}'),
                   trailing: Icon(Icons.arrow_forward),
                   onTap: () {
                     Navigator.push(

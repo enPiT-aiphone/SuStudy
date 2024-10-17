@@ -96,8 +96,8 @@ class ViewToeflWord extends StatelessWidget {
                   );
                 },
                 child: ListTile(
-                  title: Text(wordData['Word'] ?? 'No Word'),
-                  subtitle: Text('ID: ${wordData['Word_id'] ?? 'No ID'}'),
+                  title: Text('${wordData['Word_id']}, ${wordData['Word'] ?? 'No Word'}'),
+                  subtitle: Text('      ${wordData['ENG_to_JPN_Answer'] ?? 'No Translation'}'),
                   trailing: Icon(Icons.arrow_forward),
                   onTap: () {
                     Navigator.push(
