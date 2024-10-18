@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class AddGrammarShortSentenceToeic extends StatefulWidget {
   final String level;  // レベルを動的に渡す
 
-  AddGrammarShortSentenceToeic({required this.level});
+  const AddGrammarShortSentenceToeic({super.key, required this.level});
 
   @override
   _AddGrammarShortSentenceToeicState createState() => _AddGrammarShortSentenceToeicState();
@@ -37,7 +37,7 @@ class _AddGrammarShortSentenceToeicState extends State<AddGrammarShortSentenceTo
         questionId = int.parse(questionIdController.text);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Question ID must be a valid number')),
+          const SnackBar(content: Text('Question ID must be a valid number')),
         );
         return;
       }
@@ -84,7 +84,7 @@ class _AddGrammarShortSentenceToeicState extends State<AddGrammarShortSentenceTo
       tipsController.clear();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Question added and form cleared')),
+        const SnackBar(content: Text('Question added and form cleared')),
       );
     }
   }
@@ -98,64 +98,64 @@ class _AddGrammarShortSentenceToeicState extends State<AddGrammarShortSentenceTo
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
               TextFormField(
                 controller: answerController,
-                decoration: InputDecoration(labelText: '解答'),
+                decoration: const InputDecoration(labelText: '解答'),
               ),
               TextFormField(
                 controller: answerAController,
-                decoration: InputDecoration(labelText: '回答A'),
+                decoration: const InputDecoration(labelText: '回答A'),
               ),
               TextFormField(
                 controller: answerBController,
-                decoration: InputDecoration(labelText: '回答B'),
+                decoration: const InputDecoration(labelText: '回答B'),
               ),
               TextFormField(
                 controller: answerCController,
-                decoration: InputDecoration(labelText: '回答C'),
+                decoration: const InputDecoration(labelText: '回答C'),
               ),
               TextFormField(
                 controller: answerDController,
-                decoration: InputDecoration(labelText: '回答D'),
+                decoration: const InputDecoration(labelText: '回答D'),
               ),
               TextFormField(
                 controller: categoryController,
-                decoration: InputDecoration(labelText: 'カテゴリー'),
+                decoration: const InputDecoration(labelText: 'カテゴリー'),
               ),
               TextFormField(
                 controller: explanation1Controller,
-                decoration: InputDecoration(labelText: '解説1'),
+                decoration: const InputDecoration(labelText: '解説1'),
               ),
               TextFormField(
                 controller: explanation2Controller,
-                decoration: InputDecoration(labelText: '解説2'),
+                decoration: const InputDecoration(labelText: '解説2'),
               ),
               TextFormField(
                 controller: explanation3Controller,
-                decoration: InputDecoration(labelText: '解説3'),
+                decoration: const InputDecoration(labelText: '解説3'),
               ),
               TextFormField(
                 controller: explanation4Controller,
-                decoration: InputDecoration(labelText: '解説4'),
+                decoration: const InputDecoration(labelText: '解説4'),
               ),
               TextFormField(
                 controller: explanation5Controller,
-                decoration: InputDecoration(labelText: '解説5'),
+                decoration: const InputDecoration(labelText: '解説5'),
               ),
               TextFormField(
                 controller: jpnTranslationController,
-                decoration: InputDecoration(labelText: '問題翻訳'),
+                decoration: const InputDecoration(labelText: '問題翻訳'),
               ),
               TextFormField(
                 controller: questionController,
-                decoration: InputDecoration(labelText: '問題'),
+                decoration: const InputDecoration(labelText: '問題'),
               ),
               TextFormField(
                 controller: questionIdController,
-                decoration: InputDecoration(labelText: 'Question ID (Number)'),
+                decoration: const InputDecoration(labelText: 'Question ID (Number)'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -169,12 +169,12 @@ class _AddGrammarShortSentenceToeicState extends State<AddGrammarShortSentenceTo
               ),
               TextFormField(
                 controller: tipsController,
-                decoration: InputDecoration(labelText: 'Tips'),
+                decoration: const InputDecoration(labelText: 'Tips'),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: addQuestionToFirestore,
-                child: Text('Add Question'),
+                child: const Text('Add Question'),
               ),
             ],
           ),

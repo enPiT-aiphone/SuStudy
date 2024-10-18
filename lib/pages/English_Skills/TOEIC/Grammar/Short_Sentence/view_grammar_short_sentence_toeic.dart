@@ -6,7 +6,7 @@ import 'view_grammar_short_sentence_detail_toeic.dart';  // 詳細ページの�
 class ViewShortSentences extends StatelessWidget {
   final String level;  // レベルを動的に渡す
 
-  ViewShortSentences({required this.level});
+  const ViewShortSentences({super.key, required this.level});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,7 @@ class ViewShortSentences extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return Center(
+            return const Center(
               child: CircularProgressIndicator(),
             );
           }
@@ -33,7 +33,7 @@ class ViewShortSentences extends StatelessWidget {
           var documents = snapshot.data!.docs;
 
           if (documents.isEmpty) {
-            return Center(
+            return const Center(
               child: Text('No short sentences available'),
             );
           }
@@ -49,9 +49,9 @@ class ViewShortSentences extends StatelessWidget {
                 direction: DismissDirection.endToStart,  // 右から左へのスワイプ
                 background: Container(
                   color: Colors.red,
-                  padding: EdgeInsets.only(right: 20),
+                  padding: const EdgeInsets.only(right: 20),
                   alignment: Alignment.centerRight,
-                  child: Icon(
+                  child: const Icon(
                     Icons.delete,
                     color: Colors.white,
                   ),
@@ -61,16 +61,16 @@ class ViewShortSentences extends StatelessWidget {
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        title: Text("Confirm Deletion"),
+                        title: const Text("Confirm Deletion"),
                         content: Text("Are you sure you want to delete '${sentenceData['Question']}'?"),
                         actions: <Widget>[
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(false),
-                            child: Text("Cancel"),
+                            child: const Text("Cancel"),
                           ),
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(true),
-                            child: Text("Delete"),
+                            child: const Text("Delete"),
                           ),
                         ],
                       );
@@ -98,7 +98,7 @@ class ViewShortSentences extends StatelessWidget {
                 child: ListTile(
                   title: Text('${sentenceData['Question_id']}, ${sentenceData['Question'] ?? 'No Question'}'),
                   subtitle: Text('      ${sentenceData['JPN_Translation'] ?? 'No Translation'}'),
-                  trailing: Icon(Icons.arrow_forward),
+                  trailing: const Icon(Icons.arrow_forward),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -113,7 +113,7 @@ class ViewShortSentences extends StatelessWidget {
                 ),
               );
             },
-            separatorBuilder: (context, index) => Divider(),  // 各項目の間に区切り線を追加
+            separatorBuilder: (context, index) => const Divider(),  // 各項目の間に区切り線を追加
           );
         },
       ),
@@ -127,9 +127,9 @@ class ViewShortSentences extends StatelessWidget {
               builder: (context) => AddGrammarShortSentenceToeic(level: level),  // 追加フォームへ遷移
             ),
           );
-        },
-        child: Icon(Icons.add),  // プラスボタンアイコン
-        tooltip: 'Add Short Sentence',  // ツールチップ
+        },  // プラスボタンアイコン
+        tooltip: 'Add Short Sentence',
+        child: Icon(Icons.add),  // ツールチップ
       ),
     );
   }

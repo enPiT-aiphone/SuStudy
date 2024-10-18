@@ -6,7 +6,7 @@ import 'add_word_toefl.dart';  // データ追加用のフォーム
 class ViewToeflWord extends StatelessWidget {
   final String level;  // レベルを動的に渡す
 
-  ViewToeflWord({required this.level});
+  const ViewToeflWord({super.key, required this.level});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,7 @@ class ViewToeflWord extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return Center(
+            return const Center(
               child: CircularProgressIndicator(),
             );
           }
@@ -33,7 +33,7 @@ class ViewToeflWord extends StatelessWidget {
           var documents = snapshot.data!.docs;
 
           if (documents.isEmpty) {
-            return Center(
+            return const Center(
               child: Text('No words available'),
             );
           }
@@ -49,9 +49,9 @@ class ViewToeflWord extends StatelessWidget {
                 direction: DismissDirection.endToStart,  // 右から左へのスワイプ
                 background: Container(
                   color: Colors.red,
-                  padding: EdgeInsets.only(right: 20),
+                  padding: const EdgeInsets.only(right: 20),
                   alignment: Alignment.centerRight,
-                  child: Icon(
+                  child: const Icon(
                     Icons.delete,
                     color: Colors.white,
                   ),
@@ -61,16 +61,16 @@ class ViewToeflWord extends StatelessWidget {
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        title: Text("Confirm Deletion"),
+                        title: const Text("Confirm Deletion"),
                         content: Text("Are you sure you want to delete '${wordData['Word']}'?"),
                         actions: <Widget>[
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(false),
-                            child: Text("Cancel"),
+                            child: const Text("Cancel"),
                           ),
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(true),
-                            child: Text("Delete"),
+                            child: const Text("Delete"),
                           ),
                         ],
                       );
@@ -98,7 +98,7 @@ class ViewToeflWord extends StatelessWidget {
                 child: ListTile(
                   title: Text('${wordData['Word_id']}, ${wordData['Word'] ?? 'No Word'}'),
                   subtitle: Text('      ${wordData['ENG_to_JPN_Answer'] ?? 'No Translation'}'),
-                  trailing: Icon(Icons.arrow_forward),
+                  trailing: const Icon(Icons.arrow_forward),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -113,7 +113,7 @@ class ViewToeflWord extends StatelessWidget {
                 ),
               );
             },
-            separatorBuilder: (context, index) => Divider(),  // 各項目の間に線を追加
+            separatorBuilder: (context, index) => const Divider(),  // 各項目の間に線を追加
           );
         },
       ),
@@ -125,9 +125,9 @@ class ViewToeflWord extends StatelessWidget {
               builder: (context) => AddWordToefl(level: level), // データ追加ページへ遷移
             ),
           );
-        },
-        child: Icon(Icons.add),  // プラスアイコン
+        },  // プラスアイコン
         tooltip: 'Add Word',
+        child: Icon(Icons.add),
       ),
     );
   }

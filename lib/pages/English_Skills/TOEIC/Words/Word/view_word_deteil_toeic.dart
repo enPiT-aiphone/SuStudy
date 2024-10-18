@@ -5,7 +5,7 @@ class WordDetailPage extends StatefulWidget {
   final DocumentSnapshot wordData;
   final String level;  // 渡されたレベル
 
-  WordDetailPage({required this.wordData, required this.level});
+  const WordDetailPage({super.key, required this.wordData, required this.level});
 
   @override
   _WordDetailPageState createState() => _WordDetailPageState();
@@ -80,7 +80,7 @@ class _WordDetailPageState extends State<WordDetailPage> {
         wordId = int.parse(wordIdController.text);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Word ID must be a valid number')),
+          const SnackBar(content: Text('Word ID must be a valid number')),
         );
         return;
       }
@@ -121,7 +121,7 @@ class _WordDetailPageState extends State<WordDetailPage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Changes saved successfully')),
+        const SnackBar(content: Text('Changes saved successfully')),
       );
 
       Navigator.pop(context);
@@ -132,7 +132,7 @@ class _WordDetailPageState extends State<WordDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Edit Word Details'),
+        title: const Text('Edit Word Details'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -165,10 +165,10 @@ class _WordDetailPageState extends State<WordDetailPage> {
               _buildTextFormField('Word Preposition', wordPrepositionController),
               _buildTextFormField('Word Adverb', wordAdverbController),
               _buildTextFormField('Word Adjective', wordAdjectiveController),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveChanges,
-                child: Text('Save Changes'),
+                child: const Text('Save Changes'),
               ),
             ],
           ),
