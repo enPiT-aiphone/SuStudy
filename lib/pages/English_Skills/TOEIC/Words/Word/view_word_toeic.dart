@@ -6,7 +6,7 @@ import 'view_word_deteil_toeic.dart';
 class ViewToeicWord extends StatelessWidget {
   final String level; 
 
-  ViewToeicWord({required this.level});
+  const ViewToeicWord({super.key, required this.level});
 
   @override
   Widget build(BuildContext context) {
@@ -25,13 +25,13 @@ class ViewToeicWord extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           var documents = snapshot.data!.docs;
 
           if (documents.isEmpty) {
-            return Center(child: Text('No words available'));
+            return const Center(child: Text('No words available'));
           }
 
           return ListView.separated( 
@@ -45,25 +45,25 @@ class ViewToeicWord extends StatelessWidget {
                 direction: DismissDirection.endToStart, 
                 background: Container(
                   color: Colors.red,
-                  padding: EdgeInsets.only(right: 20),
+                  padding: const EdgeInsets.only(right: 20),
                   alignment: Alignment.centerRight,
-                  child: Icon(Icons.delete, color: Colors.white),
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
                 confirmDismiss: (direction) async {
                   return await showDialog(
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        title: Text("Confirm Deletion"),
+                        title: const Text("Confirm Deletion"),
                         content: Text("Are you sure you want to delete '${wordData['Word']}'?"),
                         actions: <Widget>[
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(false),
-                            child: Text("Cancel"),
+                            child: const Text("Cancel"),
                           ),
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(true),
-                            child: Text("Delete"),
+                            child: const Text("Delete"),
                           ),
                         ],
                       );
@@ -89,7 +89,7 @@ class ViewToeicWord extends StatelessWidget {
                 child: ListTile(
                   title: Text('${wordData['Word_id']}, ${wordData['Word'] ?? 'No Word'}'),
                   subtitle: Text('      ${wordData['ENG_to_JPN_Answer'] ?? 'No Translation'}'),
-                  trailing: Icon(Icons.arrow_forward),
+                  trailing: const Icon(Icons.arrow_forward),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -101,7 +101,7 @@ class ViewToeicWord extends StatelessWidget {
                 ),
               );
             },
-            separatorBuilder: (context, index) => Divider(),  // 各項目の間に区切り線を追加
+            separatorBuilder: (context, index) => const Divider(),  // 各項目の間に区切り線を追加
           );
         },
       ),
@@ -115,9 +115,9 @@ class ViewToeicWord extends StatelessWidget {
               builder: (context) => AddWordToeic(level: level),  // 追加フォームへ遷移
             ),
           );
-        },
-        child: Icon(Icons.add),  // プラスボタンアイコン
-        tooltip: 'Add Word',  // ツールチップ
+        },  // プラスボタンアイコン
+        tooltip: 'Add Word',
+        child: Icon(Icons.add),  // ツールチップ
       ),
     );
   }

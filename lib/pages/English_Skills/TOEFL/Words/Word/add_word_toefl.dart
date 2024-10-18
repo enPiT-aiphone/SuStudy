@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class AddWordToefl extends StatefulWidget {
   final String level;  // レベルを動的に渡す
 
-  AddWordToefl({required this.level});
+  const AddWordToefl({super.key, required this.level});
 
   @override
   _AddWordToeflState createState() => _AddWordToeflState();
@@ -47,7 +47,7 @@ class _AddWordToeflState extends State<AddWordToefl> {
         wordId = int.parse(wordIdController.text);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Word ID must be a valid number')),
+          const SnackBar(content: Text('Word ID must be a valid number')),
         );
         return;
       }
@@ -114,7 +114,7 @@ class _AddWordToeflState extends State<AddWordToefl> {
       wordIdController.clear();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Word added and form cleared')),
+        const SnackBar(content: Text('Word added and form cleared')),
       );
     }
   }
@@ -128,12 +128,12 @@ class _AddWordToeflState extends State<AddWordToefl> {
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
               TextFormField(
                 controller: wordController,
-                decoration: InputDecoration(labelText: 'Word'),
+                decoration: const InputDecoration(labelText: 'Word'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a word';
@@ -143,99 +143,99 @@ class _AddWordToeflState extends State<AddWordToefl> {
               ),
               TextFormField(
                 controller: engToJpnAnswerController,
-                decoration: InputDecoration(labelText: '英和問題解答'),
+                decoration: const InputDecoration(labelText: '英和問題解答'),
               ),
               TextFormField(
                 controller: engToJpnAnswerAController,
-                decoration: InputDecoration(labelText: '英和問題解答A'),
+                decoration: const InputDecoration(labelText: '英和問題解答A'),
               ),
               TextFormField(
                 controller: engToJpnAnswerBController,
-                decoration: InputDecoration(labelText: '英和問題解答B'),
+                decoration: const InputDecoration(labelText: '英和問題解答B'),
               ),
               TextFormField(
                 controller: engToJpnAnswerCController,
-                decoration: InputDecoration(labelText: '英和問題解答C'),
+                decoration: const InputDecoration(labelText: '英和問題解答C'),
               ),
               TextFormField(
                 controller: engToJpnAnswerDController,
-                decoration: InputDecoration(labelText: '英和問題解答D'),
+                decoration: const InputDecoration(labelText: '英和問題解答D'),
               ),
               TextFormField(
                 controller: explanationController,
-                decoration: InputDecoration(labelText: '解説'),
+                decoration: const InputDecoration(labelText: '解説'),
               ),
               TextFormField(
                 controller: jpnToEngAnswerController,
-                decoration: InputDecoration(labelText: '和英問題解答'),
+                decoration: const InputDecoration(labelText: '和英問題解答'),
               ),
               TextFormField(
                 controller: jpnToEngQuestionEngController,
-                decoration: InputDecoration(labelText: '和英問題ENG'),
+                decoration: const InputDecoration(labelText: '和英問題ENG'),
               ),
               TextFormField(
                 controller: jpnToEngQuestionJpnController,
-                decoration: InputDecoration(labelText: '和英問題JPN'),
+                decoration: const InputDecoration(labelText: '和英問題JPN'),
               ),
               TextFormField(
                 controller: meaningNounController,
-                decoration: InputDecoration(labelText: '名詞としての意味'),
+                decoration: const InputDecoration(labelText: '名詞としての意味'),
               ),
               TextFormField(
                 controller: meaningVerbController,
-                decoration: InputDecoration(labelText: '動詞としての意味'),
+                decoration: const InputDecoration(labelText: '動詞としての意味'),
               ),
               TextFormField(
                 controller: meaningPrepositionController,
-                decoration: InputDecoration(labelText: '前置詞としての意味'),
+                decoration: const InputDecoration(labelText: '前置詞としての意味'),
               ),
               TextFormField(
                 controller: meaningAdverbController,
-                decoration: InputDecoration(labelText: '副詞としての意味'),
+                decoration: const InputDecoration(labelText: '副詞としての意味'),
               ),
               TextFormField(
                 controller: meaningAdjectiveController,
-                decoration: InputDecoration(labelText: '形容詞としての意味'),
+                decoration: const InputDecoration(labelText: '形容詞としての意味'),
               ),
               TextFormField(
                 controller: phoneticSymbolsController,
-                decoration: InputDecoration(labelText: '発音記号'),
+                decoration: const InputDecoration(labelText: '発音記号'),
               ),
               TextFormField(
                 controller: wordSynonymsController,
-                decoration: InputDecoration(labelText: '類義語'),
+                decoration: const InputDecoration(labelText: '類義語'),
               ),
               TextFormField(
                 controller: wordAntonymController,
-                decoration: InputDecoration(labelText: '対義語'),
+                decoration: const InputDecoration(labelText: '対義語'),
               ),
               TextFormField(
                 controller: wordRelatedController,
-                decoration: InputDecoration(labelText: '関連語'),
+                decoration: const InputDecoration(labelText: '関連語'),
               ),
               TextFormField(
                 controller: wordNounController,
-                decoration: InputDecoration(labelText: '名詞化単語'),
+                decoration: const InputDecoration(labelText: '名詞化単語'),
               ),
               TextFormField(
                 controller: wordVerbController,
-                decoration: InputDecoration(labelText: '動詞化単語'),
+                decoration: const InputDecoration(labelText: '動詞化単語'),
               ),
               TextFormField(
                 controller: wordPrepositionController,
-                decoration: InputDecoration(labelText: '前置詞化単語'),
+                decoration: const InputDecoration(labelText: '前置詞化単語'),
               ),
               TextFormField(
                 controller: wordAdverbController,
-                decoration: InputDecoration(labelText: '副詞化単語'),
+                decoration: const InputDecoration(labelText: '副詞化単語'),
               ),
               TextFormField(
                 controller: wordAdjectiveController,
-                decoration: InputDecoration(labelText: '形容詞化単語'),
+                decoration: const InputDecoration(labelText: '形容詞化単語'),
               ),
               TextFormField(
                 controller: wordIdController,
-                decoration: InputDecoration(labelText: 'Word ID (Number)'),
+                decoration: const InputDecoration(labelText: 'Word ID (Number)'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -247,10 +247,10 @@ class _AddWordToeflState extends State<AddWordToefl> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: addWordToFirestore,
-                child: Text('Add Word'),
+                child: const Text('Add Word'),
               ),
             ],
           ),

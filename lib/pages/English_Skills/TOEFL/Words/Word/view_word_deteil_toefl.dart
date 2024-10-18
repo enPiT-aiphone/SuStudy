@@ -5,7 +5,7 @@ class WordDetailToeflPage extends StatefulWidget {
   final DocumentSnapshot wordData;
   final String level;  // 渡されたレベル
 
-  WordDetailToeflPage({required this.wordData, required this.level});
+  const WordDetailToeflPage({super.key, required this.wordData, required this.level});
 
   @override
   _WordDetailToeflPageState createState() => _WordDetailToeflPageState();
@@ -80,7 +80,7 @@ class _WordDetailToeflPageState extends State<WordDetailToeflPage> {
         wordId = int.parse(wordIdController.text);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Word ID must be a valid number')),
+          const SnackBar(content: Text('Word ID must be a valid number')),
         );
         return;
       }
@@ -121,7 +121,7 @@ class _WordDetailToeflPageState extends State<WordDetailToeflPage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Changes saved successfully')),
+        const SnackBar(content: Text('Changes saved successfully')),
       );
 
       Navigator.pop(context);
@@ -132,7 +132,7 @@ class _WordDetailToeflPageState extends State<WordDetailToeflPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Edit Word Details (TOEFL)'),
+        title: const Text('Edit Word Details (TOEFL)'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -165,10 +165,10 @@ class _WordDetailToeflPageState extends State<WordDetailToeflPage> {
               _buildTextFormField('Word Preposition', wordPrepositionController),
               _buildTextFormField('Word Adverb', wordAdverbController),
               _buildTextFormField('Word Adjective', wordAdjectiveController),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveChanges,
-                child: Text('Save Changes'),
+                child: const Text('Save Changes'),
               ),
             ],
           ),

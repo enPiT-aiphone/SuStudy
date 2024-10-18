@@ -5,7 +5,7 @@ class GrammarShortSentenceDetailPage extends StatefulWidget {
   final DocumentSnapshot sentenceData;
   final String level;  // 渡されたレベル
 
-  GrammarShortSentenceDetailPage({required this.sentenceData, required this.level});
+  const GrammarShortSentenceDetailPage({super.key, required this.sentenceData, required this.level});
 
   @override
   _GrammarShortSentenceDetailPageState createState() => _GrammarShortSentenceDetailPageState();
@@ -60,7 +60,7 @@ class _GrammarShortSentenceDetailPageState extends State<GrammarShortSentenceDet
         questionId = int.parse(questionIdController.text);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Question ID must be a valid number')),
+          const SnackBar(content: Text('Question ID must be a valid number')),
         );
         return;
       }
@@ -91,7 +91,7 @@ class _GrammarShortSentenceDetailPageState extends State<GrammarShortSentenceDet
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Changes saved successfully')),
+        const SnackBar(content: Text('Changes saved successfully')),
       );
 
       Navigator.pop(context);
@@ -102,7 +102,7 @@ class _GrammarShortSentenceDetailPageState extends State<GrammarShortSentenceDet
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Edit Short Sentence Details'),
+        title: const Text('Edit Short Sentence Details'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -125,10 +125,10 @@ class _GrammarShortSentenceDetailPageState extends State<GrammarShortSentenceDet
               _buildTextFormField('Explanation 5', explanation5Controller),
               _buildTextFormField('JPN Translation', jpnTranslationController),
               _buildTextFormField('Tips', tipsController),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveChanges,
-                child: Text('Save Changes'),
+                child: const Text('Save Changes'),
               ),
             ],
           ),

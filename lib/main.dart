@@ -1,3 +1,5 @@
+import 'package:sustudy_add/presentation/component/problem.dart';
+
 import 'import.dart';
 import 'view_form.dart';
 
@@ -6,10 +8,12 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -17,7 +21,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: ViewFormSelection(),
+      home: const FigmaToCodeApp(),
     );
   }
 }
