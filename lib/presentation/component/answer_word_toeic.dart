@@ -22,19 +22,16 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    // アニメーションコントローラーの初期化
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),  // アニメーションの長さ
+      duration: const Duration(seconds: 1),
     );
 
-    // 正答率に応じてアニメーションの進捗を設定
     int correctCount = widget.isCorrectAnswers.where((answer) => answer == true).length;
     _progressAnimation = Tween<double>(begin: 0.0, end: correctCount / 5).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
-    // アニメーションの開始
     _animationController.forward();
   }
 
@@ -46,7 +43,6 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    // 正解数をカウント
     int correctCount = widget.isCorrectAnswers.where((answer) => answer == true).length;
 
     return Scaffold(
@@ -81,11 +77,10 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // 正答率と X/5 を囲む枠の追加（横幅2/3）
             FractionallySizedBox(
-              widthFactor: 0.67,  // 横幅を画面の2/3に設定
+              widthFactor: 0.67,
               child: Container(
-                padding: const EdgeInsets.all(16.0),  // 内側の余白
+                padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE9E9E9),
                   border: Border.all(color: const Color(0xFFE9E9E9), width: 2),
@@ -112,9 +107,8 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                       ],
                     ),
                     const SizedBox(height: 20),
-                    // 正答率に応じたアニメーションバー
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(20),  // 両端を丸める
+                      borderRadius: BorderRadius.circular(20),
                       child: AnimatedBuilder(
                         animation: _progressAnimation,
                         builder: (context, child) {
@@ -122,7 +116,6 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                             height: 20,
                             child: Stack(
                               children: [
-                                // 背景のバー
                                 Container(
                                   width: double.infinity,
                                   height: 20,
@@ -131,7 +124,6 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                 ),
-                                // 正答率バー
                                 FractionallySizedBox(
                                   widthFactor: _progressAnimation.value,
                                   child: Container(
@@ -181,30 +173,37 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                                 : const Color(0xFFFF5252),
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              '${index + 1}. ${wordData['Word']}',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: widget.isCorrectAnswers[index] == true
-                                    ? const Color(0xFF0ABAB5)
-                                    : const Color(0xFFFF5252),
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${index + 1}. ${wordData['Word']}',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: widget.isCorrectAnswers[index] == true
+                                        ? const Color(0xFF0ABAB5)
+                                        : const Color(0xFFFF5252),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  widget.isCorrectAnswers[index] == true ? '正解' : '不正解',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: widget.isCorrectAnswers[index] == true
+                                        ? const Color(0xFF0ABAB5)
+                                        : const Color(0xFFFF5252),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              widget.isCorrectAnswers[index] == true ? '正解' : '不正解',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: widget.isCorrectAnswers[index] == true
-                                    ? const Color(0xFF0ABAB5)
-                                    : const Color(0xFFFF5252),
-                              ),
-                            ),
+                            const Icon(Icons.arrow_forward_ios, color: Color(0xFF818181)
+),
                           ],
                         ),
                       ),
