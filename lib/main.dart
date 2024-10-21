@@ -1,7 +1,4 @@
-import 'package:sustudy_add/presentation/component/problem.dart';
-
 import 'import.dart';
-import 'view_form.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,11 +14,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SuStudy Database Manager',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const FigmaToCodeApp(),
+      home: const TOEICLevelSelection(),
     );
   }
 }
