@@ -7,7 +7,19 @@ class ViewFormSelection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SuStudy, データベース管理フォーム'),
+        backgroundColor: const Color(0xFF0ABAB5),  // AppBarの色を設定
+        title: Row(
+          children: const [
+            Text(
+              'SuStudy,',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
       drawer: Drawer(
         child: ListView(
@@ -15,10 +27,10 @@ class ViewFormSelection extends StatelessWidget {
           children: <Widget>[
             const DrawerHeader(
               decoration: BoxDecoration(
-                color: Colors.blue,
+                color: const Color(0xFF0ABAB5),
               ),
               child: Text(
-                'Select a Collection',
+                '管理するデータを選んでください',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -2032,7 +2044,7 @@ ExpansionTile(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'メニューから管理するコレクションを選択してください.',
+              'データベース管理フォーム',
               style: TextStyle(fontSize: 20),
             ),
           ],
