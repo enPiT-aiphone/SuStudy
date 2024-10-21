@@ -51,14 +51,13 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0ABAB5),  // AppBarの色を0xFF0ABAB5に設定
-        automaticallyImplyLeading: false,  // デフォルトの戻るボタンを無効にする
+        backgroundColor: const Color(0xFF0ABAB5),
+        automaticallyImplyLeading: false,
         title: Row(
           children: [
-            IconButton(  // 左上に「×」ボタンを配置
-              icon: const Icon(Icons.close, color: Colors.white),  // 「×」アイコン
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
               onPressed: () {
-                // ボタンを押すとTOEICのレベル選択画面に戻る
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (context) => TOEICLevelSelection()),
@@ -66,7 +65,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                 );
               },
             ),
-            const SizedBox(width: 8),  // 「×」ボタンとテキストの間にスペースを挿入
+            const SizedBox(width: 8),
             const Text(
               'SuStudy, ',
               style: TextStyle(
@@ -89,27 +88,26 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                 padding: const EdgeInsets.all(16.0),  // 内側の余白
                 decoration: BoxDecoration(
                   color: const Color(0xFFE9E9E9),
-                  border: Border.all(color: const Color(0xFFE9E9E9), width: 2),  // 枠線を追加
-                  borderRadius: BorderRadius.circular(10),  // 枠の角を丸くする
+                  border: Border.all(color: const Color(0xFFE9E9E9), width: 2),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Column(
                   children: [
                     Text(
-                      '正答率',  // 正答率の表示
+                      '正答率',
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
-                    // X/5の表示 (Xを大きく表示)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          '$correctCount',  // Xの部分
-                          style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),  // フォントサイズを大きく設定
+                          '$correctCount',
+                          style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
                         ),
                         const Text(
                           '/5',
-                          style: TextStyle(fontSize: 24),  // フォントサイズは少し小さく設定
+                          style: TextStyle(fontSize: 24),
                         ),
                       ],
                     ),
@@ -121,7 +119,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                         animation: _progressAnimation,
                         builder: (context, child) {
                           return Container(
-                            height: 20,  // バーの太さを設定
+                            height: 20,
                             child: Stack(
                               children: [
                                 // 背景のバー
@@ -130,16 +128,18 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                                   height: 20,
                                   decoration: BoxDecoration(
                                     color: Colors.grey[300],
-                                    borderRadius: BorderRadius.circular(20),  // 背景バーの両端を丸く
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
                                 ),
                                 // 正答率バー
-                                Container(
-                                  width: MediaQuery.of(context).size.width * 0.67 * _progressAnimation.value,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF0ABAB5),
-                                    borderRadius: BorderRadius.circular(20),  // 正答率バーの両端を丸く
+                                FractionallySizedBox(
+                                  widthFactor: _progressAnimation.value,
+                                  child: Container(
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0ABAB5),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -158,7 +158,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                 itemCount: widget.wordDetails.length,
                 itemBuilder: (context, index) {
                   if (index >= widget.selectedAnswers.length || index >= widget.isCorrectAnswers.length) {
-                    return Container(); // 範囲外の場合は空のContainerを返す
+                    return Container();
                   }
 
                   var wordData = widget.wordDetails[index];
@@ -185,7 +185,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${index + 1}. ${wordData['Word']}',  // 問題番号を追加
+                              '${index + 1}. ${wordData['Word']}',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -227,7 +227,6 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // wordData['Word']を太文字で表示
               Row(
                 children: [
                   Text(
@@ -237,7 +236,6 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                       fontSize: 30,
                     ),
                   ),
-                  // Phonetic_Symbolsを横に通常の文字サイズで表示
                   if (wordData['Phonetic_Symbols'] != null && wordData['Phonetic_Symbols'].isNotEmpty)
                     Text(
                       '[${wordData['Phonetic_Symbols']}]',
@@ -247,7 +245,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                     ),
                 ],
               ),
-              const SizedBox(height: 16), // 一行分の隙間を追加
+              const SizedBox(height: 16),
             ],
           ),
           content: SingleChildScrollView(
@@ -263,9 +261,9 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                     ),
                     Expanded(
                       child: Align(
-                        alignment: Alignment.centerRight,  // 右側に寄せて表示
+                        alignment: Alignment.centerRight,
                         child: FractionallySizedBox(
-                          widthFactor: 0.85,  // 右3/4を占めるように設定
+                          widthFactor: 0.85,
                           child: Text(
                             '　${wordData['Explanation']}',
                             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -312,9 +310,8 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
     );
   }
 
-  // Helper method to display each row in the detail view
   Widget _buildDetailRow(String label, String? value) {
-    if (value == null || value.isEmpty) return Container(); // 値が空の場合は表示しない
+    if (value == null || value.isEmpty) return Container();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -336,7 +333,6 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
     );
   }
 
-  // Helper method to display meanings with parts of speech
   Widget _buildMeaningRow(String label, Map<String, String?> meanings) {
     List<String> meaningParts = [];
 
@@ -346,7 +342,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
       }
     });
 
-    if (meaningParts.isEmpty) return Container(); // 意味がない場合は表示しない
+    if (meaningParts.isEmpty) return Container();
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -365,7 +361,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: meaningParts
-                  .map((part) => Text(part))  // 各意味を改行して表示
+                  .map((part) => Text(part))
                   .toList(),
             ),
           ),
