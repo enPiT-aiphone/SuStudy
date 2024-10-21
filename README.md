@@ -1,4 +1,4 @@
-# sustudy_add
+# sustudy(enPiT2024 アイホン)
 
 A new Flutter project.
 
