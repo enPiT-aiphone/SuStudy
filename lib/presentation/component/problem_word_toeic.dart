@@ -1,6 +1,5 @@
 import '/import.dart';
 
-
 class TOEICWordQuiz extends StatefulWidget {
   final String level;
 
@@ -10,26 +9,23 @@ class TOEICWordQuiz extends StatefulWidget {
   _TOEICWordQuizState createState() => _TOEICWordQuizState();
 }
 
-// カスタムペインターで、バツ（×）印を描画するクラス
+// バツ（×）印を描画するカスタムペインター
 class CrossPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Paint paint = Paint()
-      ..color = const Color(0xFFFF5252)  // バツ印の色（赤）
-      ..strokeWidth = 6;  // 線の太さを設定
+      ..color = const Color(0xFFFF5252)
+      ..strokeWidth = 6;
 
-    // 右上がりの斜線を描画
     canvas.drawLine(Offset(0, size.height), Offset(size.width, 0), paint);
-    // 左上がりの斜線を描画
     canvas.drawLine(Offset(size.width, size.height), Offset(0, 0), paint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;  // 再描画が必要ない場合はfalseを返す
+    return false;
   }
 }
-
 
 class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProviderStateMixin {
   int currentQuestionIndex = 0;
@@ -40,8 +36,9 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
   bool isDataLoaded = false;
   bool isShowingAnswer = false;
   List<String> askedWordIds = [];
-  late AnimationController _animationController;  // アニメーションコントローラー
-  late Animation<double> _animation;  // アニメーションの進捗
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  late Animation<Color?> _colorAnimation;
 
   @override
   void initState() {
@@ -49,16 +46,19 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
     _fetchQuestions();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),  // 5秒でアニメーションが完了する
+      duration: const Duration(seconds: 5),
     );
 
-    // 0から1までのアニメーションを設定
     _animation = Tween<double>(begin: 1.0, end: 0.0).animate(_animationController)
       ..addListener(() {
         setState(() {});
       });
 
-    // アニメーションが終了したら自動的に時間切れの処理を呼ぶ
+    _colorAnimation = ColorTween(
+      begin: const Color(0xFF0ABAB5), 
+      end: const Color.fromARGB(255, 255, 82, 82),   
+    ).animate(_animationController);
+
     _animationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         _handleTimeout();
@@ -103,17 +103,16 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
 
       setState(() {
         isDataLoaded = true;
-        _startTimer();  // タイマーを開始
+        _startTimer();
       });
     }
   }
 
   void _startTimer() {
-    _animationController.reset();  // タイマーをリセット
-    _animationController.forward();  // アニメーション開始
+    _animationController.reset();
+    _animationController.forward();
   }
 
-  // 5秒以内に回答されなかった場合の処理
   void _handleTimeout() {
     setState(() {
       isCorrectAnswers[currentQuestionIndex] = false;
@@ -140,7 +139,7 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
           setState(() {
             currentQuestionIndex++;
             isShowingAnswer = false;
-            _startTimer();  // 次の問題に進む時にタイマーを再スタート
+            _startTimer();
           });
         } else {
           Navigator.push(
@@ -161,20 +160,33 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0ABAB5),
-        automaticallyImplyLeading: false,
-        title: Row(
-          children: const [
-            Text(
-              'SuStudy, ',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60.0),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [_colorAnimation.value ?? const Color(0xFF0ABAB5), Colors.white],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-          ],
+          ),
+          child: AppBar(
+            automaticallyImplyLeading: false,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: Row(
+              children: 
+              const [
+                Text(
+                  'SuStudy, ',
+                  style: TextStyle(
+                    fontSize: 25,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
       body: isDataLoaded
@@ -190,23 +202,35 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // プログレスバー（アニメーションバー）
           LinearProgressIndicator(
             borderRadius: BorderRadius.circular(20),
-            value: _animation.value,  // アニメーションの値でバーを更新
-            backgroundColor: const Color(0xFFD9D9D9),  // バックグラウンド色
-            color: const Color(0xFF0ABAB5),  // バーの色
-            minHeight: 20,  // バーの高さ
+            value: _animation.value,
+            backgroundColor: const Color(0xFFD9D9D9),
+            valueColor: AlwaysStoppedAnimation<Color?>(_colorAnimation.value),
+            minHeight: 20,
           ),
           const SizedBox(height: 20),
           Expanded(
             flex: 5,
             child: Center(
-              child: Text(
-                wordData['Word'],
-                style: const TextStyle(
-                  fontSize: 30,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    wordData['Word'],
+                    style: const TextStyle(
+                      fontSize: 30,
+                    ),
+                  ),
+                  SizedBox(height: 8), // スペースを追加
+                  Text(
+                    "【${wordData['Phonetic_Symbols']}】", // 発音記号を表示
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey, // 色を指定する場合
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -214,10 +238,10 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
             alignment: Alignment.topLeft,
             child: Text(
               '${currentQuestionIndex + 1}/5',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF0ABAB5),
+                color: _colorAnimation.value,
               ),
             ),
           ),
@@ -238,19 +262,20 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
 
   Widget _buildAnswerButton(String option, QueryDocumentSnapshot wordData, double screenHeight) {
     Color? backgroundColor;
-    Color? borderColor;
+    Color finalBorderColor = _colorAnimation.value ?? const Color(0xFF0ABAB5);
+
 
     if (isShowingAnswer) {
       if (option == wordData['ENG_to_JPN_Answer']) {
         backgroundColor = const Color(0xFFE0F7FA);
-        borderColor = const Color(0xFF0ABAB5);
+        finalBorderColor = const Color(0xFF0ABAB5);
       } else if (selectedAnswers[currentQuestionIndex] == option) {
         backgroundColor = const Color(0xFFFFEBEE);
-        borderColor = const Color(0xFFFF5252);
+        finalBorderColor = const Color(0xFFFF5252);
       }
     } else {
       backgroundColor = Colors.white;
-      borderColor = const Color(0xFF0ABAB5);
+      finalBorderColor = _colorAnimation.value ?? const Color(0xFF0ABAB5);
     }
 
     return Padding(
@@ -258,7 +283,7 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
       child: GestureDetector(
         onTap: () {
           bool isCorrect = option == wordData['ENG_to_JPN_Answer'];
-          _animationController.stop();  // 回答されたらタイマーを停止
+          _animationController.stop();
           setState(() {
             selectedAnswers[currentQuestionIndex] = option;
             isCorrectAnswers[currentQuestionIndex] = isCorrect;
@@ -295,7 +320,7 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
               setState(() {
                 currentQuestionIndex++;
                 isShowingAnswer = false;
-                _startTimer();  // 次の問題に進む際にタイマーをリスタート
+                _startTimer();
               });
             } else {
               Navigator.push(
@@ -316,12 +341,12 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: backgroundColor,
-            border: Border.all(color: borderColor ?? const Color(0xFF0ABAB5)),
+            border: Border.all(color: finalBorderColor),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
             option,
-            style: const TextStyle(fontSize: 18, color: Color(0xFF0ABAB5)),
+            style: TextStyle(fontSize: 18, color: finalBorderColor),
           ),
         ),
       ),

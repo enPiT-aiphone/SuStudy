@@ -19,4 +19,6 @@ export 'presentation/component/problem_word_toeic.dart';
 export 'presentation/component/toeic_level_selection.dart';
 export 'presentation/component/answer_word_toeic.dart';
 export 'package:flutter_local_notifications/flutter_local_notifications.dart';
+export 'presentation/component/home.dart';
+export 'presentation/component/home_dashboard.dart';
 

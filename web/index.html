@@ -1,19 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-messaging-compat.js"></script>
 
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
@@ -31,6 +21,45 @@
 
   <title>sustudy_add</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Firebaseの初期化 -->
+  <script>
+    // Firebaseの構成情報
+    const firebaseConfig = {
+      apiKey: "AIzaSyDaAMNihzzLLoirhp5fujWUG0hkyDi9MtA",
+      authDomain: "todokukunn.firebaseapp.com",
+      projectId: "todokukunn",
+      storageBucket: "todokukunn.appspot.com",
+      messagingSenderId: "62928690852",
+      appId: "1:62928690852:web:8a1c4c8f3dc9fc164e1031",
+      measurementId: "G-N48D2XDC7M"
+    };
+
+    // Firebaseの初期化
+    firebase.initializeApp(firebaseConfig);
+　
+    // Firebase Messagingの初期化
+    const messaging = firebase.messaging();
+
+    // 通知の許可をリクエスト
+    messaging.requestPermission()
+      .then(() => {
+        console.log("Notification permission granted.");
+        return messaging.getToken();
+      })
+      .then((token) => {
+        console.log("Device Token:", token);
+      })
+      .catch((error) => {
+        console.error("Unable to get permission to notify.", error);
+      });
+
+    // フォアグラウンドメッセージの処理
+    messaging.onMessage((payload) => {
+      console.log("Message received. ", payload);
+      // 通知表示のカスタマイズが必要な場合、ここに追加
+    });
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

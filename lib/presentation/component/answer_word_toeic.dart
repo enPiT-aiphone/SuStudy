@@ -46,31 +46,43 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
     int correctCount = widget.isCorrectAnswers.where((answer) => answer == true).length;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0ABAB5),
-        automaticallyImplyLeading: false,
-        title: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => TOEICLevelSelection()),
-                  (route) => false,
-                );
-              },
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60.0), // AppBarの高さを設定
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0ABAB5), Color.fromARGB(255, 255, 255, 255)], // グラデーションの色設定
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            const SizedBox(width: 8),
-            const Text(
-              'SuStudy, ',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
+          ),
+          child: AppBar(
+            automaticallyImplyLeading: false,
+            backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
+            elevation: 0,
+            title: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => HomeScreen()),
+                      (route) => false,
+                    );
+                  },
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'SuStudy, ',
+                  style: TextStyle(
+                    fontSize: 25,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),          
+          ),
         ),
       ),
       body: Padding(
