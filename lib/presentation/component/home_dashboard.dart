@@ -1,51 +1,62 @@
-import '/import.dart';
-import 'package:table_calendar/table_calendar.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter/material.dart';
+// 必要なパッケージのインポート
+import '/import.dart'; // アプリ全体で使用するインポートファイル
+import 'package:table_calendar/table_calendar.dart'; // カレンダーUI用のパッケージ
+import 'package:intl/intl.dart'; // 日付フォーマット用のパッケージ
+import 'package:flutter/material.dart'; // Flutter UIのための基本パッケージ
 
+// DashboardScreenクラスの宣言
 class DashboardScreen extends StatefulWidget {
-  final String selectedTab;
-  final String selectedCategory;
+  final String selectedTab; // 選択されたタブの名前を保持する変数
+  final String selectedCategory; // 選択されたカテゴリの名前を保持する変数
 
+  // コンストラクタで初期化
   DashboardScreen({required this.selectedTab, required this.selectedCategory});
 
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
 }
 
+// DashboardScreenのステート管理用クラス
 class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
-  DateTime? _selectedDay;
-  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay; // 選択された日付を保持する変数
+  DateTime _focusedDay = DateTime.now(); // カレンダーのフォーカスされた日付
 
-  String userName = ""; // 初期は空の文字列
-  int loginStreak = 3;
-  int longestStreak = 5;
-  int tierProgress = 34;
-  int tierProgress_all = 62;
+  // ユーザー情報や進捗データを格納する変数
+  String userName = ""; // ユーザー名、初期値は空文字
+  int loginStreak = 3; // 連続ログイン日数
+  int longestStreak = 5; // 最長連続ログイン日数
+  int tierProgress = 34; // 今日の達成度
+  int tierProgress_all = 62; // 目標全体に対する達成度
 
-  late AnimationController _controller;
-  late Animation<double> _progressAnimation;
-  late Animation<double> _progressAllAnimation;
+  late AnimationController _controller; // アニメーションコントローラ
+  late Animation<double> _progressAnimation; // 今日の達成度のアニメーション
+  late Animation<double> _progressAllAnimation; // 目標達成度のアニメーション
 
   @override
   void initState() {
     super.initState();
 
+    // アニメーションコントローラの初期化
     _controller = AnimationController(
-      duration: Duration(seconds: 1),
-      vsync: this,
+      duration: Duration(seconds: 1), // 1秒間のアニメーション
+      vsync: this, // アニメーションの更新を同期
     );
 
+    // 今日の達成度のアニメーションの定義
     _progressAnimation = Tween<double>(begin: 0, end: tierProgress / 100)
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic));
+    
+    // 目標達成度のアニメーションの定義
     _progressAllAnimation = Tween<double>(begin: 0, end: tierProgress_all / 100)
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic));
 
-    _controller.forward();
+    _controller.forward(); // アニメーションの再生開始
   }
 
+  // Firestoreからユーザーデータを取得する非同期関数
   Future<void> _fetchUserData() async {
     try {
+      // Firestoreから特定のユーザーのデータを取得
       final userSnapshot = await FirebaseFirestore.instance
           .collection('Users')
           .where('user_id', isEqualTo: 'ASAHIdayo')
@@ -53,33 +64,35 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
       if (userSnapshot.docs.isNotEmpty) {
         final userData = userSnapshot.docs.first.data();
-        userName = userData['user_name'] ?? 'Unknown';
+        userName = userData['user_name'] ?? 'Unknown'; // ユーザー名がない場合、"Unknown"を代入
       }
     } catch (e) {
-      print('データ取得エラー: $e');
-      userName = 'Unknown';
+      print('データ取得エラー: $e'); // データ取得エラーの際にコンソールに表示
+      userName = 'Unknown'; // エラー発生時は"Unknown"をセット
     }
   }
 
+  // 日付を表示するための関数
   String _getDisplayDate() {
-    final displayDate = _selectedDay ?? DateTime.now();
+    final displayDate = _selectedDay ?? DateTime.now(); // 選択されていない場合は今日の日付
     return "${DateFormat('yyyy年M月d日').format(displayDate)}の${widget.selectedCategory}の記録データ閲覧画面";
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.dispose(); // アニメーションコントローラの破棄
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: _fetchUserData(),
+      future: _fetchUserData(), // _fetchUserDataの完了を待つ
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator()); // データ取得中のインジケーター
         } else {
+          // データ取得後のUI表示
           return Scaffold(
             body: SingleChildScrollView(
               child: Padding(
@@ -88,6 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(height: 20),
+                    // ユーザーの名前を表示
                     Text(
                       "$userNameさん、ナイスログイン！",
                       style: TextStyle(
@@ -96,6 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                       ),
                     ),
                     SizedBox(height: 10),
+                    // メッセージ
                     Text(
                       "今日も学習を重ねていこう",
                       style: TextStyle(
@@ -104,37 +119,22 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                       ),
                     ),
                     SizedBox(height: 20),
+                    // 統計、進捗、活動セクション
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.center,
-                            child: _buildStatSection(),
-                          ),
-                        ),
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.center,
-                            child: _buildProgressSection(),
-                          ),
-                        ),
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.center,
-                            child: _buildActivitySection(),
-                          ),
-                        ),
+                        Expanded(child: Align(alignment: Alignment.center, child: _buildStatSection())),
+                        Expanded(child: Align(alignment: Alignment.center, child: _buildProgressSection())),
+                        Expanded(child: Align(alignment: Alignment.center, child: _buildActivitySection())),
                       ],
                     ),
                     SizedBox(height: 20),
                     Divider(color: const Color.fromARGB(255, 200, 200, 200)),
                     SizedBox(height: 10),
+                    // 日付情報の表示
                     Text(
                       _getDisplayDate(),
-                      style: TextStyle(
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(fontSize: 16),
                     ),
                   ],
                 ),
@@ -146,6 +146,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
   }
 
+  // 統計情報のUIセクション
   Widget _buildStatSection() {
     return Column(
       children: [
@@ -192,6 +193,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
   }
 
+  // 今日の進捗と目標達成度のUIセクション
   Widget _buildProgressSection() {
     return Column(
       children: [
@@ -199,6 +201,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         Stack(
           alignment: Alignment.center,
           children: [
+            // 目標達成度の円形インジケーター
             AnimatedBuilder(
               animation: _progressAllAnimation,
               builder: (context, child) {
@@ -232,14 +235,12 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   bottom: 0,
                   child: Text(
                     "${(_progressAllAnimation.value * 100).toInt()}%",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                 );
               },
             ),
+            // 今日の進捗の円形インジケーター
             AnimatedBuilder(
               animation: _progressAnimation,
               builder: (context, child) {
@@ -275,10 +276,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   builder: (context, child) {
                     return Text(
                       "${(_progressAnimation.value * 100).toInt()}%",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
                     );
                   },
                 ),
@@ -290,6 +288,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
   }
 
+  // カレンダーを表示するアクティビティセクション
   Widget _buildActivitySection() {
     return Column(
       children: [
@@ -367,11 +366,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   alignment: Alignment.center,
                   child: Text(
                     DateFormat.d().format(day),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 );
               },
@@ -384,11 +379,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   alignment: Alignment.center,
                   child: Text(
                     DateFormat.d().format(day),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 );
               },

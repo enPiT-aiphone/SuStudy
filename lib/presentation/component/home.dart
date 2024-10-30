@@ -1,12 +1,14 @@
+// 必要なパッケージのインポート
 import '/import.dart';
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // メインアプリケーションの構築
     return MaterialApp(
-      home: HomeScreen(),
+      home: HomeScreen(), // アプリケーションの最初の画面としてHomeScreenを指定
       theme: ThemeData(
-        primaryColor: Color(0xFF0ABAB5),
+        primaryColor: Color(0xFF0ABAB5), // アプリのテーマカラーを設定
       ),
     );
   }
@@ -18,48 +20,54 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
-  String _selectedCategory = '';
-  String _selectedTab = '最新';
+  int _currentIndex = 0; // 現在選択されているボトムナビゲーションのインデックス
+  String _selectedCategory = ''; // 選択されたカテゴリ
+  String _selectedTab = '最新'; // 選択されたタブ
 
-  String _accountName = '';
-  String _accountId = '';
-  int _userNumber = 0;
-  int _followers = 0;
-  int _following = 0;
-  List<String> _followingSubjects = [];
+  // Firebaseから取得するユーザー情報
+  String _accountName = ''; // ユーザー名
+  String _accountId = ''; // ユーザーID
+  int _userNumber = 0; // ユーザー番号
+  int _followers = 0; // フォロワー数
+  int _following = 0; // フォロー数
+  List<String> _followingSubjects = []; // フォロー中の教科リスト
 
   @override
   void initState() {
     super.initState();
-    _fetchUserData();
+    _fetchUserData(); // Firebaseからユーザーデータを取得するメソッドを呼び出す
   }
 
+  // Firebaseからユーザーデータを取得するメソッド
   Future<void> _fetchUserData() async {
     try {
+      // FirestoreのUsersコレクションから特定のuser_idに一致するデータを取得
       final userSnapshot = await FirebaseFirestore.instance
           .collection('Users')
           .where('user_id', isEqualTo: 'ASAHIdayo')
           .get();
 
       if (userSnapshot.docs.isNotEmpty) {
+        // 取得したデータを変数にセット
         final userData = userSnapshot.docs.first.data();
         setState(() {
           _accountName = userData['user_name'] ?? 'Unknown';
           _accountId = userData['user_id'] ?? 'ID Unknown';
           _userNumber = userData['user_number'] ?? 0;
 
-          // follower_idsのリスト長をフォロワー数として使用
+          // follower_idsフィールドのリスト長をフォロワー数として使用
           _followers = (userData['follower_ids'] as List<dynamic>?)?.length ?? 0;
 
-          // following_subjectsのリストをフォロー中の教科として使用
+          // following_subjectsリストをフォロー中の教科として使用
           _followingSubjects = List<String>.from(userData['following_subjects'] ?? []);
-          
+
+          // 教科リストが存在する場合、最初の教科を選択カテゴリとして設定
           if (_followingSubjects.isNotEmpty) {
             _selectedCategory = _followingSubjects[0];
           }
         });
 
+        // フォロー数を取得
         final followingsSnapshot = await userSnapshot.docs.first.reference
             .collection('followings')
             .get();
@@ -75,27 +83,32 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // カテゴリを選択するメソッド
   void _selectCategory(String category) {
     setState(() {
       _selectedCategory = category;
     });
   }
 
+  // タブを選択するメソッド
   void _selectTab(String tab) {
     setState(() {
       _selectedTab = tab;
     });
   }
 
+  // ボトムナビゲーションの項目がタップされた時の処理
   void _onBottomNavigationTapped(int index) {
     setState(() {
       _currentIndex = index;
+      // 記録をつける画面でカテゴリが全体の場合、フォロー中の教科の最初を設定
       if (_currentIndex == 2 && _selectedCategory == '全体') {
         _selectedCategory = _followingSubjects.isNotEmpty ? _followingSubjects[0] : 'TOEIC';
       }
     });
   }
 
+  // 各画面を管理するウィジェットリスト
   List<Widget> get _pages => [
         Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
         Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
@@ -112,6 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Column(
         children: [
+          // 上部にグラデーションを持つコンテナ
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -122,6 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: Column(
               children: [
+                // AppBarの設定
                 AppBar(
                   automaticallyImplyLeading: false,
                   title: Builder(
@@ -162,13 +177,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: Colors.transparent,
                   elevation: 0,
                 ),
+                // タイムラインとランキング画面でのみ表示するタブバー
                 if (_currentIndex == 0 || _currentIndex == 1) _buildCustomTabBar(),
               ],
             ),
           ),
+          // 表示するページを選択
           Expanded(
             child: _pages[_currentIndex],
           ),
+          // カテゴリバーを表示（設定画面では非表示）
           if (_currentIndex != 4) _buildCategoryBar(context),
         ],
       ),
@@ -178,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ドロワーを構築するメソッド
   Widget _buildDrawer() {
     return Container(
       width: MediaQuery.of(context).size.width * 0.8,
@@ -261,6 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            // 特定のユーザ番号に応じてデータベース管理フォームを表示
             if (_userNumber >= 1 && _userNumber <= 6)
               ListTile(
                 leading: Icon(Icons.build),
@@ -278,6 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ボトムナビゲーションバーの構築メソッド
   Widget _buildBottomNavigationBar() {
     return BottomNavigationBar(
       backgroundColor: Color(0xFF0ABAB5),
@@ -311,6 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // タブバーを構築するメソッド
   Widget _buildCustomTabBar() {
     return Container(
       color: Colors.transparent,
@@ -326,6 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // タブボタンの構築メソッド
   Widget _buildTabButton(String tab) {
     return GestureDetector(
       onTap: () {
@@ -348,6 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // カテゴリバーの構築メソッド
   Widget _buildCategoryBar(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double barWidth = screenWidth * 0.7;
@@ -368,6 +392,7 @@ class _HomeScreenState extends State<HomeScreen> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
+              // 条件に応じてカテゴリボタンを生成
               if (_currentIndex == 0 || _currentIndex == 1 || _currentIndex == 3)
                 _buildCategoryButton('全体'),
               if (_followingSubjects.isNotEmpty)
@@ -380,6 +405,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // カテゴリボタンの構築メソッド
   Widget _buildCategoryButton(String category) {
     return GestureDetector(
       onTap: () {
