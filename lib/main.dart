@@ -5,16 +5,14 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: const TOEICLevelSelection(),
+      home: TOEICLevelSelection(), // toeic_level_selection.dartを表示
     );
   }
 }

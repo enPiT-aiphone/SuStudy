@@ -6,19 +6,42 @@ class ViewFormSelection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0ABAB5),  // AppBarの色を設定
-        title: Row(
-          children: const [
-            Text(
-              'SuStudy,',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60.0), // AppBarの高さを設定
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0ABAB5), Color.fromARGB(255, 255, 255, 255)], // グラデーションの色設定
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-          ],
+          ),
+          child: AppBar(
+            backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
+            elevation: 0,
+            title: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => HomeScreen()),
+                      (route) => false,
+                    );
+                  },
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'SuStudy, ',
+                  style: TextStyle(
+                    fontSize: 25,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),          
+          ),
         ),
       ),
       drawer: Drawer(
@@ -27,7 +50,11 @@ class ViewFormSelection extends StatelessWidget {
           children: <Widget>[
             const DrawerHeader(
               decoration: BoxDecoration(
-                color: const Color(0xFF0ABAB5),
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0ABAB5), const Color.fromARGB(255, 255, 255, 255)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
               child: Text(
                 '管理するデータを選んでください',
@@ -1823,7 +1850,7 @@ ExpansionTile(
   title: const Text('     試験'),
   children: <Widget>[
     ListTile(
-      title: const Text('                 ITパスポート'),
+      title: const Text('           ITパスポート'),
       onTap: () {
         Navigator.push(
           context,
@@ -1836,7 +1863,7 @@ ExpansionTile(
       },
     ),
     ListTile(
-      title: const Text('                 基本情報技術者試験'),
+      title: const Text('           基本情報技術者試験'),
       onTap: () {
         Navigator.push(
           context,
@@ -1849,7 +1876,7 @@ ExpansionTile(
       },
     ),
     ListTile(
-      title: const Text('                 C言語プログラミング能力認定試験'),
+      title: const Text('           C言語プログラミング能力認定試験'),
       onTap: () {
         Navigator.push(
           context,
@@ -2044,7 +2071,7 @@ ExpansionTile(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'データベース管理フォーム',
+              '管理者用データベース管理フォーム',
               style: TextStyle(fontSize: 20),
             ),
           ],

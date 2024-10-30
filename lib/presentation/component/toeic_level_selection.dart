@@ -7,20 +7,32 @@ class TOEICLevelSelection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0ABAB5),  // AppBarの背景色を0xFF0ABAB5に設定
-        title: Row(
-          children: const [
-            // アプリのタイトル「SuStudy,」を表示
-            Text(
-              'SuStudy, ',
-              style: TextStyle(
-                fontSize: 20,  // フォントサイズを20に設定
-                fontWeight: FontWeight.bold,  // 太字で表示
-                color: Colors.white,  // 文字色を白に設定
-              ),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60.0), // AppBarの高さを設定
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0ABAB5), Color.fromARGB(255, 255, 255, 255)], // グラデーションの色設定
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-          ],
+          ),
+          child: AppBar(
+            backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
+            elevation: 0,
+            title: Row(
+              children: const [
+                // アプリのタイトル「SuStudy,」を表示
+                Text(
+                  'SuStudy, ',
+                  style: TextStyle(
+                    fontSize: 25,  // フォントサイズを20に設定
+                    color: Colors.white,  // 文字色を白に設定
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
       body: Column(
