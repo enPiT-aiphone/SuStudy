@@ -1,14 +1,16 @@
 // 必要なパッケージのインポート
-import '/import.dart';
+import '/import.dart'; // 他ファイルの内容を含む
+import 'notification.dart'; // NotificationPageクラスが定義されているファイル
+import 'badge_view_model.dart'; // BadgeViewModelクラスをインポート
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // メインアプリケーションの構築
+    // メインのFlutterアプリケーション構築
     return MaterialApp(
-      home: HomeScreen(), // アプリケーションの最初の画面としてHomeScreenを指定
+      home: HomeScreen(), // アプリの初期画面をHomeScreenに設定
       theme: ThemeData(
-        primaryColor: Color(0xFF0ABAB5), // アプリのテーマカラーを設定
+        primaryColor: Color(0xFF0ABAB5), // テーマカラーを設定
       ),
     );
   }
@@ -19,61 +21,79 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   int _currentIndex = 0; // 現在選択されているボトムナビゲーションのインデックス
-  String _selectedCategory = ''; // 選択されたカテゴリ
-  String _selectedTab = '最新'; // 選択されたタブ
+  OverlayEntry? _overlayEntry; // OverlayEntryの参照を保持
+  bool _isNotificationVisible = false; // 通知が表示されているかどうかを管理
+  String _selectedCategory = ''; // 現在選択されたカテゴリ
+  String _selectedTab = '最新'; // 現在選択されたタブ
+  late AnimationController _animationController; // アニメーションコントローラ
+  late Animation<double> _scaleAnimation; // スケールアニメーション
+  late Animation<double> _opacityAnimation; // 透過アニメーション
 
-  // Firebaseから取得するユーザー情報
+  // Firebaseから取得したユーザー情報の変数
   String _accountName = ''; // ユーザー名
   String _accountId = ''; // ユーザーID
   int _userNumber = 0; // ユーザー番号
   int _followers = 0; // フォロワー数
   int _following = 0; // フォロー数
-  List<String> _followingSubjects = []; // フォロー中の教科リスト
+  List<String> _followingSubjects = []; // フォロー中の教科のリスト
 
   @override
   void initState() {
     super.initState();
-    _fetchUserData(); // Firebaseからユーザーデータを取得するメソッドを呼び出す
+    _fetchUserData(); // Firebaseからのユーザーデータ取得を呼び出し
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 220), // アニメーション時間を設定
+      vsync: this, // アニメーションコントローラの初期化
+    );
+
+    // スケールアニメーションの設定
+    _scaleAnimation = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0, end: 1.05).chain(CurveTween(curve: Curves.easeOut)), // スケールアップ
+        weight: 170,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.05, end: 1.0).chain(CurveTween(curve: Curves.easeIn)), // スケールダウン
+        weight: 50,
+      ),
+    ]).animate(_animationController);
+
+    // 透過アニメーションの設定
+    _opacityAnimation = Tween<double>(begin: 0, end: 0.9).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
-  // Firebaseからユーザーデータを取得するメソッド
+  // Firebaseからユーザーデータを取得
   Future<void> _fetchUserData() async {
     try {
-      // FirestoreのUsersコレクションから特定のuser_idに一致するデータを取得
       final userSnapshot = await FirebaseFirestore.instance
           .collection('Users')
           .where('user_id', isEqualTo: 'ASAHIdayo')
-          .get();
+          .get(); // Usersコレクションからuser_idが一致するデータを取得
 
       if (userSnapshot.docs.isNotEmpty) {
-        // 取得したデータを変数にセット
-        final userData = userSnapshot.docs.first.data();
+        final userData = userSnapshot.docs.first.data(); // 取得したドキュメントの最初を取得
         setState(() {
-          _accountName = userData['user_name'] ?? 'Unknown';
-          _accountId = userData['user_id'] ?? 'ID Unknown';
-          _userNumber = userData['user_number'] ?? 0;
-
-          // follower_idsフィールドのリスト長をフォロワー数として使用
-          _followers = (userData['follower_ids'] as List<dynamic>?)?.length ?? 0;
-
-          // following_subjectsリストをフォロー中の教科として使用
-          _followingSubjects = List<String>.from(userData['following_subjects'] ?? []);
-
-          // 教科リストが存在する場合、最初の教科を選択カテゴリとして設定
+          _accountName = userData['user_name'] ?? 'Unknown'; // ユーザー名
+          _accountId = userData['user_id'] ?? 'ID Unknown'; // ユーザーID
+          _userNumber = userData['user_number'] ?? 0; // ユーザー番号
+          _followers = (userData['follower_ids'] as List<dynamic>?)?.length ?? 0; // フォロワー数
+          _followingSubjects = List<String>.from(userData['following_subjects'] ?? []); // フォロー中の教科
           if (_followingSubjects.isNotEmpty) {
-            _selectedCategory = _followingSubjects[0];
+            _selectedCategory = _followingSubjects[0]; // 最初の教科を選択
           }
         });
 
         // フォロー数を取得
         final followingsSnapshot = await userSnapshot.docs.first.reference
             .collection('followings')
-            .get();
+            .get(); // followingsサブコレクションのドキュメント数を取得
 
         setState(() {
-          _following = followingsSnapshot.docs.length;
+          _following = followingsSnapshot.docs.length; // フォロー数を更新
         });
       } else {
         print('ユーザーデータが見つかりません');
@@ -83,14 +103,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // カテゴリを選択するメソッド
+  // カテゴリの選択処理
   void _selectCategory(String category) {
     setState(() {
       _selectedCategory = category;
     });
   }
 
-  // タブを選択するメソッド
+  // タブの選択処理
   void _selectTab(String tab) {
     setState(() {
       _selectedTab = tab;
@@ -101,14 +121,130 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onBottomNavigationTapped(int index) {
     setState(() {
       _currentIndex = index;
-      // 記録をつける画面でカテゴリが全体の場合、フォロー中の教科の最初を設定
       if (_currentIndex == 2 && _selectedCategory == '全体') {
-        _selectedCategory = _followingSubjects.isNotEmpty ? _followingSubjects[0] : 'TOEIC';
+        _selectedCategory = _followingSubjects.isNotEmpty ? _followingSubjects[0] : 'TOEIC'; // 記録画面でカテゴリを選択
       }
     });
   }
 
-  // 各画面を管理するウィジェットリスト
+  @override
+  void dispose() {
+    _animationController.dispose(); // アニメーションコントローラの破棄
+    super.dispose();
+  }
+
+  // 通知リストをOverlayで表示
+  void _toggleNotificationOverlay(BuildContext context) {
+  if (_isNotificationVisible) {
+    _animationController.reverse().then((_) {
+      _removeOverlay();
+    });
+  } else {
+    _showOverlay(context);
+    _animationController.reset(); // アニメーションの状態をリセット
+    _animationController.forward();// アニメーション開始
+  }
+}
+
+  // 通知オーバーレイを表示
+  void _showOverlay(BuildContext context) {
+    _overlayEntry = _createOverlayEntry(); // OverlayEntryを生成
+    Overlay.of(context).insert(_overlayEntry!); // オーバーレイに挿入
+    _isNotificationVisible = true;
+  }
+
+  // 通知オーバーレイを削除
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _isNotificationVisible = false;
+  }
+
+  // 通知オーバーレイのエントリを生成
+  OverlayEntry _createOverlayEntry() {
+    return OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          GestureDetector(
+            onTap: () => _toggleNotificationOverlay(context), // タップでオーバーレイを閉じる
+            child: Container(color: Colors.transparent),
+          ),
+          Positioned(
+            top: kToolbarHeight + 10, // 通知リストの位置を指定
+            right: 50,
+            child: ScaleTransition(
+              scale: _scaleAnimation, // スケールアニメーションを適用
+              alignment: Alignment.topRight,
+              child: FadeTransition(
+                opacity: _opacityAnimation, // 透過アニメーションを適用
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 250,
+                    height: 300,
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Consumer<BadgeViewModel>(
+                        builder: (context, badgeViewModel, _) {
+                          return NotificationPage(
+                            notifications: badgeViewModel.notifications,
+                            onNotificationTap: (docId) => badgeViewModel.markNotificationAsRead(docId),
+                          ); // 通知ページを表示
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 通知アイコンのウィジェットを構築
+  Widget _buildNotificationIcon() {
+    return Stack(
+      children: [
+        IconButton(
+          icon: Icon(Icons.notifications),
+          onPressed: () => _toggleNotificationOverlay(context),
+        ),
+        Positioned(
+          right: 0,
+          child: Consumer<BadgeViewModel>(
+            builder: (context, badgeViewModel, _) {
+              return badgeViewModel.showBadge && badgeViewModel.badgeCount > 0
+                  ? CircleAvatar(
+                      radius: 10,
+                      backgroundColor: Colors.red,
+                      child: Text(
+                        '${badgeViewModel.badgeCount}', // バッジに未読数を表示
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    )
+                  : Container();
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ボトムナビゲーションバーの項目を管理
   List<Widget> get _pages => [
         Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
         Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
@@ -125,18 +261,16 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // 上部にグラデーションを持つコンテナ
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF0ABAB5), const Color.fromARGB(255, 255, 255, 255)],
+                colors: [Color(0xFF0ABAB5), Color(0xFFFFFFFF)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
             ),
             child: Column(
               children: [
-                // AppBarの設定
                 AppBar(
                   automaticallyImplyLeading: false,
                   title: Builder(
@@ -153,46 +287,29 @@ class _HomeScreenState extends State<HomeScreen> {
                         SizedBox(width: 10),
                         Text(
                           'SuStudy,',
-                          style: TextStyle(
-                            fontSize: 25,
-                            color: Colors.white,
-                          ),
+                          style: TextStyle(fontSize: 25, color: Colors.white),
                         ),
                         Spacer(),
-                        IconButton(
-                          icon: Icon(Icons.search),
-                          onPressed: () {},
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.notifications),
-                          onPressed: () {},
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.mail),
-                          onPressed: () {},
-                        ),
+                        IconButton(icon: Icon(Icons.search), onPressed: () {}),
+                        _buildNotificationIcon(), // 通知アイコンを表示
+                        IconButton(icon: Icon(Icons.mail), onPressed: () {}),
                       ],
                     ),
                   ),
                   backgroundColor: Colors.transparent,
                   elevation: 0,
                 ),
-                // タイムラインとランキング画面でのみ表示するタブバー
-                if (_currentIndex == 0 || _currentIndex == 1) _buildCustomTabBar(),
+                if (_currentIndex == 0 || _currentIndex == 1) _buildCustomTabBar(), // タブバーを表示
               ],
             ),
           ),
-          // 表示するページを選択
-          Expanded(
-            child: _pages[_currentIndex],
-          ),
-          // カテゴリバーを表示（設定画面では非表示）
+          Expanded(child: _pages[_currentIndex]),
           if (_currentIndex != 4) _buildCategoryBar(context),
         ],
       ),
       drawerEnableOpenDragGesture: true,
-      drawer: _buildDrawer(),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+      drawer: _buildDrawer(), // ドロワー
+      bottomNavigationBar: _buildBottomNavigationBar(), // ボトムナビゲーションバー
     );
   }
 
