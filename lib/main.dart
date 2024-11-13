@@ -1,7 +1,7 @@
 // 各種必要なパッケージをインポート
 import 'import.dart';
 import 'package:flutter/foundation.dart' show kIsWeb; // kIsWebを使用してWebかどうかを判定
-
+import 'package:firebase_auth/firebase_auth.dart';
 void main() async {
   // Flutterエンジンの初期化（asyncを用いるためにawaitが必要）
   WidgetsFlutterBinding.ensureInitialized();
@@ -126,12 +126,152 @@ Future<void> _initNotification() async {
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 // アプリケーションのルートウィジェット
+// class MyApp extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       navigatorKey: navigatorKey, // NavigatorKeyを設定
+//       //home: TOEICLevelSelection(), // アプリのホーム画面を指定
+//       home: MyHomePage(),
+//     );
+//   }
+// }
+
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorKey: navigatorKey, // NavigatorKeyを設定
-      home: TOEICLevelSelection(), // アプリのホーム画面を指定
+      title: 'Flutter App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: AuthChecker(),  // 認証状態を監視
+    );
+  }
+}
+
+class AuthChecker extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(), // 認証状態を監視
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasData) {
+          // ユーザーがログインしている場合、TOEICLevelSelection画面に遷移
+          return TOEICLevelSelection();
+        } else {
+          // ログインしていない場合、ログイン画面を表示
+          return MyHomePage();
+        }
+      },
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+//新しく追加（ログイン）
+class _MyHomePageState extends State<MyHomePage> {
+  // 入力したメールアドレス・パスワード
+  String _email = '';
+  String _password = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              // 1行目 メールアドレス入力用テキストフィールド
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'メールアドレス'),
+                onChanged: (String value) {
+                  setState(() {
+                    _email = value;
+                  });
+                },
+              ),
+              // 2行目 パスワード入力用テキストフィールド
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'パスワード'),
+                obscureText: true,
+                onChanged: (String value) {
+                  setState(() {
+                    _password = value;
+                  });
+                },
+              ),
+              
+              ElevatedButton(
+                 child: const Text('ユーザ登録'),
+                 onPressed: () async {
+                   try {
+                      final User? user = (await FirebaseAuth.instance
+                      .createUserWithEmailAndPassword(
+                      email: _email, password: _password))
+                      .user;
+
+      if (user != null) {
+        print("ユーザ登録しました ${user.email} , ${user.uid}");
+        
+        // Firestoreにユーザー情報を保存
+        await FirebaseFirestore.instance.collection('Users').doc(user.uid).set({
+          'email': user.email,
+          "user_id" : user.uid,
+          //'createdAt': FieldValue.serverTimestamp(),
+          // 必要に応じて他のフィールドを追加
+        });
+        
+        print("Firestoreにユーザー情報を保存しました");
+      }
+    } catch (e) {
+      print(e);
+    }
+  },
+),
+              // 4行目 ログインボタン
+              ElevatedButton(
+                child: const Text('ログイン'),
+                onPressed: () async {
+                  try {
+                    // メール/パスワードでログイン
+                    final User? user = (await FirebaseAuth.instance
+                            .signInWithEmailAndPassword(
+                                email: _email, password: _password))
+                        .user;
+                    if (user != null)
+                      print("ログインしました　${user.email} , ${user.uid}");
+                  } catch (e) {
+                    print(e);
+                  }
+                },
+              ),
+              // 5行目 パスワードリセット登録ボタン
+              ElevatedButton(
+                  child: const Text('パスワードリセット'),
+                  onPressed: () async {
+                    try {
+                      await FirebaseAuth.instance
+                          .sendPasswordResetEmail(email: _email);
+                      print("パスワードリセット用のメールを送信しました");
+                    } catch (e) {
+                      print(e);
+                    }
+                  }),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
