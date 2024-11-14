@@ -2,7 +2,7 @@
 import '/import.dart'; // アプリ全体で使用するインポートファイル
 import 'package:table_calendar/table_calendar.dart'; // カレンダーUI用のパッケージ
 import 'package:intl/intl.dart'; // 日付フォーマット用のパッケージ
-import 'package:flutter/material.dart'; // Flutter UIのための基本パッケージ
+import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 
 // DashboardScreenクラスの宣言
 class DashboardScreen extends StatefulWidget {
@@ -56,15 +56,24 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   // Firestoreからユーザーデータを取得する非同期関数
   Future<void> _fetchUserData() async {
     try {
-      // Firestoreから特定のユーザーのデータを取得
-      final userSnapshot = await FirebaseFirestore.instance
-          .collection('Users')
-          .where('user_id', isEqualTo: 'ASAHIdayo')
-          .get();
+      // 現在のユーザーのUIDを取得
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        final userId = currentUser.uid;
 
-      if (userSnapshot.docs.isNotEmpty) {
-        final userData = userSnapshot.docs.first.data();
-        userName = userData['user_name'] ?? 'Unknown'; // ユーザー名がない場合、"Unknown"を代入
+        // Firestoreから特定のユーザーのデータを取得
+        final userSnapshot = await FirebaseFirestore.instance
+            .collection('Users')
+            .where('user_id', isEqualTo: userId)
+            .get();
+
+        if (userSnapshot.docs.isNotEmpty) {
+          final userData = userSnapshot.docs.first.data();
+          userName = userData['user_name'] ?? 'Unknown'; // ユーザー名がない場合、"Unknown"を代入
+        }
+      } else {
+        print('ユーザーがログインしていません');
+        userName = 'Unknown';
       }
     } catch (e) {
       print('データ取得エラー: $e'); // データ取得エラーの際にコンソールに表示
