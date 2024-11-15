@@ -9,6 +9,8 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   String _email = '';
   String _password = '';
+  String _confirmPassword = ''; // 確認用パスワードを保存する変数
+  String? _errorMessage; // エラーメッセージを保存するための変数
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +48,13 @@ class _SignInScreenState extends State<SignInScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // エラーメッセージを表示するウィジェット
+            if (_errorMessage != null)
+              Text(
+                _errorMessage!,
+                style: TextStyle(color: Colors.red),
+              ),
+            SizedBox(height: 10),
             TextFormField(
               decoration: InputDecoration(labelText: 'メールアドレス'),
               onChanged: (value) => setState(() => _email = value),
@@ -55,9 +64,26 @@ class _SignInScreenState extends State<SignInScreen> {
               obscureText: true,
               onChanged: (value) => setState(() => _password = value),
             ),
+            TextFormField(
+              decoration: InputDecoration(labelText: 'パスワードの確認'),
+              obscureText: true,
+              onChanged: (value) => setState(() => _confirmPassword = value),
+            ),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
+                setState(() {
+                  _errorMessage = null; // エラーが発生する前にリセット
+                });
+
+                // パスワードと確認用パスワードが一致しているかチェック
+                if (_password != _confirmPassword) {
+                  setState(() {
+                    _errorMessage = 'パスワードが一致しません。';
+                  });
+                  return;
+                }
+
                 try {
                   final userCredential = await FirebaseAuth.instance
                       .createUserWithEmailAndPassword(
@@ -83,7 +109,23 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     );
                   }
+                } on FirebaseAuthException catch (e) {
+                  // エラーメッセージを設定
+                  setState(() {
+                    if (e.code == 'email-already-in-use') {
+                      _errorMessage = 'このメールアドレスは既に使用されています。';
+                    } else if (e.code == 'invalid-email') {
+                      _errorMessage = '有効なメールアドレスを入力してください。';
+                    } else if (e.code == 'weak-password') {
+                      _errorMessage = 'パスワードは6文字以上にしてください。';
+                    } else {
+                      _errorMessage = 'エラーが発生しました。もう一度お試しください。';
+                    }
+                  });
                 } catch (e) {
+                  setState(() {
+                    _errorMessage = '予期しないエラーが発生しました。';
+                  });
                   print('登録エラー: $e');
                 }
               },

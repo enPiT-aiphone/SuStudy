@@ -9,9 +9,10 @@ class LogInScreen extends StatefulWidget {
 class _LogInScreenState extends State<LogInScreen> {
   String _email = '';
   String _password = '';
+  String? _errorMessage; // エラーメッセージを保存する変数
 
   @override
-    Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60.0), // AppBarの高さを設定
@@ -32,8 +33,8 @@ class _LogInScreenState extends State<LogInScreen> {
                 Text(
                   'SuStudy, ',
                   style: TextStyle(
-                    fontSize: 25,  // フォントサイズを20に設定
-                    color: Colors.white,  // 文字色を白に設定
+                    fontSize: 25, // フォントサイズを20に設定
+                    color: Colors.white, // 文字色を白に設定
                   ),
                 ),
               ],
@@ -46,6 +47,13 @@ class _LogInScreenState extends State<LogInScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // エラーメッセージを表示するウィジェット
+            if (_errorMessage != null)
+              Text(
+                _errorMessage!,
+                style: TextStyle(color: Colors.red),
+              ),
+            SizedBox(height: 10),
             TextFormField(
               decoration: InputDecoration(labelText: 'メールアドレス'),
               onChanged: (value) => setState(() => _email = value),
@@ -58,6 +66,9 @@ class _LogInScreenState extends State<LogInScreen> {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
+                setState(() {
+                  _errorMessage = null; // エラーメッセージをリセット
+                });
                 try {
                   final user = await FirebaseAuth.instance
                       .signInWithEmailAndPassword(
@@ -66,7 +77,23 @@ class _LogInScreenState extends State<LogInScreen> {
                     print('ログイン成功: ${user.user?.email}');
                     Navigator.pop(context);
                   }
+                } on FirebaseAuthException catch (e) {
+                  // エラーメッセージを設定
+                  setState(() {
+                    if (e.code == 'user-not-found') {
+                      _errorMessage = 'このメールアドレスのユーザーは見つかりません。';
+                    } else if (e.code == 'wrong-password') {
+                      _errorMessage = 'パスワードが間違っています。';
+                    } else if (e.code == 'invalid-email') {
+                      _errorMessage = '有効なメールアドレスを入力してください。';
+                    } else {
+                      _errorMessage = 'エラーが発生しました。もう一度お試しください。';
+                    }
+                  });
                 } catch (e) {
+                  setState(() {
+                    _errorMessage = '予期しないエラーが発生しました。';
+                  });
                   print('ログインエラー: $e');
                 }
               },
