@@ -2,6 +2,7 @@
 import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
+import 'record.dart'; //記録の画面のコンポーネント
 
 class MyApp extends StatelessWidget {
   @override
@@ -257,7 +258,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
         Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
         Center(child: Text('検索画面')),
-        Center(child: Text('$_selectedCategoryの記録をつける画面')),
+        //Center(child: Text('$_selectedCategoryの記録をつける画面')),
+        LanguageCategoryScreen(), // record.dart の画面に変更
         DashboardScreen(
           selectedTab: _selectedTab,
           selectedCategory: _selectedCategory,
