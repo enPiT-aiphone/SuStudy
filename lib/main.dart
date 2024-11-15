@@ -1,11 +1,12 @@
 // 各種必要なパッケージをインポート
 import 'import.dart';
 import 'package:flutter/foundation.dart' show kIsWeb; // kIsWebを使用してWebかどうかを判定
+import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 
 void main() async {
   // Flutterエンジンの初期化（asyncを用いるためにawaitが必要）
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Firebaseアプリの初期化（プロジェクト設定に基づいた設定を指定）
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
@@ -77,10 +78,17 @@ Future<void> setupFirebaseMessaging() async {
 
 // FirestoreのUsersコレクション内の特定ユーザーにfcmTokenサブコレクションを作成し、トークンを保存する関数
 Future<void> saveTokenToSubcollection(String token) async {
-  // Usersコレクションから特定のユーザーID（user_idがASAHIdayoのユーザー）を取得
+  // FirebaseAuthを使用して現在ログイン中のユーザーIDを取得
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) {
+    print('ログインしているユーザーがいません');
+    return;
+  }
+
+  // Usersコレクションから特定のユーザーID（現在ログイン中のユーザー）を取得
   final querySnapshot = await FirebaseFirestore.instance
       .collection('Users')
-      .where('user_id', isEqualTo: 'ASAHIdayo')
+      .where('user_id', isEqualTo: userId)
       .get();
 
   if (querySnapshot.docs.isNotEmpty) {
@@ -130,8 +138,34 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorKey: navigatorKey, // NavigatorKeyを設定
-      home: TOEICLevelSelection(), // アプリのホーム画面を指定
+      title: 'Flutter App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: AuthChecker(), // AuthCheckerがアプリの初期画面を決定する
+    );
+  }
+}
+
+// 認証状態を監視して適切な画面を表示するウィジェット
+class AuthChecker extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(), // 認証状態を監視
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasData) {
+          // ユーザーがログインしている場合、ホーム画面に遷移
+          return HomeScreen();
+        } else {
+          // ログインしていない場合、認証選択画面を表示
+          return AuthenticationScreen();
+        }
+      },
     );
   }
 }

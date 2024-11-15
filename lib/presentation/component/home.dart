@@ -1,7 +1,7 @@
 // 必要なパッケージのインポート
 import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
-import 'badge_view_model.dart'; // BadgeViewModelクラスをインポート
+import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 
 class MyApp extends StatelessWidget {
   @override
@@ -69,13 +69,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Firebaseからユーザーデータを取得
   Future<void> _fetchUserData() async {
     try {
+      // FirebaseAuthを使用して現在ログイン中のユーザーIDを取得
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        print('ログインしているユーザーがいません');
+        return;
+      }
+
+      // Usersコレクションから現在ログイン中のユーザーのデータを取得
       final userSnapshot = await FirebaseFirestore.instance
           .collection('Users')
-          .where('user_id', isEqualTo: 'ASAHIdayo')
-          .get(); // Usersコレクションからuser_idが一致するデータを取得
+          .where('user_id', isEqualTo: userId)
+          .get();
 
       if (userSnapshot.docs.isNotEmpty) {
-        final userData = userSnapshot.docs.first.data(); // 取得したドキュメントの最初を取得
+        final userData = userSnapshot.docs.first.data();
         setState(() {
           _accountName = userData['user_name'] ?? 'Unknown'; // ユーザー名
           _accountId = userData['user_id'] ?? 'ID Unknown'; // ユーザーID
@@ -90,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         // フォロー数を取得
         final followingsSnapshot = await userSnapshot.docs.first.reference
             .collection('followings')
-            .get(); // followingsサブコレクションのドキュメント数を取得
+            .get();
 
         setState(() {
           _following = followingsSnapshot.docs.length; // フォロー数を更新
@@ -135,16 +143,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   // 通知リストをOverlayで表示
   void _toggleNotificationOverlay(BuildContext context) {
-  if (_isNotificationVisible) {
-    _animationController.reverse().then((_) {
-      _removeOverlay();
-    });
-  } else {
-    _showOverlay(context);
-    _animationController.reset(); // アニメーションの状態をリセット
-    _animationController.forward();// アニメーション開始
+    if (_isNotificationVisible) {
+      _animationController.reverse().then((_) {
+        _removeOverlay();
+      });
+    } else {
+      _showOverlay(context);
+      _animationController.reset(); // アニメーションの状態をリセット
+      _animationController.forward(); // アニメーション開始
+    }
   }
-}
 
   // 通知オーバーレイを表示
   void _showOverlay(BuildContext context) {
@@ -248,12 +256,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   List<Widget> get _pages => [
         Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
         Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
+        Center(child: Text('検索画面')),
         Center(child: Text('$_selectedCategoryの記録をつける画面')),
         DashboardScreen(
           selectedTab: _selectedTab,
           selectedCategory: _selectedCategory,
         ),
-        Center(child: Text('設定画面')),
       ];
 
   @override
@@ -290,7 +298,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           style: TextStyle(fontSize: 25, color: Colors.white),
                         ),
                         Spacer(),
-                        IconButton(icon: Icon(Icons.search), onPressed: () {}),
                         _buildNotificationIcon(), // 通知アイコンを表示
                         IconButton(icon: Icon(Icons.mail), onPressed: () {}),
                       ],
@@ -304,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
           Expanded(child: _pages[_currentIndex]),
-          if (_currentIndex != 4) _buildCategoryBar(context),
+          if (_currentIndex != 2) _buildCategoryBar(context),
         ],
       ),
       drawerEnableOpenDragGesture: true,
@@ -388,6 +395,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     },
                   ),
                   ListTile(
+                    leading: Icon(Icons.settings),
+                    title: Text('設定'),
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
                     leading: Icon(Icons.logout),
                     title: Text('ログアウト'),
                     onTap: () {
@@ -434,16 +448,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           label: 'ランキング',
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.search),
+          label: '検索',
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.post_add),
           label: '記録',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.timeline),
           label: 'データ',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: '設定',
         ),
       ],
     );
@@ -490,36 +504,71 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   // カテゴリバーの構築メソッド
   Widget _buildCategoryBar(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final double barWidth = screenWidth * 0.7;
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 20.0),
-      child: Container(
-        width: barWidth,
-        padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.horizontal(
-            left: Radius.circular(50),
-            right: Radius.circular(50),
-          ),
-        ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              // 条件に応じてカテゴリボタンを生成
-              if (_currentIndex == 0 || _currentIndex == 1 || _currentIndex == 3)
-                _buildCategoryButton('全体'),
-              if (_followingSubjects.isNotEmpty)
-                for (String subject in _followingSubjects)
-                  _buildCategoryButton(subject),
-            ],
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 画面幅の0.7倍を最大幅として設定
+          double maxBarWidth = constraints.maxWidth * 0.7;
+
+          // 各カテゴリのボタンを生成して、その合計幅を計算
+          double totalWidth = 0.0;
+          List<Widget> categoryButtons = [];
+
+          if (_currentIndex == 0 || _currentIndex == 1 || _currentIndex == 4) {
+            double buttonWidth = _calculateButtonWidth('全体');
+            categoryButtons.add(_buildCategoryButton('全体'));
+            totalWidth += buttonWidth;
+          }
+
+          for (String subject in _followingSubjects) {
+            double buttonWidth = _calculateButtonWidth(subject);
+            categoryButtons.add(_buildCategoryButton(subject));
+            totalWidth += buttonWidth;
+          }
+
+          // カテゴリバーの幅を、教科に依存する合計幅と最大幅の小さい方に設定
+          double barWidth = totalWidth < maxBarWidth ? totalWidth : maxBarWidth;
+
+          return Container(
+            width: barWidth,
+            padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.horizontal(
+                left: Radius.circular(50),
+                right: Radius.circular(50),
+              ),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: categoryButtons,
+              ),
+            ),
+          );
+        },
       ),
     );
+  }
+
+  // 各カテゴリボタンの幅を計算するメソッド
+  double _calculateButtonWidth(String text) {
+    // テキストスタイルを定義
+    TextStyle textStyle = TextStyle(
+      fontSize: 14.0, // ボタン内のテキストのフォントサイズ
+    );
+
+    // TextPainterを使ってテキストの幅を計算
+    TextPainter textPainter = TextPainter(
+      text: TextSpan(text: text, style: textStyle),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout(); // テキストのレイアウトを計算
+
+    // テキスト幅に余白を加算
+    double paddingWidth = 36.0; // 両サイドの余白
+    return textPainter.width + paddingWidth;
   }
 
   // カテゴリボタンの構築メソッド

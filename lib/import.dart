@@ -25,3 +25,9 @@ export 'presentation/component/answer_word_toeic.dart';
 export 'presentation/component/home.dart';
 export 'presentation/component/home_dashboard.dart';
 export 'presentation/component/badge_view_model.dart';
+export 'presentation/component/authentication/authentication.dart';
+export 'presentation/component/authentication/log_in.dart';
+export 'presentation/component/authentication/sign_in.dart';
+export 'presentation/component/authentication/information_registration.dart';
+
+
