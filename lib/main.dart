@@ -81,7 +81,7 @@ Future<void> saveTokenToSubcollection(String token) async {
   // FirebaseAuthを使用して現在ログイン中のユーザーIDを取得
   final userId = FirebaseAuth.instance.currentUser?.uid;
   if (userId == null) {
-    print('ログインしているユーザーがいません');
+    print('ログインしていません');
     return;
   }
 
