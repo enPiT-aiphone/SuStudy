@@ -84,6 +84,16 @@ class _SignInScreenState extends State<SignInScreen> {
                   return;
                 }
 
+
+                // パスワードが英文字と数字を含むか確認
+                if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]+$')
+                    .hasMatch(_password)) {
+                  setState(() {
+                    _errorMessage = 'パスワードには少なくとも英字と数字の両方を含めてください。';
+                  });
+                  return;
+                }
+
                 try {
                   final userCredential = await FirebaseAuth.instance
                       .createUserWithEmailAndPassword(
