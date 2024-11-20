@@ -15,7 +15,13 @@ class LanguageTOEICScreen extends StatelessWidget {
   final Map<String, List<String>> subCategories = {
     '文法': ['長文', '短文'],
     '単語': ['イディオム', '単語'],
-    'リスニング': ['Part1', 'Part2', 'Part3', 'Part4',],
+    'リスニング': ['Part1', 'Part2', 'Part3', 'Part4'],
+  };
+
+  final Map<String, String> categoryImages = {
+    '文法': 'images/grammar.png',
+    '単語': 'images/word.png',
+    'リスニング': 'images/listening.png',
   };
 
   // カテゴリーに基づく問題レベルを取得する関数
@@ -47,8 +53,15 @@ class LanguageTOEICScreen extends StatelessWidget {
       body: ListView.builder(
         itemCount: primaryCategories.length,
         itemBuilder: (context, index) {
+          String category = primaryCategories[index];
           return ListTile(
-            title: Text(primaryCategories[index]),
+            leading: Image.asset(
+              categoryImages[category]!, // カテゴリーに対応する画像を取得
+              width: 50,
+              height: 50,
+              fit: BoxFit.cover,
+            ),
+            title: Text(category),
             onTap: () {
               // オーバーレイを表示
               showGeneralDialog(
@@ -79,14 +92,13 @@ class LanguageTOEICScreen extends StatelessWidget {
                             ),
                           ),
                           child: ListView(
-                            children: subCategories[primaryCategories[index]]!
+                            children: subCategories[category]!
                                 .map((subCategory) {
                               return ListTile(
                                 title: Text(subCategory),
                                 onTap: () {
                                   // 「単語（再確認）」を選んだ場合に特別な処理を追加
-                                  if (primaryCategories[index] == '単語' &&
-                                      subCategory == '単語') {
+                                  if (category == '単語' && subCategory == '単語') {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -150,7 +162,8 @@ class SubCategoryScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => TOEICWordQuiz(level: selectedCategory), // 問題レベルを渡す
+                  builder: (context) =>
+                      TOEICWordQuiz(level: selectedCategory), // 問題レベルを渡す
                 ),
               );
             }

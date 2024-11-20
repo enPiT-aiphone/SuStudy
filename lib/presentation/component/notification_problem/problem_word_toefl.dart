@@ -1,7 +1,9 @@
 import '/import.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class TOEFLWordQuiz extends StatefulWidget {
-  final String level; 
+  final String level;
 
   const TOEFLWordQuiz({required this.level, Key? key}) : super(key: key);
 
@@ -73,11 +75,10 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
   }
 
   Future<void> _fetchQuestions() async {
-    // Firebase のコレクションを level に基づいて取得
     QuerySnapshot snapshot = await FirebaseFirestore.instance
         .collection('English_Skills')
         .doc('TOEFL')
-        .collection(widget.level) // widget.level を使用
+        .collection(widget.level)
         .doc('Words')
         .collection('Word')
         .get();
@@ -115,6 +116,8 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
   }
 
   void _handleTimeout() {
+    _saveResult(null, questions[currentQuestionIndex], false);
+
     setState(() {
       isCorrectAnswers[currentQuestionIndex] = false;
       isShowingAnswer = true;
@@ -156,6 +159,38 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
         }
       });
     });
+  }
+
+  Future<void> _saveResult(String? selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (userId == null) {
+      print('ログイン中のユーザーがいません');
+      return;
+    }
+
+    try {
+      final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+      final quizRecordsCollection = userDoc.collection('QuizRecords_TOEFL');
+      final wordName = wordData['Word'];
+      final wordDocRef = quizRecordsCollection.doc(wordName);
+
+      final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
+      final attemptNumber = attemptsSnapshot.docs.length + 1;
+
+      await wordDocRef.collection('Attempts').add({
+        'attempt_number': attemptNumber,
+        'timestamp': FieldValue.serverTimestamp(),
+        'selected_answer': selectedAnswer,
+        'correct_answer': wordData['ENG_to_JPN_Answer'],
+        'is_correct': isCorrect,
+        'word_id': wordData.id,
+      });
+
+      print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
+    } catch (e) {
+      print('クイズ結果の保存に失敗しました: $e');
+    }
   }
 
   @override
@@ -222,12 +257,12 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
                       fontSize: 30,
                     ),
                   ),
-                  SizedBox(height: 8), // スペースを追加
+                  SizedBox(height: 8),
                   Text(
-                    "【${wordData['Phonetic_Symbols']}】", // 発音記号を表示
+                    "【${wordData['Phonetic_Symbols']}】",
                     style: const TextStyle(
                       fontSize: 16,
-                      color: Colors.grey, // 色を指定する場合
+                      color: Colors.grey,
                     ),
                   ),
                 ],
@@ -288,6 +323,8 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
             isCorrectAnswers[currentQuestionIndex] = isCorrect;
             isShowingAnswer = true;
           });
+
+          _saveResult(option, wordData, isCorrect);
 
           showDialog(
             context: context,
