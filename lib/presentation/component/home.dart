@@ -4,7 +4,6 @@ import 'notification.dart'; // NotificationPageクラスが定義されている
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
 
-
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -23,8 +22,10 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   int _currentIndex = 0; // 現在選択されているボトムナビゲーションのインデックス
+  int loginDays = 15; // ログイン日数
   OverlayEntry? _overlayEntry; // OverlayEntryの参照を保持
   bool _isNotificationVisible = false; // 通知が表示されているかどうかを管理
   String _selectedCategory = ''; // 現在選択されたカテゴリ
@@ -53,11 +54,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // スケールアニメーションの設定
     _scaleAnimation = TweenSequence([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0, end: 1.05).chain(CurveTween(curve: Curves.easeOut)), // スケールアップ
+        tween: Tween<double>(begin: 0, end: 1.05)
+            .chain(CurveTween(curve: Curves.easeOut)), // スケールアップ
         weight: 170,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.05, end: 1.0).chain(CurveTween(curve: Curves.easeIn)), // スケールダウン
+        tween: Tween<double>(begin: 1.05, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeIn)), // スケールダウン
         weight: 50,
       ),
     ]).animate(_animationController);
@@ -90,8 +93,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _accountName = userData['user_name'] ?? 'Unknown'; // ユーザー名
           _accountId = userData['user_id'] ?? 'ID Unknown'; // ユーザーID
           _userNumber = userData['user_number'] ?? 0; // ユーザー番号
-          _followers = (userData['follower_ids'] as List<dynamic>?)?.length ?? 0; // フォロワー数
-          _followingSubjects = List<String>.from(userData['following_subjects'] ?? []); // フォロー中の教科
+          _followers = (userData['follower_ids'] as List<dynamic>?)?.length ??
+              0; // フォロワー数
+          _followingSubjects = List<String>.from(
+              userData['following_subjects'] ?? []); // フォロー中の教科
           if (_followingSubjects.isNotEmpty) {
             _selectedCategory = _followingSubjects[0]; // 最初の教科を選択
           }
@@ -132,7 +137,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     setState(() {
       _currentIndex = index;
       if (_currentIndex == 2 && _selectedCategory == '全体') {
-        _selectedCategory = _followingSubjects.isNotEmpty ? _followingSubjects[0] : 'TOEIC'; // 記録画面でカテゴリを選択
+        _selectedCategory = _followingSubjects.isNotEmpty
+            ? _followingSubjects[0]
+            : 'TOEIC'; // 記録画面でカテゴリを選択
       }
     });
   }
@@ -210,7 +217,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         builder: (context, badgeViewModel, _) {
                           return NotificationPage(
                             notifications: badgeViewModel.notifications,
-                            onNotificationTap: (docId) => badgeViewModel.markNotificationAsRead(docId),
+                            onNotificationTap: (docId) =>
+                                badgeViewModel.markNotificationAsRead(docId),
                           ); // 通知ページを表示
                         },
                       ),
@@ -254,17 +262,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-    // ボトムナビゲーションバーの項目を管理
-    List<Widget> get _pages => [
-      Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
-      Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
-      Center(child: Text('検索画面')),
-      LanguageCategoryScreen(selectedCategory: _selectedCategory), // _selectedCategory を渡す
-      DashboardScreen(
-        selectedTab: _selectedTab,
-        selectedCategory: _selectedCategory,
-      ),
-    ];
+  // ボトムナビゲーションバーの項目を管理
+  List<Widget> get _pages => [
+        Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
+        Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
+        Center(child: Text('検索画面')),
+        LanguageCategoryScreen(
+            selectedCategory: _selectedCategory), // _selectedCategory を渡す
+        DashboardScreen(
+          selectedTab: _selectedTab,
+          selectedCategory: _selectedCategory,
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -308,7 +317,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   backgroundColor: Colors.transparent,
                   elevation: 0,
                 ),
-                if (_currentIndex == 0 || _currentIndex == 1) _buildCustomTabBar(), // タブバーを表示
+                if (_currentIndex == 0 || _currentIndex == 1)
+                  _buildCustomTabBar(), // タブバーを表示
               ],
             ),
           ),
@@ -337,7 +347,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Color(0xFF0ABAB5), Color.fromARGB(255, 255, 255, 255)],
+                        colors: [
+                          Color(0xFF0ABAB5),
+                          Color.fromARGB(255, 255, 255, 255)
+                        ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
@@ -349,17 +362,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         CircleAvatar(
                           backgroundColor: Colors.white,
                           radius: 30,
-                          child: Icon(Icons.person, color: Color(0xFF0ABAB5), size: 40),
+                          child: Icon(Icons.person,
+                              color: Color(0xFF0ABAB5), size: 40),
                         ),
                         SizedBox(height: 10),
-                        Text(
-                          _accountName,
-                          style: TextStyle(
-                            color: Color.fromARGB(255, 100, 100, 100),
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                        Row(children: <Widget>[
+                          if (loginDays < 8) Container()
+                          else if (loginDays < 15) Image.asset('images/smallCrown.png', width: 24, height: 24)
+                          else if (loginDays < 22) Image.asset('images/middleCrown.png', width: 24, height: 24)
+                          else Image.asset('images/bigCrown.png', width: 24, height: 24),
+                          SizedBox(width: 5),
+                          Text(
+                            _accountName,
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 100, 100, 100),
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
+                        ]),
                         Text(
                           '@$_accountId',
                           style: TextStyle(
@@ -372,19 +393,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           children: [
                             Text(
                               'フォロワー: $_followers',
-                              style: TextStyle(color: Color.fromARGB(255, 100, 100, 100)),
+                              style: TextStyle(
+                                  color: Color.fromARGB(255, 100, 100, 100)),
                             ),
                             SizedBox(width: 10),
                             Text(
                               'フォロー中: $_following',
-                              style: TextStyle(color: Color.fromARGB(255, 100, 100, 100)),
+                              style: TextStyle(
+                                  color: Color.fromARGB(255, 100, 100, 100)),
                             ),
                           ],
                         ),
                         SizedBox(height: 10),
                         Text(
                           'フォロー中の教科: ${_followingSubjects.join(', ')}',
-                          style: TextStyle(color: Color.fromARGB(255, 100, 100, 100)),
+                          style: TextStyle(
+                              color: Color.fromARGB(255, 100, 100, 100)),
                         ),
                       ],
                     ),
@@ -421,7 +445,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => ViewFormSelection()),
+                    MaterialPageRoute(
+                        builder: (context) => ViewFormSelection()),
                   );
                 },
               ),
@@ -582,7 +607,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         decoration: BoxDecoration(
-          color: _selectedCategory == category ? Color(0xFF0ABAB5) : Colors.transparent,
+          color: _selectedCategory == category
+              ? Color(0xFF0ABAB5)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
