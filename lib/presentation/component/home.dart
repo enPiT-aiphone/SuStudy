@@ -80,7 +80,9 @@ class _HomeScreenState extends State<HomeScreen>
         print('ログインしているユーザーがいません');
         return;
       }
-
+      
+      //仮のコード（ログイン日数の更新）
+      addLoginHistory(userId);
       // Usersコレクションから現在ログイン中のユーザーのデータを取得
       final userSnapshot = await FirebaseFirestore.instance
           .collection('Users')

@@ -41,6 +41,7 @@ class _InformationRegistrationScreenState
           'occupation': _occupation,
           'follower_ids': [], // 空のリスト
           'following_subjects': [], // 空のリスト
+          'login_history':<Timestamp>[],
         });
 
         // サブコレクションを作成
@@ -156,7 +157,11 @@ class _InformationRegistrationScreenState
               SizedBox(height: 20),
               // 保存ボタン
               ElevatedButton(
-                onPressed: _saveUserInfo,
+                onPressed: () async {
+                    // ここでログイン履歴を追加
+                    await addLoginHistory(_userId); // addLoginHistory の呼び出し
+                    _saveUserInfo(); // ユーザー情報を保存する関数
+                },
                 child: Text('保存'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF0ABAB5), // `primary` を `backgroundColor` に変更

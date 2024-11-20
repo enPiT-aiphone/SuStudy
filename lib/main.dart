@@ -3,6 +3,7 @@ import 'import.dart';
 import 'package:flutter/foundation.dart' show kIsWeb; // kIsWebを使用してWebかどうかを判定
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 
+
 void main() async {
   // Flutterエンジンの初期化（asyncを用いるためにawaitが必要）
   WidgetsFlutterBinding.ensureInitialized();
@@ -160,6 +161,14 @@ class AuthChecker extends StatelessWidget {
 
         if (snapshot.hasData) {
           // ユーザーがログインしている場合、ホーム画面に遷移
+          //ここでLogin_historyに追加
+           // ユーザーがログインしている場合、userId を取得
+          final userId = snapshot.data?.uid; // snapshotからuidを取得
+          if (userId != null) {
+            // userId が null でないことを確認してからログイン履歴に追加
+            addLoginHistory(userId);
+          }
+        
           return HomeScreen();
         } else {
           // ログインしていない場合、認証選択画面を表示
