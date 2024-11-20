@@ -2,7 +2,8 @@
 import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
-import 'record.dart'; //記録の画面のコンポーネント
+import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
+
 
 class MyApp extends StatelessWidget {
   @override
@@ -253,18 +254,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  // ボトムナビゲーションバーの項目を管理
-  List<Widget> get _pages => [
-        Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
-        Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
-        Center(child: Text('検索画面')),
-        //Center(child: Text('$_selectedCategoryの記録をつける画面')),
-        LanguageCategoryScreen(), // record.dart の画面に変更
-        DashboardScreen(
-          selectedTab: _selectedTab,
-          selectedCategory: _selectedCategory,
-        ),
-      ];
+    // ボトムナビゲーションバーの項目を管理
+    List<Widget> get _pages => [
+      Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
+      Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
+      Center(child: Text('検索画面')),
+      LanguageCategoryScreen(selectedCategory: _selectedCategory), // _selectedCategory を渡す
+      DashboardScreen(
+        selectedTab: _selectedTab,
+        selectedCategory: _selectedCategory,
+      ),
+    ];
 
   @override
   Widget build(BuildContext context) {

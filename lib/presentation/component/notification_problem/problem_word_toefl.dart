@@ -1,12 +1,12 @@
 import '/import.dart';
 
-class TOEICWordQuiz extends StatefulWidget {
-  final String level;
+class TOEFLWordQuiz extends StatefulWidget {
+  final String level; 
 
-  const TOEICWordQuiz({required this.level, Key? key}) : super(key: key);
+  const TOEFLWordQuiz({required this.level, Key? key}) : super(key: key);
 
   @override
-  _TOEICWordQuizState createState() => _TOEICWordQuizState();
+  _TOEFLWordQuizState createState() => _TOEFLWordQuizState();
 }
 
 // バツ（×）印を描画するカスタムペインター
@@ -27,7 +27,7 @@ class CrossPainter extends CustomPainter {
   }
 }
 
-class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProviderStateMixin {
+class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProviderStateMixin {
   int currentQuestionIndex = 0;
   List<QueryDocumentSnapshot> questions = [];
   List<List<String>> shuffledOptions = [];
@@ -55,8 +55,8 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
       });
 
     _colorAnimation = ColorTween(
-      begin: const Color(0xFF0ABAB5), 
-      end: const Color.fromARGB(255, 255, 82, 82),   
+      begin: const Color(0xFF0ABAB5),
+      end: const Color.fromARGB(255, 255, 82, 82),
     ).animate(_animationController);
 
     _animationController.addStatusListener((status) {
@@ -73,10 +73,11 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
   }
 
   Future<void> _fetchQuestions() async {
+    // Firebase のコレクションを level に基づいて取得
     QuerySnapshot snapshot = await FirebaseFirestore.instance
         .collection('English_Skills')
-        .doc('TOEIC')
-        .collection(widget.level)
+        .doc('TOEFL')
+        .collection(widget.level) // widget.level を使用
         .doc('Words')
         .collection('Word')
         .get();
@@ -175,8 +176,7 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
             backgroundColor: Colors.transparent,
             elevation: 0,
             title: Row(
-              children: 
-              const [
+              children: const [
                 Text(
                   'SuStudy, ',
                   style: TextStyle(
@@ -263,7 +263,6 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
   Widget _buildAnswerButton(String option, QueryDocumentSnapshot wordData, double screenHeight) {
     Color? backgroundColor;
     Color finalBorderColor = _colorAnimation.value ?? const Color(0xFF0ABAB5);
-
 
     if (isShowingAnswer) {
       if (option == wordData['ENG_to_JPN_Answer']) {

@@ -19,9 +19,9 @@ export 'pages/English_Skills/TOEIC/Grammar/Short_Sentence/add_grammar_short_sent
 export 'pages/English_Skills/TOEIC/Grammar/Short_Sentence/view_grammar_short_sentence_toeic.dart';
 export 'pages/English_Skills/TOEFL/Words/Word/add_word_toefl.dart';
 export 'pages/English_Skills/TOEFL/Words/Word/view_word_toefl.dart';
-export 'presentation/component/problem_word_toeic.dart';
+export 'presentation/component/notification_problem/problem_word_toeic.dart';
 export 'presentation/component/toeic_level_selection.dart';
-export 'presentation/component/answer_word_toeic.dart';
+export 'presentation/component/notification_problem/result_toeic_toefl.dart';
 export 'presentation/component/home.dart';
 export 'presentation/component/home_dashboard.dart';
 export 'presentation/component/badge_view_model.dart';
@@ -29,5 +29,4 @@ export 'presentation/component/authentication/authentication.dart';
 export 'presentation/component/authentication/log_in.dart';
 export 'presentation/component/authentication/sign_in.dart';
 export 'presentation/component/authentication/information_registration.dart';
-
-
+export 'presentation/component/record/record.dart';
