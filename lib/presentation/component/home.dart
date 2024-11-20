@@ -25,7 +25,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0; // 現在選択されているボトムナビゲーションのインデックス
-  int loginDays = 10; // ログイン日数
+  int loginDays = 15; // ログイン日数
   OverlayEntry? _overlayEntry; // OverlayEntryの参照を保持
   bool _isNotificationVisible = false; // 通知が表示されているかどうかを管理
   String _selectedCategory = ''; // 現在選択されたカテゴリ
@@ -367,18 +367,11 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                         SizedBox(height: 10),
                         Row(children: <Widget>[
-                          if (loginDays < 8)
-                            Image.asset('images/smallCrown.png',
-                                width: 24, height: 24)
-                          else if (loginDays < 15)
-                            Image.asset('images/middleCrown.png',
-                                width: 24, height: 24)
-                          else if (loginDays < 22)
-                            Image.asset('images/bigCrown.png',
-                                width: 24, height: 24)
-                          else
-                            Container(),
-                            SizedBox(width: 5),
+                          if (loginDays < 8) Container()
+                          else if (loginDays < 15) Image.asset('images/smallCrown.png', width: 24, height: 24)
+                          else if (loginDays < 22) Image.asset('images/middleCrown.png', width: 24, height: 24)
+                          else Image.asset('images/bigCrown.png', width: 24, height: 24),
+                          SizedBox(width: 5),
                           Text(
                             _accountName,
                             style: TextStyle(
