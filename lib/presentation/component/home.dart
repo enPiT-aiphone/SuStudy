@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _isNotificationVisible = false; // 通知が表示されているかどうかを管理
   String _selectedCategory = ''; // 現在選択されたカテゴリ
   String _selectedTab = '最新'; // 現在選択されたタブ
+  int loginDays = 7; // ログイン日数
   late AnimationController _animationController; // アニメーションコントローラ
   late Animation<double> _scaleAnimation; // スケールアニメーション
   late Animation<double> _opacityAnimation; // 透過アニメーション
@@ -352,14 +353,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           child: Icon(Icons.person, color: Color(0xFF0ABAB5), size: 40),
                         ),
                         SizedBox(height: 10),
-                        Text(
-                          _accountName,
-                          style: TextStyle(
-                            color: Color.fromARGB(255, 100, 100, 100),
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        Row(
+                          children: <Widget>[
+                            if(loginDays == 7)Image.network('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUf5HY67BWecppQVdrwpCQm0GXDDwZCp3Xsg&s', width: 30, height: 30),
+                            Text(
+                              _accountName,
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 100, 100, 100),
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                          ),                    
                         Text(
                           '@$_accountId',
                           style: TextStyle(
