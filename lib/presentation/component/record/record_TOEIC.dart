@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import '/import.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'record_problem_toeic_word.dart';
 
-class LanguageTOEICScreen extends StatelessWidget {
-  final String selectedCategory; // _selectedCategory を受け取る
+class LanguageTOEICScreen extends StatefulWidget {
+  final String selectedCategory;
 
   LanguageTOEICScreen({required this.selectedCategory});
+
+  @override
+  _LanguageTOEICScreenState createState() => _LanguageTOEICScreenState();
+}
+
+class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
+  String selectedQuestionType = ''; // 選択された質問タイプを保持
 
   final List<String> primaryCategories = [
     '文法',
@@ -13,9 +22,9 @@ class LanguageTOEICScreen extends StatelessWidget {
   ];
 
   final Map<String, List<String>> subCategories = {
-    '文法': ['長文', '短文'],
-    '単語': ['イディオム', '単語'],
-    'リスニング': ['Part1', 'Part2', 'Part3', 'Part4'],
+    '文法': ['      長文', '      短文'],
+    '単語': ['      単語', '      イディオム'],
+    'リスニング': ['      Part1', '     Part2', '     Part3', '     Part4'],
   };
 
   final Map<String, String> categoryImages = {
@@ -26,7 +35,7 @@ class LanguageTOEICScreen extends StatelessWidget {
 
   // カテゴリーに基づく問題レベルを取得する関数
   String getProblemLevel() {
-    switch (selectedCategory) {
+    switch (widget.selectedCategory) {
       case 'TOEIC300点':
         return 'up_to_300';
       case 'TOEIC500点':
@@ -44,132 +53,246 @@ class LanguageTOEICScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String problemLevel = getProblemLevel(); // 問題レベルを取得
+    String problemLevel = getProblemLevel();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('$selectedCategory の問題'),
-      ),
-      body: ListView.builder(
-        itemCount: primaryCategories.length,
-        itemBuilder: (context, index) {
-          String category = primaryCategories[index];
-          return ListTile(
-            leading: Image.asset(
-              categoryImages[category]!, // カテゴリーに対応する画像を取得
-              width: 50,
-              height: 50,
-              fit: BoxFit.cover,
-            ),
-            title: Text(category),
-            onTap: () {
-              // オーバーレイを表示
-              showGeneralDialog(
-                context: context,
-                barrierDismissible: true,
-                barrierLabel: '',
-                pageBuilder: (context, animation1, animation2) {
-                  return Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Container(
-                      width: MediaQuery.of(context).size.width, // 横幅を画面いっぱいに設定
-                      height: MediaQuery.of(context).size.height * 0.88, // 高さを9割に設定
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(20), // 上部の角を丸くする
-                          topRight: Radius.circular(20),
-                        ),
+      body: Column(
+        children: [
+          SizedBox(height: 40),
+          _buildTextLabel(context, "${widget.selectedCategory} の問題"),
+          SizedBox(height: 40),
+          Expanded(
+            child: ListView.builder(
+              itemCount: primaryCategories.length,
+              itemBuilder: (context, index) {
+                String category = primaryCategories[index];
+                return Column(
+                  children: [
+                    ExpansionTile(
+                      leading: Image.asset(
+                        categoryImages[category]!,
+                        width: 70,
+                        height: 70,
+                        fit: BoxFit.cover,
                       ),
-                      child: Material(
-                        color: Colors.transparent, // 背景を透明に設定
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(20), // 上部の角を丸くする
-                              topRight: Radius.circular(20),
-                            ),
-                          ),
-                          child: ListView(
-                            children: subCategories[category]!
-                                .map((subCategory) {
-                              return ListTile(
-                                title: Text(subCategory),
-                                onTap: () {
-                                  // 「単語（再確認）」を選んだ場合に特別な処理を追加
-                                  if (category == '単語' && subCategory == '単語') {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => TOEICWordQuiz(
-                                            level: problemLevel), // 問題レベルを渡す
-                                      ),
-                                    );
-                                  }
-                                },
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
+                      title: Text(category),
+                      children: subCategories[category]!
+                          .map((subCategory) {
+                            return ListTile(
+                              title: Text(subCategory),
+                              onTap: () {
+                                if (category == '単語' && subCategory == '      単語') {
+                                  _showOverlay(context, problemLevel);
+                                }
+                              },
+                            );
+                          })
+                          .toList(),
                     ),
-                  );
-                },
-                transitionBuilder: (context, animation1, animation2, child) {
-                  return SlideTransition(
-                    position: Tween(
-                      begin: Offset(0, 1),
-                      end: Offset(0, 0),
-                    ).animate(animation1),
-                    child: child,
-                  );
-                },
-              );
-            },
-          );
-        },
+                    SizedBox(height: 10), // 各カテゴリ間の間隔を広げる
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
-}
 
+  Widget _buildTextLabel(BuildContext context, String label) {
+    final double buttonWidth = MediaQuery.of(context).size.width * 0.75;
 
-class SubCategoryScreen extends StatelessWidget {
-  final String category;
-  final List<String> subCategories;
-  final String selectedCategory; // 問題レベルを受け取る
-  final ScrollController scrollController; // スクロールコントローラ
+    return Container(
+      width: buttonWidth,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFF0ABAB5)),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFF0ABAB5),
+          fontSize: 18,
+        ),
+      ),
+    );
+  }
 
-  SubCategoryScreen({
-    required this.category,
-    required this.subCategories,
-    required this.selectedCategory,
-    required this.scrollController,
-  });
+  // オーバーレイを表示する
+  void _showOverlay(BuildContext context, String problemLevel) {
+    // 初期値として「ランダム」を選択
+    String? selectedOption = 'random';
 
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      controller: scrollController, // スクロールコントローラを設定
-      itemCount: subCategories.length,
-      itemBuilder: (context, index) {
-        return ListTile(
-          title: Text(subCategories[index]),
-          onTap: () {
-            // 「単語（再確認）」を選んだ場合に特別な処理を追加
-            if (category == '単語' && subCategories[index] == '単語') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      TOEICWordQuiz(level: selectedCategory), // 問題レベルを渡す
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      pageBuilder: (context, animation1, animation2) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height * 0.6,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
                 ),
-              );
-            }
+                child: Column(
+                  children: [
+                    SizedBox(height: 20),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _buildSelectableOption(
+                            context,
+                            'ランダム',
+                            selectedOption == 'random',
+                            () {
+                              setState(() {
+                                selectedOption = 'random';
+                              });
+                            },
+                          ),
+                          _buildSelectableOption(
+                            context,
+                            '未学習',
+                            selectedOption == 'unanswered',
+                            () {
+                              setState(() {
+                                selectedOption = 'unanswered';
+                              });
+                            },
+                          ),
+                          _buildSelectableOption(
+                            context,
+                            '直近誤答',
+                            selectedOption == 'incorrect',
+                            () {
+                              setState(() {
+                                selectedOption = 'incorrect';
+                              });
+                            },
+                          ),
+                          _buildSelectableOption(
+                            context,
+                            'うろ覚え',
+                            selectedOption == 'recent_incorrect',
+                            () {
+                              setState(() {
+                                selectedOption = 'recent_incorrect';
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    _buildStartButton(
+                      context,
+                      'スタート',
+                      selectedOption != null
+                          ? () {
+                              Navigator.pop(context); // オーバーレイを閉じる
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => TOEICWordQuiz(
+                                    level: problemLevel,
+                                    questionType: selectedOption!,
+                                  ),
+                                ),
+                              );
+                            }
+                          : null, // チェックがない場合は無効
+                    ),
+                    SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            );
           },
+        );
+      },
+      transitionBuilder: (context, animation1, animation2, child) {
+        return SlideTransition(
+          position: Tween(
+            begin: Offset(0, 1),
+            end: Offset(0, 0),
+          ).animate(animation1),
+          child: child,
         );
       },
     );
   }
+
+ Widget _buildSelectableOption(
+  BuildContext context,
+  String label,
+  bool isSelected,
+  VoidCallback onTap,
+) {
+  final double buttonWidth = MediaQuery.of(context).size.width * 0.75; // ボタンの幅を画面の0.75倍に設定
+
+  return Material(
+    color: Colors.transparent, // 背景色を透明に設定
+    child: InkWell(
+      onTap: onTap,
+      child: Container(
+        width: buttonWidth,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: isSelected ? const Color(0xFF0ABAB5) : Colors.grey),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF0ABAB5) : Colors.grey.shade600,
+            fontSize: 18,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildStartButton(BuildContext context, String label, VoidCallback? onPressed) {
+  final double buttonWidth = MediaQuery.of(context).size.width * 0.75;
+
+  return Material(
+    color: Colors.transparent, // 背景色を透明に設定
+    child: InkWell(
+      onTap: onPressed,
+      child: Container(
+        width: buttonWidth,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: Color(0xFF0ABAB5),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 }

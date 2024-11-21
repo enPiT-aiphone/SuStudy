@@ -94,7 +94,7 @@ class TOEICLevelSelection extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => TOEICWordQuiz(level: level),  // 各レベルに応じたクイズ画面を表示
+              builder: (context) => NotificationTOEICWordQuiz(level: level),  // 各レベルに応じたクイズ画面を表示
             ),
           );
         },
