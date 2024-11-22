@@ -89,72 +89,59 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     }
   }
 
-  void _calculateLoginStats(List<dynamic> loginHistory) {
+void _calculateLoginStats(List<dynamic> loginHistory) {
   if (loginHistory.isEmpty) {
-    // ログイン履歴が空の場合、すべての値をリセット
     setState(() {
-      loginStreak = 0;
-      longestStreak = 0;
-      totalLogins = 0;
+      loginStreak = 0; // 今日までの連続ログイン日数
+      longestStreak = 0; // 最長連続ログイン日数
+      totalLogins = 0; // 総ログイン数
     });
     return;
   }
 
-  // タイムスタンプをDateTime型に変換し、日付のみを扱う
   final loginDates = loginHistory
-      .map((timestamp) => (timestamp as Timestamp).toDate()) // タイムスタンプをDateTimeに変換
-      .map((date) => DateTime(date.year, date.month, date.day)) // 日付のみに変換
-      .toSet() // 同じ日の重複ログインを除外
+      .map((timestamp) => (timestamp as Timestamp).toDate())
+      .map((date) => DateTime(date.year, date.month, date.day))
+      .toSet()
       .toList()
-    ..sort((a, b) => b.compareTo(a)); // 降順でソート
+    ..sort((a, b) => a.compareTo(b)); // 日付を昇順にソート
 
-  int currentStreak = 1; // 連続ログイン日数
+  int currentStreak = 1; // 今日までの連続ログイン日数
   int maxStreak = 1; // 最長連続ログイン日数
   int total = loginDates.length; // 総ログイン日数
+  int todayStreak = 0; // 今日の連続ログイン日数
 
-  if (loginDates.length == 1) {
-    // ログイン履歴が1件の場合
-    final today = DateTime.now();
-    if (loginDates.first.isAtSameMomentAs(DateTime(today.year, today.month, today.day))) {
-      loginStreak = 1; // 今日ログインしている場合、連続ログインを1とする
-    } else {
-      loginStreak = 0; // 今日ログインしていない場合
-    }
-    longestStreak = 1;
-    totalLogins = total;
-    setState(() {
-      loginStreak = loginStreak;
-      longestStreak = longestStreak;
-      totalLogins = totalLogins;
-    });
-    return;
-  }
-
-  // ログイン履歴が2件以上の場合、連続性を計算
-  for (int i = 1; i < loginDates.length; i++) {
-    if (loginDates[i - 1].difference(loginDates[i]).inDays == 1) {
-      // 前日と連続している場合
-      currentStreak++;
-      if (currentStreak > maxStreak) {
-        maxStreak = currentStreak;
-      }
-    } else if (loginDates[i - 1].difference(loginDates[i]).inDays > 1) {
-      // 連続が途切れた場合
-      currentStreak = 1;
-    }
-  }
-
-  // 今日が最新のログイン日かを確認
+  // 今日がログインしている場合
   final today = DateTime.now();
   final todayDate = DateTime(today.year, today.month, today.day);
-  loginStreak = loginDates.first == todayDate ? currentStreak : 0;
+  
+  if (loginDates.first.isAtSameMomentAs(todayDate)) {
+    todayStreak = 1; // 今日もログインしているので連続日数は1
+  }
 
-  // 結果を更新
+  // ログイン履歴をチェックして連続性を計算
+  for (int i = 1; i < loginDates.length; i++) {
+    if (loginDates[i - 1].difference(loginDates[i]).inDays == -1) {
+      currentStreak++; // 連続している場合
+    } else {
+      maxStreak = currentStreak > maxStreak ? currentStreak : maxStreak; // 最長連続日数を更新
+      currentStreak = 1; // 途切れたらリセット
+    }
+  }
+
+  // 最後の連続日数を最長連続日数に反映
+  maxStreak = currentStreak > maxStreak ? currentStreak : maxStreak;
+
+  todayStreak=currentStreak;
+
+  // 最長連続ログイン日数と今日までの連続ログイン日数をセット
   setState(() {
-    longestStreak = maxStreak; // 最長連続ログインを設定
-    totalLogins = total; // 総ログイン数を設定
+    loginStreak = todayStreak; // 今日までの連続ログイン日数
+    longestStreak = maxStreak; // 最長連続ログイン日数
+    totalLogins = total; // 総ログイン数
   });
 }
+
   // 日付を表示するための関数
   String _getDisplayDate() {
     final displayDate = _selectedDay ?? DateTime.now(); // 選択されていない場合は今日の日付
