@@ -178,60 +178,78 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // 通知オーバーレイのエントリを生成
-  OverlayEntry _createOverlayEntry() {
-    return OverlayEntry(
-      builder: (context) => Stack(
-        children: [
-          GestureDetector(
-            onTap: () => _toggleNotificationOverlay(context), // タップでオーバーレイを閉じる
-            child: Container(color: Colors.transparent),
-          ),
-          Positioned(
-            top: kToolbarHeight + 10, // 通知リストの位置を指定
-            right: 50,
-            child: ScaleTransition(
-              scale: _scaleAnimation, // スケールアニメーションを適用
-              alignment: Alignment.topRight,
-              child: FadeTransition(
-                opacity: _opacityAnimation, // 透過アニメーションを適用
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    width: 250,
-                    height: 300,
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Consumer<BadgeViewModel>(
-                        builder: (context, badgeViewModel, _) {
-                          return NotificationPage(
-                            notifications: badgeViewModel.notifications,
-                            onNotificationTap: (docId) =>
-                                badgeViewModel.markNotificationAsRead(docId),
-                          ); // 通知ページを表示
-                        },
+OverlayEntry _createOverlayEntry() {
+  return OverlayEntry(
+    builder: (context) => Stack(
+      children: [
+        GestureDetector(
+          onTap: () => _toggleNotificationOverlay(context),
+          child: Container(color: Colors.transparent),
+        ),
+        Positioned(
+          top: kToolbarHeight + 10,
+          right: 50,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            alignment: Alignment.topRight,
+            child: FadeTransition(
+              opacity: _opacityAnimation,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 250,
+                  height: 300,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
                       ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Consumer<BadgeViewModel>(
+                      builder: (context, badgeViewModel, _) {
+                        return NotificationPage(
+                          notifications: badgeViewModel.notifications,
+                          onNotificationTap: (docId) {
+                            final selectedNotification = badgeViewModel.notifications.firstWhere(
+                              (notif) => notif['id'] == docId,
+                              orElse: () => {}, // 空の Map を返す
+                            );
+                            if (selectedNotification.isNotEmpty) {
+                              final level = selectedNotification['level'] ?? 'up_to_500';
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => NotificationTOEICWordQuiz(level: level),
+                                ),
+                              );
+                            } else {
+                              print('通知が見つかりませんでした');
+                            }
+                          },
+                        );
+                      },
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
+
+
+
 
   // 通知アイコンのウィジェットを構築
   Widget _buildNotificationIcon() {
