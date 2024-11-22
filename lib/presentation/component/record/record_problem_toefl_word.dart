@@ -1,32 +1,14 @@
 import '/import.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-
 class TOEFLWordQuiz extends StatefulWidget {
-  final String level;
+  final String level; // TOEFLレベル
+  final String questionType; // 出題タイプ（random, unanswered, incorrect, recent_incorrect）
 
-  const TOEFLWordQuiz({required this.level, Key? key}) : super(key: key);
+  const TOEFLWordQuiz({required this.level, required this.questionType, Key? key}) : super(key: key);
 
   @override
   _TOEFLWordQuizState createState() => _TOEFLWordQuizState();
-}
-
-// バツ（×）印を描画するカスタムペインター
-class CrossPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    Paint paint = Paint()
-      ..color = const Color(0xFFFF5252)
-      ..strokeWidth = 6;
-
-    canvas.drawLine(Offset(0, size.height), Offset(size.width, 0), paint);
-    canvas.drawLine(Offset(size.width, size.height), Offset(0, 0), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
-  }
 }
 
 class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProviderStateMixin {
@@ -75,13 +57,103 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
   }
 
   Future<void> _fetchQuestions() async {
-    QuerySnapshot snapshot = await FirebaseFirestore.instance
-        .collection('English_Skills')
-        .doc('TOEFL')
-        .collection(widget.level)
-        .doc('Words')
-        .collection('Word')
-        .get();
+    QuerySnapshot snapshot;
+
+    if (widget.questionType == 'random') {
+      snapshot = await FirebaseFirestore.instance
+          .collection('English_Skills')
+          .doc('TOEFL')
+          .collection(widget.level)
+          .doc('Words')
+          .collection('Word')
+          .get();
+    } else if (widget.questionType == 'unanswered') {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      final answeredWordsSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(userId)
+          .collection('QuizRecords_TOEFL')
+          .get();
+
+      List<String> answeredWordIds = answeredWordsSnapshot.docs
+          .map((doc) => doc['word_id'] as String)
+          .toList();
+
+      if (answeredWordIds.isEmpty) {
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEFL')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .get();
+      } else {
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEFL')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .where(FieldPath.documentId, whereNotIn: answeredWordIds)
+            .get();
+      }
+    } else if (widget.questionType == 'incorrect') {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      snapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(userId)
+          .collection('QuizRecords_TOEFL')
+          .get();
+
+      List<QueryDocumentSnapshot> allRecords = snapshot.docs;
+      List<String> incorrectWords = [];
+
+      for (var record in allRecords) {
+        final wordDocRef = FirebaseFirestore.instance
+            .collection('QuizRecords_TOEFL')
+            .doc(record.id)
+            .collection('Attempts')
+            .orderBy('attempt_number', descending: true)
+            .limit(1);
+
+        final latestAttemptSnapshot = await wordDocRef.get();
+
+        if (latestAttemptSnapshot.docs.isNotEmpty) {
+          final latestAttempt = latestAttemptSnapshot.docs.first;
+          if (!latestAttempt['is_correct']) {
+            incorrectWords.add(record.id);
+          }
+        }
+      }
+
+      if (incorrectWords.isEmpty) {
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEFL')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .get();
+      } else {
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEFL')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .where(FieldPath.documentId, whereIn: incorrectWords)
+            .get();
+      }
+    } else {
+      snapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(FirebaseAuth.instance.currentUser?.uid)
+          .collection('QuizRecords_TOEFL')
+          .where('is_correct', isEqualTo: false)
+          .orderBy('timestamp', descending: true)
+          .limit(3)
+          .get();
+    }
 
     List<QueryDocumentSnapshot> allQuestions = snapshot.docs;
     questions = allQuestions.where((doc) => !askedWordIds.contains(doc.id)).toList();
@@ -115,10 +187,41 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
     _animationController.forward();
   }
 
-  void _handleTimeout() {
-    _saveResult(null, questions[currentQuestionIndex], false);
+  Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
 
+    if (userId == null) {
+      print('ログイン中のユーザーがいません');
+      return;
+    }
+
+    try {
+      final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+      final quizRecordsCollection = userDoc.collection('QuizRecords_TOEFL');
+      final wordName = wordData['Word'];
+      final wordDocRef = quizRecordsCollection.doc(wordName);
+
+      final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
+      final attemptNumber = attemptsSnapshot.docs.length + 1;
+
+      await wordDocRef.collection('Attempts').add({
+        'attempt_number': attemptNumber,
+        'timestamp': FieldValue.serverTimestamp(),
+        'selected_answer': selectedAnswer,
+        'correct_answer': wordData['ENG_to_JPN_Answer'],
+        'is_correct': isCorrect,
+        'word_id': wordData.id,
+      });
+
+      print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
+    } catch (e) {
+      print('クイズ結果の保存に失敗しました: $e');
+    }
+  }
+
+  void _handleTimeout() {
     setState(() {
+      _saveResult('', questions[currentQuestionIndex], false);
       isCorrectAnswers[currentQuestionIndex] = false;
       isShowingAnswer = true;
 
@@ -159,38 +262,6 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
         }
       });
     });
-  }
-
-  Future<void> _saveResult(String? selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-
-    if (userId == null) {
-      print('ログイン中のユーザーがいません');
-      return;
-    }
-
-    try {
-      final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
-      final quizRecordsCollection = userDoc.collection('QuizRecords_TOEFL');
-      final wordName = wordData['Word'];
-      final wordDocRef = quizRecordsCollection.doc(wordName);
-
-      final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
-      final attemptNumber = attemptsSnapshot.docs.length + 1;
-
-      await wordDocRef.collection('Attempts').add({
-        'attempt_number': attemptNumber,
-        'timestamp': FieldValue.serverTimestamp(),
-        'selected_answer': selectedAnswer,
-        'correct_answer': wordData['ENG_to_JPN_Answer'],
-        'is_correct': isCorrect,
-        'word_id': wordData.id,
-      });
-
-      print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
-    } catch (e) {
-      print('クイズ結果の保存に失敗しました: $e');
-    }
   }
 
   @override
@@ -321,10 +392,9 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
           setState(() {
             selectedAnswers[currentQuestionIndex] = option;
             isCorrectAnswers[currentQuestionIndex] = isCorrect;
+            _saveResult(option, wordData, isCorrect);
             isShowingAnswer = true;
           });
-
-          _saveResult(option, wordData, isCorrect);
 
           showDialog(
             context: context,

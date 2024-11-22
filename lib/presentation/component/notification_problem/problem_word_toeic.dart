@@ -1,9 +1,11 @@
 import '/import.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class TOEICWordQuiz extends StatefulWidget {
+
+class NotificationTOEICWordQuiz extends StatefulWidget {
   final String level; // LanguageTOEICScreen から渡される TOEIC レベル
 
-  const TOEICWordQuiz({required this.level, Key? key}) : super(key: key);
+  const NotificationTOEICWordQuiz({required this.level, Key? key}) : super(key: key);
 
   @override
   _TOEICWordQuizState createState() => _TOEICWordQuizState();
@@ -27,7 +29,7 @@ class CrossPainter extends CustomPainter {
   }
 }
 
-class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProviderStateMixin {
+class _TOEICWordQuizState extends State<NotificationTOEICWordQuiz> with SingleTickerProviderStateMixin {
   int currentQuestionIndex = 0;
   List<QueryDocumentSnapshot> questions = [];
   List<List<String>> shuffledOptions = [];
@@ -114,8 +116,43 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
     _animationController.forward();
   }
 
+Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+
+  if (userId == null) {
+    print('ログイン中のユーザーがいません');
+    return;
+  }
+
+  try {
+    final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+    final quizRecordsCollection = userDoc.collection('QuizRecords_TOEIC');
+    final wordName = wordData['Word']; // 単語名を取得
+    final wordDocRef = quizRecordsCollection.doc(wordName); // 単語名をドキュメントIDとして使用
+
+    // サブコレクション "Attempts" のドキュメント数を取得
+    final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
+    final attemptNumber = attemptsSnapshot.docs.length + 1; // ドキュメント数 + 1
+
+    // サブコレクション "Attempts" にデータを追加
+    await wordDocRef.collection('Attempts').add({
+      'attempt_number': attemptNumber,
+      'timestamp': FieldValue.serverTimestamp(),
+      'selected_answer': selectedAnswer,
+      'correct_answer': wordData['ENG_to_JPN_Answer'],
+      'is_correct': isCorrect,
+      'word_id': wordData.id,
+    });
+
+    print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
+  } catch (e) {
+    print('クイズ結果の保存に失敗しました: $e');
+  }
+}
+
   void _handleTimeout() {
     setState(() {
+      _saveResult('', questions[currentQuestionIndex], false); // タイムアウト時も記録
       isCorrectAnswers[currentQuestionIndex] = false;
       isShowingAnswer = true;
 
@@ -286,6 +323,7 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
           setState(() {
             selectedAnswers[currentQuestionIndex] = option;
             isCorrectAnswers[currentQuestionIndex] = isCorrect;
+            _saveResult(option, wordData, isCorrect); // クイズ結果を保存
             isShowingAnswer = true;
           });
 
