@@ -63,33 +63,40 @@ class BadgeViewModel extends ChangeNotifier {
   }
 
   // 通知を追加（titleとbodyの両方を受け取る）
-  Future<void> addNotification(String title, String body) async {
-    final User? currentUser = _auth.currentUser;
-    if (currentUser != null) {
-      String userId = currentUser.uid;
+Future<void> addNotification(String title, String body, {String? level}) async {
+  final User? currentUser = _auth.currentUser;
+  if (currentUser != null) {
+    String userId = currentUser.uid;
 
-      final newNotification = {'title': title, 'body': body, 'isRead': false};
+    final newNotification = {
+      'title': title,
+      'body': body,
+      'isRead': false,
+      'level': level, // レベル情報を追加
+    };
 
-      _notifications.add(newNotification);
-      _badgeCount += 1;
-      _showBadge = true;
+    _notifications.add(newNotification);
+    _badgeCount += 1;
+    _showBadge = true;
 
-      final querySnapshot = await _usersCollection.where('user_id', isEqualTo: userId).get();
-      if (querySnapshot.docs.isNotEmpty) {
-        final userDocRef = querySnapshot.docs.first.reference;
-        await userDocRef.collection('Notifications').add({
-          'title': title,
-          'body': body,
-          'isRead': false,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-      } else {
-        print('User with user_id "$userId" not found.');
-      }
-
-      notifyListeners(); // UIへ状態更新を通知
+    final querySnapshot = await _usersCollection.where('user_id', isEqualTo: userId).get();
+    if (querySnapshot.docs.isNotEmpty) {
+      final userDocRef = querySnapshot.docs.first.reference;
+      await userDocRef.collection('Notifications').add({
+        'title': title,
+        'body': body,
+        'isRead': false,
+        'level': level, // Firestoreにもレベル情報を保存
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } else {
+      print('User with user_id "$userId" not found.');
     }
+
+    notifyListeners();
   }
+}
+
 
   // 通知を既読にするメソッド
   Future<void> markNotificationAsRead(String docId) async {
