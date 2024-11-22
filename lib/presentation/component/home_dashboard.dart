@@ -23,18 +23,23 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
   // ユーザー情報や進捗データを格納する変数
   String userName = ""; // ユーザー名、初期値は空文字
-  int loginStreak = 3; // 連続ログイン日数
-  int longestStreak = 5; // 最長連続ログイン日数
+  int loginStreak = 0; // 連続ログイン日数
+  int longestStreak = 0; // 最長連続ログイン日数
+  int totalLogins = 0;       // 総ログイン回数
   int tierProgress = 34; // 今日の達成度
   int tierProgress_all = 62; // 目標全体に対する達成度
 
   late AnimationController _controller; // アニメーションコントローラ
   late Animation<double> _progressAnimation; // 今日の達成度のアニメーション
   late Animation<double> _progressAllAnimation; // 目標達成度のアニメーション
+  late Future<void> _userDataFuture; // Futureを保持する変数
 
   @override
   void initState() {
     super.initState();
+
+     // 非同期処理を初期化時に実行し、結果を保持
+    _userDataFuture = _fetchUserData();
 
     // アニメーションコントローラの初期化
     _controller = AnimationController(
@@ -70,6 +75,9 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         if (userSnapshot.docs.isNotEmpty) {
           final userData = userSnapshot.docs.first.data();
           userName = userData['user_name'] ?? 'Unknown'; // ユーザー名がない場合、"Unknown"を代入
+          // login_historyを取得して計算
+        final loginHistory = userData['login_history'] ?? [];
+        _calculateLoginStats(loginHistory); // ここでログイン情報の計算
         }
       } else {
         print('ユーザーがログインしていません');
@@ -81,6 +89,72 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     }
   }
 
+  void _calculateLoginStats(List<dynamic> loginHistory) {
+  if (loginHistory.isEmpty) {
+    // ログイン履歴が空の場合、すべての値をリセット
+    setState(() {
+      loginStreak = 0;
+      longestStreak = 0;
+      totalLogins = 0;
+    });
+    return;
+  }
+
+  // タイムスタンプをDateTime型に変換し、日付のみを扱う
+  final loginDates = loginHistory
+      .map((timestamp) => (timestamp as Timestamp).toDate()) // タイムスタンプをDateTimeに変換
+      .map((date) => DateTime(date.year, date.month, date.day)) // 日付のみに変換
+      .toSet() // 同じ日の重複ログインを除外
+      .toList()
+    ..sort((a, b) => b.compareTo(a)); // 降順でソート
+
+  int currentStreak = 1; // 連続ログイン日数
+  int maxStreak = 1; // 最長連続ログイン日数
+  int total = loginDates.length; // 総ログイン日数
+
+  if (loginDates.length == 1) {
+    // ログイン履歴が1件の場合
+    final today = DateTime.now();
+    if (loginDates.first.isAtSameMomentAs(DateTime(today.year, today.month, today.day))) {
+      loginStreak = 1; // 今日ログインしている場合、連続ログインを1とする
+    } else {
+      loginStreak = 0; // 今日ログインしていない場合
+    }
+    longestStreak = 1;
+    totalLogins = total;
+    setState(() {
+      loginStreak = loginStreak;
+      longestStreak = longestStreak;
+      totalLogins = totalLogins;
+    });
+    return;
+  }
+
+  // ログイン履歴が2件以上の場合、連続性を計算
+  for (int i = 1; i < loginDates.length; i++) {
+    if (loginDates[i - 1].difference(loginDates[i]).inDays == 1) {
+      // 前日と連続している場合
+      currentStreak++;
+      if (currentStreak > maxStreak) {
+        maxStreak = currentStreak;
+      }
+    } else if (loginDates[i - 1].difference(loginDates[i]).inDays > 1) {
+      // 連続が途切れた場合
+      currentStreak = 1;
+    }
+  }
+
+  // 今日が最新のログイン日かを確認
+  final today = DateTime.now();
+  final todayDate = DateTime(today.year, today.month, today.day);
+  loginStreak = loginDates.first == todayDate ? currentStreak : 0;
+
+  // 結果を更新
+  setState(() {
+    longestStreak = maxStreak; // 最長連続ログインを設定
+    totalLogins = total; // 総ログイン数を設定
+  });
+}
   // 日付を表示するための関数
   String _getDisplayDate() {
     final displayDate = _selectedDay ?? DateTime.now(); // 選択されていない場合は今日の日付
@@ -93,13 +167,16 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     super.dispose();
   }
 
+ 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: _fetchUserData(), // _fetchUserDataの完了を待つ
+      future: _userDataFuture, // 初期化時に設定したFutureを使用
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator()); // データ取得中のインジケーター
+        } else if (snapshot.hasError) {
+          return Center(child: Text('データ取得エラー: ${snapshot.error}')); // エラーが発生した場合の表示
         } else {
           // データ取得後のUI表示
           return Scaffold(
@@ -119,7 +196,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                       ),
                     ),
                     SizedBox(height: 10),
-                    // メッセージ
                     Text(
                       "今日も学習を重ねていこう",
                       style: TextStyle(
@@ -155,52 +231,67 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
   }
 
-  // 統計情報のUIセクション
   Widget _buildStatSection() {
-    return Column(
-      children: [
-        SizedBox(height: 8),
-        SizedBox(
-          height: 200,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                "連続ログイン日数",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: const Color.fromARGB(255, 100, 100, 100),
-                  fontSize: 13,
-                ),
+  return Column(
+    children: [
+      SizedBox(height: 8),
+      SizedBox(
+        height: 200,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              "連続ログイン日数",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: const Color.fromARGB(255, 100, 100, 100),
+                fontSize: 13,
               ),
-              Text(""),
-              Text(
-                "$loginStreak日",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              "$loginStreak日",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              "最高連続ログイン日数",
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: const Color.fromARGB(255, 130, 130, 130),
               ),
-              Text(
-                "最高連続ログイン日数",
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: const Color.fromARGB(255, 130, 130, 130),
-                ),
+            ),
+            Text(
+              "$longestStreak日",
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: const Color.fromARGB(255, 130, 130, 130),
               ),
-              Text(
-                "$longestStreak日",
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: const Color.fromARGB(255, 130, 130, 130),
-                ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              "総ログイン回数",
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: const Color.fromARGB(255, 130, 130, 130),
               ),
-            ],
-          ),
+            ),
+            Text(
+              "$totalLogins回",
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: const Color.fromARGB(255, 130, 130, 130),
+              ),
+            ),
+          ],
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   // 今日の進捗と目標達成度のUIセクション
   Widget _buildProgressSection() {
