@@ -456,10 +456,16 @@ OverlayEntry _createOverlayEntry() {
                   onTap: () async {
                     try {
                       await FirebaseAuth.instance.signOut(); // Firebaseでログアウト
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => AuthenticationScreen()), // ログイン画面に遷移
-                      );
+                      // FirebaseAuth の状態を監視
+                      FirebaseAuth.instance.authStateChanges().listen((User? user) {
+                        if (user == null) {
+                          // ユーザーがログアウトした場合は AuthenticationScreen に遷移
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => AuthenticationScreen()),
+                          );
+                        }
+                      });
                       print('ログアウト成功');
                     } catch (e) {
                       print('ログアウトエラー: $e');
