@@ -332,45 +332,49 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ドロワーを構築するメソッド
-  Widget _buildDrawer() {
-    return Container(
-      width: MediaQuery.of(context).size.width * 0.8,
-      child: Drawer(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: <Widget>[
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Color(0xFF0ABAB5),
-                          Color.fromARGB(255, 255, 255, 255)
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
+ Widget _buildDrawer() {
+  return Container(
+    width: MediaQuery.of(context).size.width * 0.8,
+    child: Drawer(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: <Widget>[
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF0ABAB5),
+                        Color.fromARGB(255, 255, 255, 255)
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                     ),
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Colors.white,
-                          radius: 30,
-                          child: Icon(Icons.person,
-                              color: Color(0xFF0ABAB5), size: 40),
-                        ),
-                        SizedBox(height: 10),
-                        Row(children: <Widget>[
-                          if (loginDays < 8) Container()
-                          else if (loginDays < 15) Image.asset('images/smallCrown.png', width: 24, height: 24)
-                          else if (loginDays < 22) Image.asset('images/middleCrown.png', width: 24, height: 24)
-                          else Image.asset('images/bigCrown.png', width: 24, height: 24),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.white,
+                        radius: 30,
+                        child: Icon(Icons.person,
+                            color: Color(0xFF0ABAB5), size: 40),
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        children: <Widget>[
+                          if (loginDays < 8)
+                            Container()
+                          else if (loginDays < 15)
+                            Image.asset('images/smallCrown.png', width: 24, height: 24)
+                          else if (loginDays < 22)
+                            Image.asset('images/middleCrown.png', width: 24, height: 24)
+                          else
+                            Image.asset('images/bigCrown.png', width: 24, height: 24),
                           SizedBox(width: 5),
                           Text(
                             _accountName,
@@ -380,81 +384,91 @@ class _HomeScreenState extends State<HomeScreen>
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ]),
-                        Text(
-                          '@$_accountId',
-                          style: TextStyle(
-                            color: Color.fromARGB(179, 160, 160, 160),
-                            fontSize: 14,
+                        ],
+                      ),
+                      Text(
+                        '@$_accountId',
+                        style: TextStyle(
+                          color: Color.fromARGB(179, 160, 160, 160),
+                          fontSize: 14,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Text(
+                            'フォロワー: $_followers',
+                            style: TextStyle(
+                                color: Color.fromARGB(255, 100, 100, 100)),
                           ),
-                        ),
-                        SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Text(
-                              'フォロワー: $_followers',
-                              style: TextStyle(
-                                  color: Color.fromARGB(255, 100, 100, 100)),
-                            ),
-                            SizedBox(width: 10),
-                            Text(
-                              'フォロー中: $_following',
-                              style: TextStyle(
-                                  color: Color.fromARGB(255, 100, 100, 100)),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 10),
-                        Text(
-                          'フォロー中の教科: ${_followingSubjects.join(', ')}',
-                          style: TextStyle(
-                              color: Color.fromARGB(255, 100, 100, 100)),
-                        ),
-                      ],
-                    ),
+                          SizedBox(width: 10),
+                          Text(
+                            'フォロー中: $_following',
+                            style: TextStyle(
+                                color: Color.fromARGB(255, 100, 100, 100)),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        'フォロー中の教科: ${_followingSubjects.join(', ')}',
+                        style: TextStyle(
+                            color: Color.fromARGB(255, 100, 100, 100)),
+                      ),
+                    ],
                   ),
-                  ListTile(
-                    leading: Icon(Icons.person),
-                    title: Text('プロフィール'),
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.settings),
-                    title: Text('設定'),
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.logout),
-                    title: Text('ログアウト'),
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                ],
-              ),
+                ),
+                ListTile(
+                  leading: Icon(Icons.person),
+                  title: Text('プロフィール'),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.settings),
+                  title: Text('設定'),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.logout),
+                  title: Text('ログアウト'),
+                  onTap: () async {
+                    try {
+                      await FirebaseAuth.instance.signOut(); // Firebaseでログアウト
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => AuthenticationScreen()), // ログイン画面に遷移
+                      );
+                      print('ログアウト成功');
+                    } catch (e) {
+                      print('ログアウトエラー: $e');
+                    }
+                  },
+                ),
+              ],
             ),
-            // 特定のユーザ番号に応じてデータベース管理フォームを表示
-            if (_userNumber >= 1 && _userNumber <= 6)
-              ListTile(
-                leading: Icon(Icons.build),
-                title: Text('データベース管理フォーム'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => ViewFormSelection()),
-                  );
-                },
-              ),
-          ],
-        ),
+          ),
+          // 特定のユーザ番号に応じてデータベース管理フォームを表示
+          if (_userNumber >= 1 && _userNumber <= 6)
+            ListTile(
+              leading: Icon(Icons.build),
+              title: Text('データベース管理フォーム'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ViewFormSelection()),
+                );
+              },
+            ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   // ボトムナビゲーションバーの構築メソッド
   Widget _buildBottomNavigationBar() {
