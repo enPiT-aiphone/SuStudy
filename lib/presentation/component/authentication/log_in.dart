@@ -75,7 +75,8 @@ class _LogInScreenState extends State<LogInScreen> {
                           email: _email, password: _password);
                   if (user != null) {
                     print('ログイン成功: ${user.user?.email}');
-                    Navigator.pop(context);
+                    Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) => HomeScreen()),
+                    ); // 遷移先の画面を指定
                   }
                 } on FirebaseAuthException catch (e) {
                   // エラーメッセージを設定
