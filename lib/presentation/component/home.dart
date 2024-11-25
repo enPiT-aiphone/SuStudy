@@ -217,13 +217,22 @@ OverlayEntry _createOverlayEntry() {
                       builder: (context, badgeViewModel, _) {
                         return NotificationPage(
                           notifications: badgeViewModel.notifications,
-                          onNotificationTap: (docId) {
+                          onNotificationTap: (docId) async {
+
+                            // クリックされた通知を取得
                             final selectedNotification = badgeViewModel.notifications.firstWhere(
                               (notif) => notif['id'] == docId,
-                              orElse: () => {}, // 空の Map を返す
+                              orElse: () => {},
                             );
+
                             if (selectedNotification.isNotEmpty) {
+                              // レベルを取得（デフォルトは 'up_to_500'）
                               final level = selectedNotification['level'] ?? 'up_to_500';
+
+                              // 通知を既読にする処理
+                              await badgeViewModel.markNotificationAsRead(docId);
+
+                              // NotificationTOEICWordQuiz に遷移
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -233,6 +242,8 @@ OverlayEntry _createOverlayEntry() {
                             } else {
                               print('通知が見つかりませんでした');
                             }
+                            // オーバーレイを閉じる
+                            _removeOverlay();
                           },
                         );
                       },
@@ -247,7 +258,6 @@ OverlayEntry _createOverlayEntry() {
     ),
   );
 }
-
 
 
 
