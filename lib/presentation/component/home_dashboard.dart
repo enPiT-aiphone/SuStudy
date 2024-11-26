@@ -75,7 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         // Firestoreから特定のユーザーのデータを取得
         final userSnapshot = await FirebaseFirestore.instance
             .collection('Users')
-            .where('user_id', isEqualTo: userId)
+            .where('auth_uid', isEqualTo: userId)
             .get();
 
         if (userSnapshot.docs.isNotEmpty) {

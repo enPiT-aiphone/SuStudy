@@ -89,7 +89,7 @@ Future<void> saveTokenToSubcollection(String token) async {
   // Usersコレクションから特定のユーザーID（現在ログイン中のユーザー）を取得
   final querySnapshot = await FirebaseFirestore.instance
       .collection('Users')
-      .where('user_id', isEqualTo: userId)
+      .where('auth_uid', isEqualTo: userId)
       .get();
 
   if (querySnapshot.docs.isNotEmpty) {

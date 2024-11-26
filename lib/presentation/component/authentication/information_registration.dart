@@ -15,8 +15,10 @@ class _InformationRegistrationScreenState
   final _formKey = GlobalKey<FormState>();
   String _userName = '';
   String _userId = '';
+  String _ModifieduserId = '';
   int _age = 0;
   String _occupation = '';
+  int _userNumber = 0;
 
   @override
   void initState() {
@@ -32,23 +34,73 @@ class _InformationRegistrationScreenState
       try {
         // Firebaseにユーザー情報を保存
         final userDoc = FirebaseFirestore.instance.collection('Users').doc(_userId);
+        final userCollection = FirebaseFirestore.instance.collection('Users');
+        final userSnapshot = await userCollection.get();
+        _userNumber = userSnapshot.docs.length;
 
         // ユーザー情報を保存
-        await userDoc.set({
+        await userDoc.update({
           'user_name': _userName,
-          'user_id': _userId,
+          'user_id': _ModifieduserId,
           'age': _age,
+          'user_number': _userNumber,
           'occupation': _occupation,
           'follower_ids': [], // 空のリスト
           'following_subjects': [], // 空のリスト
-          'login_history':<Timestamp>[],
+          'login_history': <Timestamp>[],
         });
 
         // サブコレクションを作成
         await userDoc.collection('post_timeline_ids').doc('init').set({});
         await userDoc.collection('posts').doc('init').set({});
         await userDoc.collection('followings').doc('init').set({});
-        await userDoc.collection('following_subjects').doc('init').set({});
+
+        // following_subjects サブコレクションにドキュメントを追加
+        final List<String> subjects = [
+          'TOEIC',
+          'TOEFL',
+          '高校数学',
+          '大学数学',
+          'SPI',
+          'プログラミング'
+        ];
+        for (String subject in subjects) {
+          final subjectDoc = userDoc.collection('following_subjects').doc(subject);
+          await subjectDoc.set({
+            'name': subject, // 必要に応じて追加情報を保存
+          });
+
+          // TOEIC と TOEFL のサブコレクションを作成
+          if (subject == 'TOEIC' || subject == 'TOEFL') {
+            final List<String> levels = subject == 'TOEIC'
+                ? ['up_to_300', 'up_to_500', 'up_to_700', 'up_to_900', 'up_to_990']
+                : ['up_to_40', 'up_to_60', 'up_to_80', 'up_to_100', 'up_to_120'];
+
+            for (String level in levels) {
+              final levelDoc = subjectDoc.collection(level).doc();
+              await levelDoc.set({});
+
+              // 各レベルに「Words」「Grammar」「Listening」ドキュメントを作成
+              final List<String> categories = ['Words', 'Grammar', 'Listening'];
+              for (String category in categories) {
+                final categoryDoc = subjectDoc.collection(level).doc(category);
+                await categoryDoc.set({
+                  'category_name': category, // 必要に応じてフィールドを追加
+                });
+
+                // 「Words」カテゴリの場合、「Word」「Idioms」のサブコレクションを作成
+                if (category == 'Words') {
+                  final List<String> wordCollections = ['Word', 'Idioms'];
+                  for (String wordCollection in wordCollections) {
+                    await categoryDoc.collection(wordCollection).doc('init').set({
+                      'init_field': 'value', // 必要なら初期値を設定
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
 
         print('ユーザー情報とサブコレクションが保存されました');
 
@@ -64,7 +116,7 @@ class _InformationRegistrationScreenState
   }
 
   @override
-    Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60.0), // AppBarの高さを設定
@@ -118,7 +170,7 @@ class _InformationRegistrationScreenState
                 decoration: InputDecoration(labelText: 'ユーザーID'),
                 initialValue: _userId,
                 onSaved: (value) {
-                  _userId = value ?? '';
+                  _ModifieduserId = value ?? '';
                 },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -158,13 +210,12 @@ class _InformationRegistrationScreenState
               // 保存ボタン
               ElevatedButton(
                 onPressed: () async {
-                    // ここでログイン履歴を追加
-                    await addLoginHistory(_userId); // addLoginHistory の呼び出し
-                    _saveUserInfo(); // ユーザー情報を保存する関数
+                  await addLoginHistory(_userId); // ログイン履歴の追加
+                  await _saveUserInfo(); // ユーザー情報を保存する関数
                 },
                 child: Text('保存'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0ABAB5), // `primary` を `backgroundColor` に変更
+                  backgroundColor: Color(0xFF0ABAB5),
                 ),
               ),
             ],

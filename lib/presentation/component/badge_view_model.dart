@@ -25,7 +25,7 @@ class BadgeViewModel extends ChangeNotifier {
       String userId = currentUser.uid; // ログイン中のユーザーIDを取得
 
       _notificationSubscription = _usersCollection
-          .where('user_id', isEqualTo: userId) // 現在のユーザーIDを使用してドキュメントを検索
+          .where('auth_uid', isEqualTo: userId) // 現在のユーザーIDを使用してドキュメントを検索
           .snapshots() // リアルタイムで変更があるたびに更新
           .listen((querySnapshot) {
         if (querySnapshot.docs.isNotEmpty) { // 対象のユーザーが存在するかチェック
@@ -54,7 +54,7 @@ class BadgeViewModel extends ChangeNotifier {
             notifyListeners(); // UIへ状態更新を通知
           });
         } else {
-          print('User with user_id "$userId" not found.');
+          print('User with auth_uid "$userId" not found.');
         }
       });
     } else {
@@ -79,7 +79,7 @@ Future<void> addNotification(String title, String body, {String? level}) async {
     _badgeCount += 1;
     _showBadge = true;
 
-    final querySnapshot = await _usersCollection.where('user_id', isEqualTo: userId).get();
+    final querySnapshot = await _usersCollection.where('', isEqualTo: userId).get();
     if (querySnapshot.docs.isNotEmpty) {
       final userDocRef = querySnapshot.docs.first.reference;
       await userDocRef.collection('Notifications').add({
@@ -90,7 +90,7 @@ Future<void> addNotification(String title, String body, {String? level}) async {
         'timestamp': FieldValue.serverTimestamp(),
       });
     } else {
-      print('User with user_id "$userId" not found.');
+      print('User with auth_uid "$userId" not found.');
     }
 
     notifyListeners();
@@ -104,7 +104,7 @@ Future<void> addNotification(String title, String body, {String? level}) async {
     if (currentUser != null) {
       String userId = currentUser.uid;
 
-      final querySnapshot = await _usersCollection.where('user_id', isEqualTo: userId).get();
+      final querySnapshot = await _usersCollection.where('auth_uid', isEqualTo: userId).get();
       if (querySnapshot.docs.isNotEmpty) {
         final userDocRef = querySnapshot.docs.first.reference;
         final notifDocRef = userDocRef.collection('Notifications').doc(docId);

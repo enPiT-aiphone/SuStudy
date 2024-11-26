@@ -27,10 +27,38 @@ class _QuizReviewScreenState extends State<QuizReviewScreen> {
     }
 
     try {
-      // Firestoreから間違えた問題を取得
-      final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
-      final quizRecordsRef = userDoc.collection('QuizRecords_TOEIC'); // 例としてTOEIC
-      final incorrectQuizSnapshot = await quizRecordsRef
+      // Firestoreからユーザー情報を取得
+      final userDoc =
+          FirebaseFirestore.instance.collection('Users').doc(userId);
+      final userSnapshot = await userDoc.get();
+
+      if (!userSnapshot.exists) {
+        print('ユーザー情報が見つかりません');
+        return;
+      }
+
+      // Usersドキュメントのfollowing_subjectsフィールドからTOEICのスコアを取得
+      final followingSubjects = List<String>.from(
+          userSnapshot.data()?['following_subjects'] ?? []);
+
+      // TOEICX点のXを抽出
+      final matchedScore = followingSubjects
+          .firstWhere((subject) => subject.startsWith('TOEIC'), orElse: () => '');
+      if (matchedScore.isEmpty) {
+        print('TOEICスコアが見つかりません');
+        return;
+      }
+      final score = matchedScore.replaceAll('TOEIC', ''); // スコア部分だけ抽出
+
+      // TOEICのup_to_Xコレクション参照
+      final toeicDoc = userDoc
+          .collection('following_subjects')
+          .doc('TOEIC')
+          .collection('up_to_$score');
+
+      // Wordsのサブコレクションから間違えた問題を取得
+      final wordsCollectionRef = toeicDoc.doc('Words').collection('Word');
+      final incorrectWordsSnapshot = await wordsCollectionRef
           .where('is_correct', isEqualTo: false) // 間違えた問題をフィルタリング
           .orderBy('timestamp', descending: true) // 最新のものから取得
           .limit(5) // 必要に応じて取得する数を調整
@@ -38,7 +66,7 @@ class _QuizReviewScreenState extends State<QuizReviewScreen> {
 
       // 取得したデータをリストに変換
       setState(() {
-        incorrectQuestions = incorrectQuizSnapshot.docs.map((doc) {
+        incorrectQuestions = incorrectWordsSnapshot.docs.map((doc) {
           return {
             'quiz_id': doc['quiz_id'],
             'selected_answer': doc['selected_answer'],
@@ -48,6 +76,61 @@ class _QuizReviewScreenState extends State<QuizReviewScreen> {
           };
         }).toList();
       });
+    } catch (e) {
+      print('エラーが発生しました: $e');
+    }
+  }
+
+  // Firebaseに間違えた問題を保存するメソッド
+  Future<void> saveIncorrectQuestion(
+      String quizId, String selectedAnswer, String correctAnswer, String wordId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (userId == null) {
+      print('ユーザーがログインしていません');
+      return;
+    }
+
+    try {
+      // Firestoreからユーザー情報を取得
+      final userDoc =
+          FirebaseFirestore.instance.collection('Users').doc(userId);
+      final userSnapshot = await userDoc.get();
+
+      if (!userSnapshot.exists) {
+        print('ユーザー情報が見つかりません');
+        return;
+      }
+
+      // Usersドキュメントのfollowing_subjectsフィールドからTOEICのスコアを取得
+      final followingSubjects = List<String>.from(
+          userSnapshot.data()?['following_subjects'] ?? []);
+
+      // TOEICX点のXを抽出
+      final matchedScore = followingSubjects
+          .firstWhere((subject) => subject.startsWith('TOEIC'), orElse: () => '');
+      if (matchedScore.isEmpty) {
+        print('TOEICスコアが見つかりません');
+        return;
+      }
+      final score = matchedScore.replaceAll('TOEIC', ''); // スコア部分だけ抽出
+
+      // TOEICのup_to_Xコレクション参照
+      final toeicDoc = userDoc
+          .collection('following_subjects')
+          .doc('TOEIC')
+          .collection('up_to_$score');
+
+      // Wordsのサブコレクションに問題を保存
+      final wordsCollectionRef = toeicDoc.doc('Words').collection('Word');
+      await wordsCollectionRef.doc(wordId).set({
+        'quiz_id': quizId,
+        'selected_answer': selectedAnswer,
+        'correct_answer': correctAnswer,
+        'timestamp': FieldValue.serverTimestamp(),
+        'is_correct': false, // 間違えた問題
+        'word_id': wordId,
+      }, SetOptions(merge: true)); // 上書き保存
     } catch (e) {
       print('エラーが発生しました: $e');
     }

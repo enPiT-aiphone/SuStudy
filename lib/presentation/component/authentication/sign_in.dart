@@ -118,7 +118,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         .doc(user.uid)
                         .set({
                       'email': user.email,
-                      'user_id': user.uid,
+                      'auth_uid': user.uid,
                     });
                     // InformationRegistrationScreenに遷移
                     Navigator.push(
