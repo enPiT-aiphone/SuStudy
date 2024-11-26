@@ -152,7 +152,9 @@ Future<void> _fetchQuestions() async {
       List<String> incorrectWordIds = [];
 
       for (var record in quizRecords.docs) {
-        final wordDocRef = FirebaseFirestore.instance
+        final wordDocRef = toeicDoc
+            .doc('Words')
+            .collection('Word')
             .doc(record.id)
             .collection('Attempts')
             .orderBy('attempt_number', descending: true)
@@ -187,15 +189,49 @@ Future<void> _fetchQuestions() async {
             .get();
       }
     } else {
-
       // 直近3問の間違えた問題を取得
-      snapshot = await toeicDoc
-          .doc('Words')
-          .collection('Word')
-          .where('is_correct', isEqualTo: false)
-          .orderBy('timestamp', descending: true)
-          .limit(3)
-          .get();
+      List<String> recentWordIds = [];
+
+      // Words コレクションから全ての単語ドキュメントを取得
+      final wordsSnapshot = await toeicDoc.doc('Words').collection('Word').get();
+
+      for (var wordDoc in wordsSnapshot.docs) {
+        // 各単語ドキュメントの Attempts サブコレクションを参照
+        final attemptsSnapshot = await wordDoc.reference
+            .collection('Attempts')
+            .where('is_correct', isEqualTo: false) // 間違えた試行を取得
+            .orderBy('timestamp', descending: true) // 最新順に取得
+            .limit(1) // 各単語の最新の間違えた試行を取得
+            .get();
+
+        if (attemptsSnapshot.docs.isNotEmpty) {
+          final latestAttempt = attemptsSnapshot.docs.first;
+          recentWordIds.add(wordDoc.id); // 間違えた単語IDをリストに追加
+        }
+
+        if (recentWordIds.length >= 3) break; // 最大3問取得したら終了
+      }
+
+      if (recentWordIds.isEmpty) {
+        // 間違えた問題がない場合、ランダムで全問題を取得
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEIC')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .get();
+      } else {
+        // recentWordIds に基づいてクエリ
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEIC')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .where(FieldPath.documentId, whereIn: recentWordIds)
+            .get();
+      }
     }
 
     List<QueryDocumentSnapshot> allQuestions = snapshot.docs;

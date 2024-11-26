@@ -125,27 +125,55 @@ Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, 
   }
 
   try {
+    // Usersドキュメントからユーザー情報を取得
     final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
-    final quizRecordsCollection = userDoc.collection('QuizRecords_TOEIC');
-    final wordName = wordData['Word']; // 単語名を取得
-    final wordDocRef = quizRecordsCollection.doc(wordName); // 単語名をドキュメントIDとして使用
+    final userSnapshot = await userDoc.get();
 
-    // サブコレクション "Attempts" のドキュメント数を取得
+    if (!userSnapshot.exists) {
+      print('ユーザー情報が見つかりません');
+      return;
+    }
+
+    // following_subjectsからTOEICのスコア（X点）を取得
+    final followingSubjects = List<String>.from(
+        userSnapshot.data()?['following_subjects'] ?? []);
+    final matchedScore = followingSubjects
+        .firstWhere((subject) => subject.startsWith('TOEIC'), orElse: () => '');
+
+    if (matchedScore.isEmpty) {
+      print('TOEICスコアが見つかりません');
+      return;
+    }
+
+    // 正規表現で数字部分だけを抽出
+    final scoreMatch = RegExp(r'\d+').firstMatch(matchedScore);
+    if (scoreMatch == null) {
+      print('TOEICスコアの形式が不正です');
+      return;
+    }
+    final score = scoreMatch.group(0); // 抽出されたスコア（X部分）
+    final toeicDoc = userDoc
+        .collection('following_subjects')
+        .doc('TOEIC')
+        .collection('up_to_$score');
+
+    // Wordsサブコレクションに保存
+    final wordName = wordData['Word'];
+    final wordDocRef = toeicDoc.doc('Words').collection('Word').doc(wordName);
     final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
-    final attemptNumber = attemptsSnapshot.docs.length + 1; // ドキュメント数 + 1
+    final attemptNumber = attemptsSnapshot.docs.length + 1;
+    final Nextname = '$attemptNumber';
+      await wordDocRef.collection('Attempts')..doc(Nextname).set({
+        'attempt_number': attemptNumber,
+        'timestamp': FieldValue.serverTimestamp(),
+        'selected_answer': selectedAnswer,
+        'correct_answer': wordData['ENG_to_JPN_Answer'],
+        'is_correct': isCorrect,
+        'word_id': wordData.id,
+      },SetOptions(merge: true));
 
-    // サブコレクション "Attempts" にデータを追加
-    await wordDocRef.collection('Attempts').add({
-      'attempt_number': attemptNumber,
-      'timestamp': FieldValue.serverTimestamp(),
-      'selected_answer': selectedAnswer,
-      'correct_answer': wordData['ENG_to_JPN_Answer'],
-      'is_correct': isCorrect,
-      'word_id': wordData.id,
-    });
-
-    print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
-  } catch (e) {
+      print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
+    } catch (e) {
     print('クイズ結果の保存に失敗しました: $e');
   }
 }
