@@ -25,7 +25,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0; // 現在選択されているボトムナビゲーションのインデックス
-  int _loginStreak = 15; // ログイン日数
+  int _loginStreak = 0; // ログイン日数
   OverlayEntry? _overlayEntry; // OverlayEntryの参照を保持
   bool _isNotificationVisible = false; // 通知が表示されているかどうかを管理
   String _selectedCategory = ''; // 現在選択されたカテゴリ
@@ -117,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen>
         setState(() {
           _following = followingsSnapshot.docs.length; // フォロー数を更新
         });
+        
       } else {
         print('ユーザーデータが見つかりません');
       }
@@ -124,6 +125,9 @@ class _HomeScreenState extends State<HomeScreen>
       print('データ取得エラー: $e');
     }
   }
+
+
+  
 
   // カテゴリの選択処理
   void _selectCategory(String category) {

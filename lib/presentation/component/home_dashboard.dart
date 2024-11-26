@@ -25,6 +25,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
   DateTime? _selectedDay; // 選択された日付を保持する変数
   DateTime _focusedDay = DateTime.now(); // カレンダーのフォーカスされた日付
+  Set<DateTime> _loggedInDays = {};
 
   // ユーザー情報や進捗データを格納する変数
   String userName = ""; // ユーザー名、初期値は空文字
@@ -83,6 +84,12 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           // login_historyを取得して計算
         final loginHistory = userData['login_history'] ?? [];
         _calculateLoginStats(loginHistory); // ここでログイン情報の計算
+          // ログイン記録をセットに保存
+          _loggedInDays = loginHistory
+              .map((timestamp) => (timestamp as Timestamp).toDate())
+              .map((date) => DateTime(date.year, date.month, date.day))
+              .toSet()
+              .cast<DateTime>(); // 型変換を追加
         }
       } else {
         print('ユーザーがログインしていません');
@@ -444,9 +451,22 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                 );
               },
               defaultBuilder: (context, day, focusedDay) {
+                // ログイン記録の日付を`images/redfire.png`で表示
+                final isLoggedInDay = _loggedInDays.contains(
+                  DateTime(day.year, day.month, day.day),
+                );
+                if (isLoggedInDay) {
+                  return Center(
+                    child: Image.asset(
+                      'images/redfire.png',
+                      width: 12,
+                      height: 12,
+                    ),
+                  );
+                }
                 return Center(
                   child: Text(
-                    '•',
+                    '・',
                     style: TextStyle(fontSize: 12),
                   ),
                 );
