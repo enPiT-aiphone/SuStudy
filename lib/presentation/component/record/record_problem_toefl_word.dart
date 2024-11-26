@@ -57,128 +57,199 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
   }
 
   Future<void> _fetchQuestions() async {
-    QuerySnapshot snapshot;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
 
-    if (widget.questionType == 'random') {
-      snapshot = await FirebaseFirestore.instance
-          .collection('English_Skills')
-          .doc('TOEFL')
-          .collection(widget.level)
-          .doc('Words')
-          .collection('Word')
-          .get();
-    } else if (widget.questionType == 'unanswered') {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      final answeredWordsSnapshot = await FirebaseFirestore.instance
-          .collection('Users')
-          .doc(userId)
-          .collection('QuizRecords_TOEFL')
-          .get();
+    if (userId == null) {
+      print('ユーザーがログインしていません');
+      return;
+    }
 
-      List<String> answeredWordIds = answeredWordsSnapshot.docs
-          .map((doc) => doc['word_id'] as String)
-          .toList();
+    try {
+      // Usersドキュメントからユーザー情報を取得
+      final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+      final userSnapshot = await userDoc.get();
 
-      if (answeredWordIds.isEmpty) {
-        snapshot = await FirebaseFirestore.instance
-            .collection('English_Skills')
-            .doc('TOEFL')
-            .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
-            .get();
-      } else {
-        snapshot = await FirebaseFirestore.instance
-            .collection('English_Skills')
-            .doc('TOEFL')
-            .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
-            .where(FieldPath.documentId, whereNotIn: answeredWordIds)
-            .get();
+      if (!userSnapshot.exists) {
+        print('ユーザー情報が見つかりません');
+        return;
       }
-    } else if (widget.questionType == 'incorrect') {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      snapshot = await FirebaseFirestore.instance
-          .collection('Users')
-          .doc(userId)
-          .collection('QuizRecords_TOEFL')
-          .get();
 
-      List<QueryDocumentSnapshot> allRecords = snapshot.docs;
-      List<String> incorrectWords = [];
+      // following_subjectsからTOEFLのスコアを取得
+      final followingSubjects = List<String>.from(
+          userSnapshot.data()?['following_subjects'] ?? []);
+      final matchedScore = followingSubjects
+          .firstWhere((subject) => subject.startsWith('TOEFL'), orElse: () => '');
 
-      for (var record in allRecords) {
-        final wordDocRef = FirebaseFirestore.instance
-            .collection('QuizRecords_TOEFL')
-            .doc(record.id)
-            .collection('Attempts')
-            .orderBy('attempt_number', descending: true)
-            .limit(1);
+      if (matchedScore.isEmpty) {
+        print('TOEFLスコアが見つかりません');
+        return;
+      }
 
-        final latestAttemptSnapshot = await wordDocRef.get();
+      // 正規表現で数字部分だけを抽出
+      final scoreMatch = RegExp(r'\d+').firstMatch(matchedScore);
+      if (scoreMatch == null) {
+        print('TOEFLスコアの形式が不正です');
+        return;
+      }
+      final score = scoreMatch.group(0); // 抽出されたスコア部分
+      final toeflDoc = userDoc
+          .collection('following_subjects')
+          .doc('TOEFL')
+          .collection('up_to_$score');
 
-        if (latestAttemptSnapshot.docs.isNotEmpty) {
-          final latestAttempt = latestAttemptSnapshot.docs.first;
-          if (!latestAttempt['is_correct']) {
-            incorrectWords.add(record.id);
+      // 出題タイプに応じた問題を取得
+      QuerySnapshot snapshot;
+
+      if (widget.questionType == 'random') {
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEFL')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .get();
+      } else if (widget.questionType == 'unanswered') {
+        final answeredWordsSnapshot = await toeflDoc
+            .doc('Words')
+            .collection('Word')
+            .get();
+
+        List<String> answeredWordIds = answeredWordsSnapshot.docs
+            .map((doc) => doc['word_id'] as String)
+            .toList();
+
+        if (answeredWordIds.isEmpty) {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .get();
+        } else {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .where(FieldPath.documentId, whereNotIn: answeredWordIds)
+              .get();
+        }
+      } else if (widget.questionType == 'incorrect') {
+        final quizRecords = await toeflDoc
+            .doc('Words')
+            .collection('Word')
+            .get();
+
+        List<String> incorrectWordIds = [];
+
+        for (var record in quizRecords.docs) {
+          final wordDocRef = toeflDoc
+              .doc('Words')
+              .collection('Word')
+              .doc(record.id)
+              .collection('Attempts')
+              .orderBy('attempt_number', descending: true)
+              .limit(1);
+
+          final latestAttemptSnapshot = await wordDocRef.get();
+
+          if (latestAttemptSnapshot.docs.isNotEmpty) {
+            final latestAttempt = latestAttemptSnapshot.docs.first;
+            if (!latestAttempt['is_correct']) {
+              incorrectWordIds.add(record.id);
+            }
           }
+        }
+
+        if (incorrectWordIds.isEmpty) {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .get();
+        } else {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .where(FieldPath.documentId, whereIn: incorrectWordIds)
+              .get();
+        }
+      } else {
+        // 直近3問の間違えた問題を取得
+        List<String> recentWordIds = [];
+
+        // Words コレクションから全ての単語ドキュメントを取得
+        final wordsSnapshot = await toeflDoc.doc('Words').collection('Word').get();
+
+        for (var wordDoc in wordsSnapshot.docs) {
+          final attemptsSnapshot = await wordDoc.reference
+              .collection('Attempts')
+              .where('is_correct', isEqualTo: false)
+              .orderBy('timestamp', descending: true)
+              .limit(1)
+              .get();
+
+          if (attemptsSnapshot.docs.isNotEmpty) {
+            recentWordIds.add(wordDoc.id);
+          }
+
+          if (recentWordIds.length >= 3) break;
+        }
+
+        if (recentWordIds.isEmpty) {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .get();
+        } else {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .where(FieldPath.documentId, whereIn: recentWordIds)
+              .get();
         }
       }
 
-      if (incorrectWords.isEmpty) {
-        snapshot = await FirebaseFirestore.instance
-            .collection('English_Skills')
-            .doc('TOEFL')
-            .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
-            .get();
-      } else {
-        snapshot = await FirebaseFirestore.instance
-            .collection('English_Skills')
-            .doc('TOEFL')
-            .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
-            .where(FieldPath.documentId, whereIn: incorrectWords)
-            .get();
+      List<QueryDocumentSnapshot> allQuestions = snapshot.docs;
+      questions = allQuestions.where((doc) => !askedWordIds.contains(doc.id)).toList();
+
+      if (questions.isNotEmpty) {
+        if (questions.length > 5) {
+          questions.shuffle();
+          questions = questions.take(5).toList();
+        }
+
+        for (var question in questions) {
+          List<String> options = [
+            question['ENG_to_JPN_Answer_A'],
+            question['ENG_to_JPN_Answer_B'],
+            question['ENG_to_JPN_Answer_C'],
+            question['ENG_to_JPN_Answer_D'],
+          ];
+          options.shuffle();
+          shuffledOptions.add(options);
+        }
+
+        setState(() {
+          isDataLoaded = true;
+          _startTimer();
+        });
       }
-    } else {
-      snapshot = await FirebaseFirestore.instance
-          .collection('Users')
-          .doc(FirebaseAuth.instance.currentUser?.uid)
-          .collection('QuizRecords_TOEFL')
-          .where('is_correct', isEqualTo: false)
-          .orderBy('timestamp', descending: true)
-          .limit(3)
-          .get();
-    }
-
-    List<QueryDocumentSnapshot> allQuestions = snapshot.docs;
-    questions = allQuestions.where((doc) => !askedWordIds.contains(doc.id)).toList();
-
-    if (questions.isNotEmpty) {
-      if (questions.length > 5) {
-        questions.shuffle();
-        questions = questions.take(5).toList();
-      }
-
-      for (var question in questions) {
-        List<String> options = [
-          question['ENG_to_JPN_Answer_A'],
-          question['ENG_to_JPN_Answer_B'],
-          question['ENG_to_JPN_Answer_C'],
-          question['ENG_to_JPN_Answer_D'],
-        ];
-        options.shuffle();
-        shuffledOptions.add(options);
-      }
-
-      setState(() {
-        isDataLoaded = true;
-        _startTimer();
-      });
+    } catch (e) {
+      print('エラーが発生しました: $e');
     }
   }
 
@@ -187,7 +258,8 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
     _animationController.forward();
   }
 
-  Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
+  Future<void> _saveResult(
+      String selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
     if (userId == null) {
@@ -196,27 +268,57 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
     }
 
     try {
-      final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
-      final quizRecordsCollection = userDoc.collection('QuizRecords_TOEFL');
-      final wordName = wordData['Word'];
-      final wordDocRef = quizRecordsCollection.doc(wordName);
+    // Usersドキュメントからユーザー情報を取得
+    final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+    final userSnapshot = await userDoc.get();
 
-      final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
-      final attemptNumber = attemptsSnapshot.docs.length + 1;
+    if (!userSnapshot.exists) {
+      print('ユーザー情報が見つかりません');
+      return;
+    }
 
-      await wordDocRef.collection('Attempts').add({
+    // following_subjectsからTOEFLのスコア（X点）を取得
+    final followingSubjects = List<String>.from(
+        userSnapshot.data()?['following_subjects'] ?? []);
+    final matchedScore = followingSubjects
+        .firstWhere((subject) => subject.startsWith('TOEFL'), orElse: () => '');
+
+    if (matchedScore.isEmpty) {
+      print('TOEFLスコアが見つかりません');
+      return;
+    }
+
+    // 正規表現で数字部分だけを抽出
+    final scoreMatch = RegExp(r'\d+').firstMatch(matchedScore);
+    if (scoreMatch == null) {
+      print('TOEFLスコアの形式が不正です');
+      return;
+    }
+    final score = scoreMatch.group(0); // 抽出されたスコア（X部分）
+    final toeflDoc = userDoc
+        .collection('following_subjects')
+        .doc('TOEFL')
+        .collection('up_to_$score');
+
+    // Wordsサブコレクションに保存
+    final wordName = wordData['Word'];
+    final wordDocRef = toeflDoc.doc('Words').collection('Word').doc(wordName);
+    final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
+    final attemptNumber = attemptsSnapshot.docs.length + 1;
+    final Nextname = '$attemptNumber';
+      await wordDocRef.collection('Attempts')..doc(Nextname).set({
         'attempt_number': attemptNumber,
         'timestamp': FieldValue.serverTimestamp(),
         'selected_answer': selectedAnswer,
         'correct_answer': wordData['ENG_to_JPN_Answer'],
         'is_correct': isCorrect,
         'word_id': wordData.id,
-      });
+      },SetOptions(merge: true));
 
       print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
     } catch (e) {
-      print('クイズ結果の保存に失敗しました: $e');
-    }
+    print('クイズ結果の保存に失敗しました: $e');
+  }
   }
 
   void _handleTimeout() {

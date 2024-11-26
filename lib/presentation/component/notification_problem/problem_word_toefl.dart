@@ -170,27 +170,57 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
     }
 
     try {
-      final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
-      final quizRecordsCollection = userDoc.collection('QuizRecords_TOEFL');
-      final wordName = wordData['Word'];
-      final wordDocRef = quizRecordsCollection.doc(wordName);
+    // Usersドキュメントからユーザー情報を取得
+    final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+    final userSnapshot = await userDoc.get();
 
-      final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
-      final attemptNumber = attemptsSnapshot.docs.length + 1;
+    if (!userSnapshot.exists) {
+      print('ユーザー情報が見つかりません');
+      return;
+    }
 
-      await wordDocRef.collection('Attempts').add({
+    // following_subjectsからTOEFLのスコア（X点）を取得
+    final followingSubjects = List<String>.from(
+        userSnapshot.data()?['following_subjects'] ?? []);
+    final matchedScore = followingSubjects
+        .firstWhere((subject) => subject.startsWith('TOEFL'), orElse: () => '');
+
+    if (matchedScore.isEmpty) {
+      print('TOEFLスコアが見つかりません');
+      return;
+    }
+
+    // 正規表現で数字部分だけを抽出
+    final scoreMatch = RegExp(r'\d+').firstMatch(matchedScore);
+    if (scoreMatch == null) {
+      print('TOEFLスコアの形式が不正です');
+      return;
+    }
+    final score = scoreMatch.group(0); // 抽出されたスコア（X部分）
+    final toeflDoc = userDoc
+        .collection('following_subjects')
+        .doc('TOEFL')
+        .collection('up_to_$score');
+
+    // Wordsサブコレクションに保存
+    final wordName = wordData['Word'];
+    final wordDocRef = toeflDoc.doc('Words').collection('Word').doc(wordName);
+    final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
+    final attemptNumber = attemptsSnapshot.docs.length + 1;
+    final Nextname = '$attemptNumber';
+      await wordDocRef.collection('Attempts')..doc(Nextname).set({
         'attempt_number': attemptNumber,
         'timestamp': FieldValue.serverTimestamp(),
         'selected_answer': selectedAnswer,
         'correct_answer': wordData['ENG_to_JPN_Answer'],
         'is_correct': isCorrect,
         'word_id': wordData.id,
-      });
+      },SetOptions(merge: true));
 
       print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
     } catch (e) {
-      print('クイズ結果の保存に失敗しました: $e');
-    }
+    print('クイズ結果の保存に失敗しました: $e');
+  }
   }
 
   @override
