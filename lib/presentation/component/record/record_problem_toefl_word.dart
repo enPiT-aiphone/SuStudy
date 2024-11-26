@@ -85,13 +85,7 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
         return;
       }
 
-      // 正規表現で数字部分だけを抽出
-      final scoreMatch = RegExp(r'\d+').firstMatch(matchedScore);
-      if (scoreMatch == null) {
-        print('TOEFLスコアの形式が不正です');
-        return;
-      }
-      final score = scoreMatch.group(0); // 抽出されたスコア部分
+      final score = matchedScore.replaceAll('TOEFL', '');
       final toeflDoc = userDoc
           .collection('following_subjects')
           .doc('TOEFL')
