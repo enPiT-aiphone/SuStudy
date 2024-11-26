@@ -28,14 +28,17 @@ class _SignInScreenState extends State<SignInScreen> {
           child: AppBar(
             backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
             elevation: 0,
+            iconTheme: IconThemeData(
+              color: Colors.white,
+            ),
             title: Row(
               children: const [
                 // アプリのタイトル「SuStudy,」を表示
                 Text(
                   'SuStudy, ',
                   style: TextStyle(
-                    fontSize: 25,  // フォントサイズを20に設定
-                    color: Colors.white,  // 文字色を白に設定
+                    fontSize: 25, // フォントサイズを20に設定
+                    color: Colors.white, // 文字色を白に設定
                   ),
                 ),
               ],
@@ -46,7 +49,7 @@ class _SignInScreenState extends State<SignInScreen> {
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             // エラーメッセージを表示するウィジェット
             if (_errorMessage != null)
@@ -55,7 +58,14 @@ class _SignInScreenState extends State<SignInScreen> {
                 style: TextStyle(color: Colors.red),
               ),
             SizedBox(height: 10),
-            TextFormField(
+            Text('メールドレスを登録',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color.fromARGB(255, 50, 50, 50),
+                ),
+            ),
+            SizedBox(height: 20),            TextFormField(
               decoration: InputDecoration(labelText: 'メールアドレス'),
               onChanged: (value) => setState(() => _email = value),
             ),
@@ -69,9 +79,11 @@ class _SignInScreenState extends State<SignInScreen> {
               obscureText: true,
               onChanged: (value) => setState(() => _confirmPassword = value),
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
+            Spacer(), // ボタンを画面下部に押し出す
+            _buildAuthenticationButton(
+              context,
+              'サインイン',
+              () async {
                 setState(() {
                   _errorMessage = null; // エラーが発生する前にリセット
                 });
@@ -83,7 +95,6 @@ class _SignInScreenState extends State<SignInScreen> {
                   });
                   return;
                 }
-
 
                 // パスワードが英文字と数字を含むか確認
                 if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]+$')
@@ -139,11 +150,38 @@ class _SignInScreenState extends State<SignInScreen> {
                   print('登録エラー: $e');
                 }
               },
-              child: Text('サインイン'),
             ),
+            SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildAuthenticationButton(
+      BuildContext context, String label, VoidCallback onPressed) {
+    final double buttonWidth = MediaQuery.of(context).size.width * 0.75; // ボタンの幅を画面の0.75倍に設定
+
+    return InkWell(
+      onTap: onPressed, // ボタンが押されたときの処理
+      child: Container(
+        width: buttonWidth, // ボタンの幅を設定
+        alignment: Alignment.center, // ボタン内のテキストを中央に配置
+        padding: const EdgeInsets.symmetric(vertical: 15), // ボタンの上下パディングを設定
+        decoration: BoxDecoration(
+          color: Colors.white, // ボタンの背景色を白に設定
+          border: Border.all(color: const Color(0xFF0ABAB5)), // ボタンの境界線の色を設定
+          borderRadius: BorderRadius.circular(15), // 角を丸くする
+        ),
+        child: Text(
+          label, // ボタンのラベル
+          style: const TextStyle(
+            color: Color(0xFF0ABAB5), // テキストの色を設定
+            fontSize: 18, // フォントサイズを設定
+          ),
+        ),
+      ),
+    );
+  }
 }
+
