@@ -8,9 +8,14 @@ import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポ�
 class DashboardScreen extends StatefulWidget {
   final String selectedTab; // 選択されたタブの名前を保持する変数
   final String selectedCategory; // 選択されたカテゴリの名前を保持する変数
+  final Function(int) onLoginStreakCalculated; // コールバック関数を追加
 
   // コンストラクタで初期化
-  DashboardScreen({required this.selectedTab, required this.selectedCategory});
+  DashboardScreen({
+    required this.selectedTab, 
+    required this.selectedCategory, 
+    required this.onLoginStreakCalculated,
+    });
 
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
@@ -140,6 +145,8 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
     longestStreak = maxStreak; // 最長連続ログイン日数
     totalLogins = total; // 総ログイン数
   });
+  // 計算結果をコールバック関数で渡す
+    widget.onLoginStreakCalculated(loginStreak);
 }
 
   // 日付を表示するための関数

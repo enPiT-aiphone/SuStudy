@@ -25,7 +25,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0; // 現在選択されているボトムナビゲーションのインデックス
-  int loginDays = 15; // ログイン日数
+  int _loginStreak = 15; // ログイン日数
   OverlayEntry? _overlayEntry; // OverlayEntryの参照を保持
   bool _isNotificationVisible = false; // 通知が表示されているかどうかを管理
   String _selectedCategory = ''; // 現在選択されたカテゴリ
@@ -43,6 +43,13 @@ class _HomeScreenState extends State<HomeScreen>
   List<String> _followingSubjects = []; // フォロー中の教科のリスト
 
   @override
+  // コールバック関数を定義
+  void _onLoginStreakCalculated(int loginStreak) {
+    setState(() {
+      _loginStreak = loginStreak;
+    });
+  }
+
   void initState() {
     super.initState();
     _fetchUserData(); // Firebaseからのユーザーデータ取得を呼び出し
@@ -300,6 +307,7 @@ OverlayEntry _createOverlayEntry() {
         DashboardScreen(
           selectedTab: _selectedTab,
           selectedCategory: _selectedCategory,
+          onLoginStreakCalculated:  _onLoginStreakCalculated,
         ),
       ];
 
@@ -395,11 +403,11 @@ OverlayEntry _createOverlayEntry() {
                       SizedBox(height: 10),
                       Row(
                         children: <Widget>[
-                          if (loginDays < 8)
+                          if (_loginStreak < 8)
                             Container()
-                          else if (loginDays < 15)
+                          else if (_loginStreak < 15)
                             Image.asset('images/smallCrown.png', width: 24, height: 24)
-                          else if (loginDays < 22)
+                          else if (_loginStreak < 22)
                             Image.asset('images/middleCrown.png', width: 24, height: 24)
                           else
                             Image.asset('images/bigCrown.png', width: 24, height: 24),
