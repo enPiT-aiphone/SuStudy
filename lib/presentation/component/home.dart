@@ -25,6 +25,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0; // 現在選択されているボトムナビゲーションのインデックス
+  bool _isRecordPageVisible = false;
+  bool _showExtraButtons = false; // サブボタンを表示するかの状態管理
   int _loginStreak = 0; // ログイン日数
   OverlayEntry? _overlayEntry; // OverlayEntryの参照を保持
   bool _isNotificationVisible = false; // 通知が表示されているかどうかを管理
@@ -127,6 +129,27 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
 
+  // フローティングボタンを長押しした際にサブボタンを表示
+void _onLongPress() {
+  setState(() {
+    _showExtraButtons = !_showExtraButtons;
+  });
+}
+
+
+ // サブボタンをクリックした際の処理
+void _onMenuItemTap(String menu) {
+  setState(() {
+    _showExtraButtons = false; // サブボタンを閉じる
+  });
+
+  if (menu == "btn1") {
+    // btn1 特有の処理: LanguageCategoryScreen を表示
+    setState(() {
+      _isRecordPageVisible = true; // 記録ページ表示状態に設定
+    });
+  }
+}
   
 
   // カテゴリの選択処理
@@ -142,12 +165,12 @@ class _HomeScreenState extends State<HomeScreen>
       _selectedTab = tab;
     });
   }
+  
 
   // ボトムナビゲーションの項目がタップされた時の処理
   void _onBottomNavigationTapped(int index) {
     setState(() {
-      _currentIndex = index;
-      if (_currentIndex == 2 && _selectedCategory == '全体') {
+      if (!_isRecordPageVisible && _selectedCategory == '全体') {
         _selectedCategory = _followingSubjects.isNotEmpty
             ? _followingSubjects[0]
             : 'TOEIC'; // 記録画面でカテゴリを選択
@@ -187,6 +210,7 @@ class _HomeScreenState extends State<HomeScreen>
     _overlayEntry = null;
     _isNotificationVisible = false;
   }
+
 
   // 通知オーバーレイのエントリを生成
 OverlayEntry _createOverlayEntry() {
@@ -306,8 +330,6 @@ OverlayEntry _createOverlayEntry() {
         Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
         Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
         Center(child: Text('検索画面')),
-        LanguageCategoryScreen(
-            selectedCategory: _selectedCategory), // _selectedCategory を渡す
         DashboardScreen(
           selectedTab: _selectedTab,
           selectedCategory: _selectedCategory,
@@ -315,62 +337,222 @@ OverlayEntry _createOverlayEntry() {
         ),
       ];
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF0ABAB5), Color(0xFFFFFFFF)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: Stack(
+      fit: StackFit.expand, // Stackを画面全体に拡張
+      children: [
+        Column(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0ABAB5), Color(0xFFFFFFFF)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Column(
+                children: [
+                  AppBar(
+                    automaticallyImplyLeading: false,
+                    title: Builder(
+                      builder: (context) => Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => Scaffold.of(context).openDrawer(),
+                            child: CircleAvatar(
+                              backgroundColor: Colors.white,
+                              radius: 18,
+                              child: Icon(Icons.person, color: Color(0xFF0ABAB5)),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            'SuStudy,',
+                            style: TextStyle(fontSize: 25, color: Colors.white),
+                          ),
+                          Spacer(),
+                          _buildNotificationIcon(), // 通知アイコンを表示
+                          IconButton(icon: Icon(Icons.mail), onPressed: () {}),
+                        ],
+                      ),
+                    ),
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                  ),
+                  if (!_isRecordPageVisible && _currentIndex == 0 || _currentIndex == 1)
+                    _buildCustomTabBar(), // タブバーを表示
+                ],
               ),
             ),
-            child: Column(
-              children: [
-                AppBar(
-                  automaticallyImplyLeading: false,
-                  title: Builder(
-                    builder: (context) => Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => Scaffold.of(context).openDrawer(),
-                          child: CircleAvatar(
-                            backgroundColor: Colors.white,
-                            radius: 18,
-                            child: Icon(Icons.person, color: Color(0xFF0ABAB5)),
-                          ),
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          'SuStudy,',
-                          style: TextStyle(fontSize: 25, color: Colors.white),
-                        ),
-                        Spacer(),
-                        _buildNotificationIcon(), // 通知アイコンを表示
-                        IconButton(icon: Icon(Icons.mail), onPressed: () {}),
-                      ],
+            Expanded(
+              child: Stack(
+                children: [
+                  _pages[_currentIndex], // 現在のページを表示
+                  if (_isRecordPageVisible)
+                    LanguageCategoryScreen(
+                      selectedCategory: _selectedCategory,
+                      onClose: () {
+                        setState(() {
+                          _isRecordPageVisible = false; // フローティングボタンで開いたページを閉じる
+                        });
+                      },
                     ),
-                  ),
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
+                ],
+              ),
+            ),
+            if (!(!_isRecordPageVisible && _currentIndex == 2))
+              _buildCategoryBar(context),
+          ],
+        ),
+      ],
+    ),
+    drawerEnableOpenDragGesture: true,
+    drawer: _buildDrawer(), // ドロワー
+
+floatingActionButton: _isRecordPageVisible
+    ? null // 記録画面が表示中の場合、フローティングボタンを非表示
+    : Stack(
+      alignment: Alignment.bottomRight,
+        clipBehavior: Clip.none, // Stack の外も描画できるようにする
+        children: [
+          // サブボタンを閉じるための透明なタップ領域
+          if (_showExtraButtons)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _showExtraButtons = false; // サブボタンを閉じる
+                  });
+                },
+                child: Container(
+                  color: Colors.transparent, // 背景を透明にする
                 ),
-                if (_currentIndex == 0 || _currentIndex == 1)
-                  _buildCustomTabBar(), // タブバーを表示
+              ),
+            ),
+          // サブボタンを表示
+          if (_showExtraButtons)
+            Stack(
+              children: [
+                // サブボタン1（左上）
+                Positioned(
+                  bottom: MediaQuery.of(context).size.height * 0.05 + 100,
+                  right: MediaQuery.of(context).size.width * 0 + 10,
+                  child: FloatingActionButton(
+                    heroTag: "btn1",
+                    shape: CircleBorder(),
+                    backgroundColor: Color(0xFF0ABAB5),
+                    child: Icon(Icons.edit_note),
+                    onPressed: () {
+                      _onMenuItemTap("btn1");
+                    },
+                  ),
+                ),
+                // サブボタン2（真上）
+                Positioned(
+                  bottom: MediaQuery.of(context).size.height * 0.05 + 70,
+                  right: MediaQuery.of(context).size.width * 0+ 70,
+                  child: FloatingActionButton(
+                    heroTag: "btn2",
+                    shape: CircleBorder(),
+                    backgroundColor: Color.fromARGB(255, 23, 214, 208),
+                    child: Icon(Icons.text_snippet),
+                    onPressed: () {
+                    },
+                  ),
+                ),
+                // サブボタン3（左）
+                Positioned(
+                  bottom: MediaQuery.of(context).size.height * 0.05 + 10,
+                  right: MediaQuery.of(context).size.width * 0 + 100,
+                  child: FloatingActionButton(
+                    heroTag: "btn3",
+                    shape: CircleBorder(),
+                    backgroundColor: Color.fromARGB(255, 64, 239, 234),
+                    child: Icon(Icons.done),
+                    onPressed: () {
+                    },
+                  ),
+                ),
               ],
             ),
+
+          // メインフローティングボタン
+          Positioned(
+            bottom: MediaQuery.of(context).size.height * 0.05,
+            right: MediaQuery.of(context).size.width * 0,
+            child: SizedBox(
+              width: 80, // ボタンの幅を適切なサイズに設定
+              height: 80, // ボタンの高さを適切なサイズに設定
+              child: GestureDetector(
+                onLongPress: _onLongPress, // 長押しでサブボタンを表示
+                child: FloatingActionButton(
+                  onPressed: () {
+                    setState(() {
+                      if (_showExtraButtons) {
+                        _showExtraButtons = false; // サブボタンを閉じる
+                      } else {
+                        _isRecordPageVisible = true; // 記録画面を表示
+                      }
+                    });
+                  },
+                  backgroundColor: Color(0xFF0ABAB5),
+                  child: Icon(
+                    _showExtraButtons ? Icons.close : Icons.post_add,
+                    size: 36,
+                  ),
+                  shape: CircleBorder(),
+                ),
+              ),
+            ),
           ),
-          Expanded(child: _pages[_currentIndex]),
-          if (_currentIndex != 2) _buildCategoryBar(context),
         ],
       ),
-      drawerEnableOpenDragGesture: true,
-      drawer: _buildDrawer(), // ドロワー
-      bottomNavigationBar: _buildBottomNavigationBar(), // ボトムナビゲーションバー
-    );
-  }
+floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+
+
+
+    bottomNavigationBar: BottomNavigationBar(
+      backgroundColor: Color(0xFF0ABAB5),
+      type: BottomNavigationBarType.fixed,
+      currentIndex: _currentIndex,
+      onTap: (index) {
+        setState(() {
+          if (_isRecordPageVisible) {
+            _isRecordPageVisible = false; // フロート画面を閉じる
+          }
+          _currentIndex = index; // ボトムナビゲーションバーの選択を反映
+        });
+      },
+      selectedItemColor: _isRecordPageVisible
+          ? Color.fromARGB(255, 68, 68, 68) // フロート画面時は全てグレー
+          : Colors.white, // 通常時は選択された項目を白色に
+      unselectedItemColor: Color.fromARGB(255, 68, 68, 68), // 未選択は常にグレー
+      items: [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home),
+          label: 'タイムライン',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.leaderboard),
+          label: 'ランキング',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.search),
+          label: '検索',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.timeline),
+          label: 'データ',
+        ),
+      ],
+    ),
+  );
+}
+
+
 
  Widget _buildDrawer() {
   return Container(
@@ -516,39 +698,7 @@ OverlayEntry _createOverlayEntry() {
 }
 
 
-  // ボトムナビゲーションバーの構築メソッド
-  Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      backgroundColor: Color(0xFF0ABAB5),
-      type: BottomNavigationBarType.fixed,
-      currentIndex: _currentIndex,
-      onTap: _onBottomNavigationTapped,
-      selectedItemColor: Colors.white,
-      unselectedItemColor: const Color.fromARGB(255, 68, 68, 68),
-      items: [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'タイムライン',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.leaderboard),
-          label: 'ランキング',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.search),
-          label: '検索',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.post_add),
-          label: '記録',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.timeline),
-          label: 'データ',
-        ),
-      ],
-    );
-  }
+
 
   // タブバーを構築するメソッド
   Widget _buildCustomTabBar() {
@@ -596,13 +746,13 @@ OverlayEntry _createOverlayEntry() {
       child: LayoutBuilder(
         builder: (context, constraints) {
           // 画面幅の0.7倍を最大幅として設定
-          double maxBarWidth = constraints.maxWidth * 0.7;
+          double maxBarWidth = constraints.maxWidth * 0.68;
 
           // 各カテゴリのボタンを生成して、その合計幅を計算
           double totalWidth = 0.0;
           List<Widget> categoryButtons = [];
 
-          if (_currentIndex == 0 || _currentIndex == 1 || _currentIndex == 4) {
+          if (!_isRecordPageVisible && _currentIndex == 0 || !_isRecordPageVisible && _currentIndex == 1 || !_isRecordPageVisible && _currentIndex == 3) {
             double buttonWidth = _calculateButtonWidth('全体');
             categoryButtons.add(_buildCategoryButton('全体'));
             totalWidth += buttonWidth;
@@ -683,3 +833,5 @@ OverlayEntry _createOverlayEntry() {
     );
   }
 }
+
+
