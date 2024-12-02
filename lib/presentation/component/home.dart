@@ -3,6 +3,7 @@ import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
+import '../add_word.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -680,25 +681,39 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
             ),
           ),
           // 特定のユーザ番号に応じてデータベース管理フォームを表示
-          if (_userNumber >= 1 && _userNumber <= 6)
-            ListTile(
-              leading: Icon(Icons.build),
-              title: Text('データベース管理フォーム'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ViewFormSelection()),
-                );
-              },
-            ),
-        ],
-      ),
-    ),
-  );
-}
-
-
-
+        if (_userNumber >= 1 && _userNumber <= 6)
+              ListTile(
+                leading: Icon(Icons.build),
+                title: Text('データベース管理フォーム'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ViewFormSelection()),
+                  );
+                },
+              ),
+          if (_userNumber == 1)
+              ListTile(
+                leading: Icon(Icons.add),
+                title: Text('単語を追加'),
+                onTap: () async {
+                  try {
+                    await uploadWordsToFirestore(); // add_word.dartの関数を呼び出し
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('単語の追加が完了しました！')),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('単語の追加中にエラーが発生しました: $e')),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
   // タブバーを構築するメソッド
   Widget _buildCustomTabBar() {

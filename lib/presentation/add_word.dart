@@ -1107,7 +1107,7 @@ Future<void> uploadWordsToFirestore() async {
         'ENG_to_JPN_Answer_C': wordData['ENG_to_JPN_Answer_C'],
         'ENG_to_JPN_Answer_D': wordData['ENG_to_JPN_Answer_D'],
         'Word': wordData['word'] ?? '',
-        'explanation': wordData['explanation'] ?? '',
+        'Explanation': wordData['explanation'] ?? '',
         'JPN_to_ENG_Answer': wordData['word'] ?? '',
         'JPN_to_ENG_Question_ENG': wordData['exampleSentence'] ?? '',
         'JPN_to_ENG_Question_JPN': wordData['japaneseTranslation'] ?? '',
