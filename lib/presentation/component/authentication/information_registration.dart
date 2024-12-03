@@ -1,4 +1,5 @@
 import '/import.dart';
+import 'registration_subjects.dart';
 
 class InformationRegistrationScreen extends StatefulWidget {
   final String userId; // サインイン時に自動生成されたユーザーIDを渡す
@@ -20,6 +21,9 @@ class _InformationRegistrationScreenState
   String _occupation = '';
   String _subOccupation = '';
   int _userNumber = 0;
+  int _followcount = 1;
+  int _followercount = 0;
+
 
   // 職業選択肢のリスト
   final List<String> _occupations = [
@@ -85,7 +89,8 @@ class _InformationRegistrationScreenState
           'user_number': _userNumber,
           'occupation': _occupation,
           'sub_occupation': _subOccupation,
-          'follower_ids': [], // 空のリスト
+          'follower_count': _followercount, // 空のリスト
+          'follow_count':_followcount,
           'following_subjects': [], // 空のリスト
           'login_history': <Timestamp>[],
         });
@@ -93,16 +98,17 @@ class _InformationRegistrationScreenState
         // サブコレクションを作成
         await userDoc.collection('post_timeline_ids').doc('init').set({});
         await userDoc.collection('posts').doc('init').set({});
-        await userDoc.collection('followings').doc('init').set({});
+        // `follows` サブコレクションに `SuStudy` ドキュメントを作成してタイムスタンプを保存
+        await userDoc.collection('follows').doc('SuStudy').set({
+          'timestamp': FieldValue.serverTimestamp(), // 現在のタイムスタンプ
+        });
+        await userDoc.collection('followers').doc('init').set({});
+
 
         // following_subjects サブコレクションにドキュメントを追加
         final List<String> subjects = [
           'TOEIC',
           'TOEFL',
-          '高校数学',
-          '大学数学',
-          'SPI',
-          'プログラミング'
         ];
         for (String subject in subjects) {
           final subjectDoc = userDoc.collection('following_subjects').doc(subject);
@@ -144,11 +150,12 @@ class _InformationRegistrationScreenState
 
         print('ユーザー情報とサブコレクションが保存されました');
 
-        // HomeScreen に遷移
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
-        );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SubjectSelectionScreen(userId: widget.userId),
+        ),
+      );
       } catch (e) {
         print('エラーが発生しました: $e');
       }
@@ -289,7 +296,15 @@ class _InformationRegistrationScreenState
           key: _formKey,
           child: Column(
             children: [
-              SizedBox(height: 20),
+              SizedBox(height: 10),
+            Text('ユーザー情報の登録',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color.fromARGB(255, 50, 50, 50),
+                ),
+            ),
+            SizedBox(height: 20),
               Expanded(
                 child: ListView(
                   children: [
@@ -383,7 +398,6 @@ class _InformationRegistrationScreenState
                 context,
                 '保存',
                 () async {
-                  await addLoginHistory(_userId); // ログイン履歴の追加
                   await _saveUserInfo(); // ユーザー情報を保存する関数
                 },
               ),

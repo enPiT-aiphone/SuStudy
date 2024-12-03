@@ -1,3 +1,4 @@
+
 // 必要なパッケージのインポート
 import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
@@ -42,8 +43,9 @@ class _HomeScreenState extends State<HomeScreen>
   String _accountId = ''; // ユーザーID
   int _userNumber = 0; // ユーザー番号
   int _followers = 0; // フォロワー数
-  int _following = 0; // フォロー数
+  int _follows = 0; // フォロー数
   List<String> _followingSubjects = []; // フォロー中の教科のリスト
+  List<dynamic> _loginHistory = [];
 
   @override
   // コールバック関数を定義
@@ -103,24 +105,18 @@ class _HomeScreenState extends State<HomeScreen>
           _accountName = userData['user_name'] ?? 'Unknown'; // ユーザー名
           _accountId = userData['user_id'] ?? 'ID Unknown'; // ユーザーID
           _userNumber = userData['user_number'] ?? 0; // ユーザー番号
-          _followers = (userData['follower_ids'] as List<dynamic>?)?.length ??
-              0; // フォロワー数
+          _followers = userData['follower_count'];
+          _follows = userData['follow_count'];
           _followingSubjects = List<String>.from(
               userData['following_subjects'] ?? []); // フォロー中の教科
+          _loginHistory = userData['login_history'] ?? [];
           if (_followingSubjects.isNotEmpty) {
             _selectedCategory = _followingSubjects[0]; // 最初の教科を選択
           }
         });
-
-        // フォロー数を取得
-        final followingsSnapshot = await userSnapshot.docs.first.reference
-            .collection('followings')
-            .get();
-
-        setState(() {
-          _following = followingsSnapshot.docs.length; // フォロー数を更新
-        });
-        
+        if (_loginHistory.isEmpty) {
+          _showWelcomeDialog(userId);
+        }
       } else {
         print('ユーザーデータが見つかりません');
       }
@@ -129,6 +125,74 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  void _showWelcomeDialog(String userId) {
+    final toeicLevel = _extractToeicLevel(_followingSubjects);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.7,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$_accountNameさん、初めまして！',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'まず今日のログイン問題に取り組んでログインカウントを貯めていこう！🔥',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _navigateToQuiz(toeicLevel);
+                      },
+                      child: const Text('挑戦する'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+  String _extractToeicLevel(List<String> subjects) {
+    final toeicSubject =
+        subjects.firstWhere((subject) => subject.startsWith('TOEIC'), orElse: () => '');
+    final scoreMatch = RegExp(r'\d+').firstMatch(toeicSubject);
+    return scoreMatch != null ? 'up_to_${scoreMatch.group(0)}' : 'up_to_500';
+  }
+
+  void _navigateToQuiz(String level) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => NotificationTOEICWordQuiz(level: level),
+      ),
+    );
+  }
 
   // フローティングボタンを長押しした際にサブボタンを表示
 void _onLongPress() {
@@ -442,7 +506,7 @@ floatingActionButton: _isRecordPageVisible
                   bottom: MediaQuery.of(context).size.height * 0.05 + 100,
                   right: MediaQuery.of(context).size.width * 0 + 10,
                   child: FloatingActionButton(
-                    heroTag: "btn1",
+                    heroTag: null,
                     shape: CircleBorder(),
                     backgroundColor: Color(0xFF0ABAB5),
                     child: Icon(Icons.edit_note),
@@ -456,7 +520,7 @@ floatingActionButton: _isRecordPageVisible
                   bottom: MediaQuery.of(context).size.height * 0.05 + 70,
                   right: MediaQuery.of(context).size.width * 0+ 70,
                   child: FloatingActionButton(
-                    heroTag: "btn2",
+                    heroTag: null,
                     shape: CircleBorder(),
                     backgroundColor: Color.fromARGB(255, 23, 214, 208),
                     child: Icon(Icons.text_snippet),
@@ -469,7 +533,7 @@ floatingActionButton: _isRecordPageVisible
                   bottom: MediaQuery.of(context).size.height * 0.05 + 10,
                   right: MediaQuery.of(context).size.width * 0 + 100,
                   child: FloatingActionButton(
-                    heroTag: "btn3",
+                    heroTag: null,
                     shape: CircleBorder(),
                     backgroundColor: Color.fromARGB(255, 64, 239, 234),
                     child: Icon(Icons.done),
@@ -490,6 +554,7 @@ floatingActionButton: _isRecordPageVisible
               child: GestureDetector(
                 onLongPress: _onLongPress, // 長押しでサブボタンを表示
                 child: FloatingActionButton(
+                  heroTag: null,
                   onPressed: () {
                     setState(() {
                       if (_showExtraButtons) {
@@ -626,7 +691,7 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                           ),
                           SizedBox(width: 10),
                           Text(
-                            'フォロー中: $_following',
+                            'フォロー中: $_follows',
                             style: TextStyle(
                                 color: Color.fromARGB(255, 100, 100, 100)),
                           ),
@@ -848,5 +913,4 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
-
 

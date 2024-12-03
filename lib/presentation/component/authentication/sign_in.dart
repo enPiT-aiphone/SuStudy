@@ -26,6 +26,7 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
           ),
           child: AppBar(
+            automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
             elevation: 0,
             iconTheme: IconThemeData(
@@ -65,7 +66,8 @@ class _SignInScreenState extends State<SignInScreen> {
                 color: const Color.fromARGB(255, 50, 50, 50),
                 ),
             ),
-            SizedBox(height: 20),            TextFormField(
+            SizedBox(height: 20),
+            TextFormField(
               decoration: InputDecoration(labelText: 'メールアドレス'),
               onChanged: (value) => setState(() => _email = value),
             ),
@@ -121,14 +123,12 @@ class _SignInScreenState extends State<SignInScreen> {
                       'auth_uid': user.uid,
                     });
                     // InformationRegistrationScreenに遷移
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => InformationRegistrationScreen(
-                          userId: user.uid,
-                        ),
-                      ),
-                    );
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => InformationRegistrationScreen(userId: user.uid),
+                    ),
+                  );
                   }
                 } on FirebaseAuthException catch (e) {
                   // エラーメッセージを設定
