@@ -164,11 +164,6 @@ class AuthChecker extends StatelessWidget {
           //ここでLogin_historyに追加
            // ユーザーがログインしている場合、userId を取得
           final userId = snapshot.data?.uid; // snapshotからuidを取得
-          if (userId != null) {
-            // userId が null でないことを確認してからログイン履歴に追加
-            addLoginHistory(userId);
-          }
-        
           return HomeScreen();
         } else {
           // ログインしていない場合、認証選択画面を表示

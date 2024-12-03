@@ -1,4 +1,6 @@
 import '/import.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../authentication/login_history.dart';
 
 class ResultPage extends StatefulWidget {
   final List<String?> selectedAnswers;
@@ -41,6 +43,24 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
     super.dispose();
   }
 
+    Future<void> _addLoginHistoryAndNavigateHome() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      print('ログイン中のユーザーがいません');
+      return;
+    }
+
+    // ログイン履歴を記録
+    await addLoginHistory(userId);
+
+    // ホーム画面に遷移
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => HomeScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     int correctCount = widget.isCorrectAnswers.where((answer) => answer == true).length;
@@ -64,13 +84,8 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
               children: [
                 IconButton(
                   icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => HomeScreen()),
-                      (route) => false,
-                    );
-                  },
+                  onPressed: () => _addLoginHistoryAndNavigateHome(),
+
                 ),
                 const SizedBox(width: 10),
                 const Text(

@@ -1,4 +1,5 @@
 import '/import.dart';
+import 'registration_subjects.dart';
 
 class InformationRegistrationScreen extends StatefulWidget {
   final String userId; // サインイン時に自動生成されたユーザーIDを渡す
@@ -18,7 +19,49 @@ class _InformationRegistrationScreenState
   String _ModifieduserId = '';
   int _age = 0;
   String _occupation = '';
+  String _subOccupation = '';
   int _userNumber = 0;
+  int _followcount = 1;
+  int _followercount = 0;
+
+
+  // 職業選択肢のリスト
+  final List<String> _occupations = [
+    '中学生',
+    '浪人生',
+    '高校生',
+    '大学生',
+    '大学院生',
+    '社会人'
+  ];
+
+   // 年齢選択肢のリスト (10歳～100歳)
+  final List<int> _ages = List<int>.generate(91, (i) => i + 10);
+
+  final List<String> _juniorHighAndHighSchoolGrades = ['1年生', '2年生', '3年生'];
+  final List<String> _universityGrades = [
+    '1年生',
+    '2年生',
+    '3年生',
+    '4年生',
+    '5年生',
+    '6年生'
+  ];
+  final List<String> _graduateCourses = ['修士課程', '博士課程'];
+  final List<String> _jobIndustries = [
+    'IT・通信・インターネット',
+    'メーカー',
+    '商社',
+    'サービス・レジャー',
+    '流通・小売・フード',
+    'マスコミ・広告・デザイン',
+    '金融・保険',
+    'コンサルティング',
+    '不動産・建設・設備',
+    '運輸・交通・物流・倉庫',
+    '環境・エネルギー',
+    '公的機関'
+  ];
 
   @override
   void initState() {
@@ -45,7 +88,9 @@ class _InformationRegistrationScreenState
           'age': _age,
           'user_number': _userNumber,
           'occupation': _occupation,
-          'follower_ids': [], // 空のリスト
+          'sub_occupation': _subOccupation,
+          'follower_count': _followercount, // 空のリスト
+          'follow_count':_followcount,
           'following_subjects': [], // 空のリスト
           'login_history': <Timestamp>[],
         });
@@ -53,16 +98,17 @@ class _InformationRegistrationScreenState
         // サブコレクションを作成
         await userDoc.collection('post_timeline_ids').doc('init').set({});
         await userDoc.collection('posts').doc('init').set({});
-        await userDoc.collection('followings').doc('init').set({});
+        // `follows` サブコレクションに `SuStudy` ドキュメントを作成してタイムスタンプを保存
+        await userDoc.collection('follows').doc('SuStudy').set({
+          'timestamp': FieldValue.serverTimestamp(), // 現在のタイムスタンプ
+        });
+        await userDoc.collection('followers').doc('init').set({});
+
 
         // following_subjects サブコレクションにドキュメントを追加
         final List<String> subjects = [
           'TOEIC',
           'TOEFL',
-          '高校数学',
-          '大学数学',
-          'SPI',
-          'プログラミング'
         ];
         for (String subject in subjects) {
           final subjectDoc = userDoc.collection('following_subjects').doc(subject);
@@ -104,15 +150,112 @@ class _InformationRegistrationScreenState
 
         print('ユーザー情報とサブコレクションが保存されました');
 
-        // HomeScreen に遷移
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
-        );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SubjectSelectionScreen(userId: widget.userId),
+        ),
+      );
       } catch (e) {
         print('エラーが発生しました: $e');
       }
     }
+  }
+
+    // オーバーレイで年齢を選択
+  Future<void> _selectAge() async {
+    await showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return ListView.builder(
+          itemCount: _ages.length,
+          itemBuilder: (BuildContext context, int index) {
+            return ListTile(
+              title: Text('${_ages[index]} 歳'),
+              onTap: () {
+                setState(() {
+                  _age = _ages[index];
+                });
+                Navigator.pop(context);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // オーバーレイで職業を選択
+  Future<void> _selectOccupation() async {
+    await showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return ListView.builder(
+          itemCount: _occupations.length,
+          itemBuilder: (BuildContext context, int index) {
+            return ListTile(
+              title: Text(_occupations[index]),
+              onTap: () {
+                setState(() {
+                  _occupation = _occupations[index];
+                  _subOccupation = '';
+                });
+                Navigator.pop(context);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+    Future<void> _selectSubOccupation(List<String> options) async {
+    await showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return ListView.builder(
+          itemCount: options.length,
+          itemBuilder: (BuildContext context, int index) {
+            return ListTile(
+              title: Text(options[index]),
+              onTap: () {
+                setState(() {
+                  _subOccupation = options[index];
+                });
+                Navigator.pop(context);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // カスタムボタン
+  Widget _buildAuthenticationButton(
+      BuildContext context, String label, VoidCallback onPressed) {
+    final double buttonWidth = MediaQuery.of(context).size.width * 0.75; // ボタンの幅を画面の0.75倍に設定
+
+    return InkWell(
+      onTap: onPressed, // ボタンが押されたときの処理
+      child: Container(
+        width: buttonWidth, // ボタンの幅を設定
+        alignment: Alignment.center, // ボタン内のテキストを中央に配置
+        padding: const EdgeInsets.symmetric(vertical: 15), // ボタンの上下パディングを設定
+        decoration: BoxDecoration(
+          color: Colors.white, // ボタンの背景色を白に設定
+          border: Border.all(color: const Color(0xFF0ABAB5)), // ボタンの境界線の色を設定
+          borderRadius: BorderRadius.circular(15), // 角を丸くする
+        ),
+        child: Text(
+          label, // ボタンのラベル
+          style: const TextStyle(
+            color: Color(0xFF0ABAB5), // テキストの色を設定
+            fontSize: 18, // フォントサイズを設定
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -129,6 +272,7 @@ class _InformationRegistrationScreenState
             ),
           ),
           child: AppBar(
+            automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
             elevation: 0,
             title: Row(
@@ -150,74 +294,114 @@ class _InformationRegistrationScreenState
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: ListView(
+          child: Column(
             children: [
-              // ユーザーネームの入力フィールド
-              TextFormField(
-                decoration: InputDecoration(labelText: 'ユーザーネーム'),
-                onSaved: (value) {
-                  _userName = value ?? '';
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'ユーザーネームを入力してください';
-                  }
-                  return null;
-                },
+              SizedBox(height: 10),
+            Text('ユーザー情報の登録',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color.fromARGB(255, 50, 50, 50),
+                ),
+            ),
+            SizedBox(height: 20),
+              Expanded(
+                child: ListView(
+                  children: [
+                    // ユーザーネームの入力フィールド
+                    TextFormField(
+                      decoration: InputDecoration(labelText: 'ユーザーネーム'),
+                      onSaved: (value) {
+                        _userName = value ?? '';
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'ユーザーネームを入力してください';
+                        }
+                        return null;
+                      },
+                    ),
+                    // ユーザーIDの編集可能なフィールド
+                    TextFormField(
+                      decoration: InputDecoration(labelText: 'ユーザーID'),
+                      initialValue: _userId,
+                      onSaved: (value) {
+                        _ModifieduserId = value ?? '';
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'ユーザーIDを入力してください';
+                        }
+                        return null;
+                      },
+                    ),
+              // 年齢の選択ボタン
+              ListTile(
+                title: Text(_age > 0 ? '年齢: $_age 歳' : '年齢を選択'),
+                trailing: const Icon(Icons.keyboard_arrow_down),
+                onTap: _selectAge,
               ),
-              // ユーザーIDの編集可能なフィールド
-              TextFormField(
-                decoration: InputDecoration(labelText: 'ユーザーID'),
-                initialValue: _userId,
-                onSaved: (value) {
-                  _ModifieduserId = value ?? '';
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'ユーザーIDを入力してください';
-                  }
-                  return null;
-                },
+              const Divider(
+                thickness: 1, // 下線の太さ
+                color: Colors.black, // 下線の色
               ),
-              // 年齢の入力フィールド
-              TextFormField(
-                decoration: InputDecoration(labelText: '年齢'),
-                keyboardType: TextInputType.number,
-                onSaved: (value) {
-                  _age = int.tryParse(value ?? '0') ?? 0;
-                },
-                validator: (value) {
-                  if (value == null || int.tryParse(value) == null || int.parse(value) <= 0) {
-                    return '有効な年齢を入力してください';
-                  }
-                  return null;
-                },
+              // 職業の選択ボタン
+              ListTile(
+                      title: Text(
+                          _occupation.isNotEmpty ? '職業: $_occupation' : '職業を選択'),
+                      trailing: const Icon(Icons.keyboard_arrow_down),
+                      onTap: _selectOccupation,
+                    ),
+                    if (_occupation == '中学生' || _occupation == '高校生') ...[
+                      ListTile(
+                        title: Text(_subOccupation.isNotEmpty
+                            ? '学年: $_subOccupation'
+                            : '学年を選択'),
+                        trailing: const Icon(Icons.keyboard_arrow_down),
+                        onTap: () =>
+                            _selectSubOccupation(_juniorHighAndHighSchoolGrades),
+                      ),
+                    ],
+                    if (_occupation == '大学生') ...[
+                      ListTile(
+                        title: Text(_subOccupation.isNotEmpty
+                            ? '学年: $_subOccupation'
+                            : '学年を選択'),
+                        trailing: const Icon(Icons.keyboard_arrow_down),
+                        onTap: () =>
+                            _selectSubOccupation(_universityGrades),
+                      ),
+                    ],
+                    if (_occupation == '大学院生') ...[
+                      ListTile(
+                        title: Text(_subOccupation.isNotEmpty
+                            ? '課程: $_subOccupation'
+                            : '課程を選択'),
+                        trailing: const Icon(Icons.keyboard_arrow_down),
+                        onTap: () => _selectSubOccupation(_graduateCourses),
+                      ),
+                    ],
+                    if (_occupation == '社会人') ...[
+                      ListTile(
+                        title: Text(_subOccupation.isNotEmpty
+                            ? '業界: $_subOccupation'
+                            : '業界を選択'),
+                        trailing: const Icon(Icons.keyboard_arrow_down),
+                        onTap: () => _selectSubOccupation(_jobIndustries),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-              // 職業の入力フィールド
-              TextFormField(
-                decoration: InputDecoration(labelText: '職業'),
-                onSaved: (value) {
-                  _occupation = value ?? '';
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '職業を入力してください';
-                  }
-                  return null;
+              SizedBox(height: 20),
+              _buildAuthenticationButton(
+                context,
+                '保存',
+                () async {
+                  await _saveUserInfo(); // ユーザー情報を保存する関数
                 },
               ),
               SizedBox(height: 20),
-              // 保存ボタン
-              ElevatedButton(
-                onPressed: () async {
-                  await addLoginHistory(_userId); // ログイン履歴の追加
-                  await _saveUserInfo(); // ユーザー情報を保存する関数
-                },
-                child: Text('保存'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0ABAB5),
-                ),
-              ),
             ],
           ),
         ),
