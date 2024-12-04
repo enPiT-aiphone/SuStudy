@@ -5,6 +5,7 @@ import 'notification.dart'; // NotificationPageクラスが定義されている
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
 import '../add_word.dart';
+import 'search.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -394,7 +395,7 @@ OverlayEntry _createOverlayEntry() {
   List<Widget> get _pages => [
         Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
         Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
-        Center(child: Text('検索画面')),
+        SearchScreen(),
         DashboardScreen(
           selectedTab: _selectedTab,
           selectedCategory: _selectedCategory,
