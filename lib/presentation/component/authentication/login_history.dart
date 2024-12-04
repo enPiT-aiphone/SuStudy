@@ -31,6 +31,7 @@ Future<void> addLoginHistory(String userId) async {
       // ログイン履歴を追加
       await FirebaseFirestore.instance.collection('Users').doc(userId).update({
         'login_history': FieldValue.arrayUnion([Timestamp.fromDate(now)]),
+         't_solved_count': 0, //解いた問題数 を 0 にリセット
       });
       print('本日のログイン履歴が追加されました');
     } catch (e) {
