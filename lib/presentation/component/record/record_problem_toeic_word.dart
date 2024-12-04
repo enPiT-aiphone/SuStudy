@@ -328,6 +328,14 @@ Future<void> _saveResult(
       },SetOptions(merge: true));
 
       print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
+    
+         
+         // todays_count を 1 増やす
+      await userDoc.update({
+          't_solved_count': FieldValue.increment(1),
+      });
+      print('todays_count を 1 増やしました');
+    
     } catch (e) {
     print('クイズ結果の保存に失敗しました: $e');
   }
