@@ -93,6 +93,7 @@ class _InformationRegistrationScreenState
           'follow_count':_followcount,
           'following_subjects': [], // 空のリスト
           'login_history': <Timestamp>[],
+          't_solved_count': 0, 
         });
 
         // サブコレクションを作成

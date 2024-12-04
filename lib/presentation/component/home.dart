@@ -5,6 +5,7 @@ import 'notification.dart'; // NotificationPageクラスが定義されている
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
 import '../add_word.dart';
+import 'ranking_dashboard.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -393,7 +394,8 @@ OverlayEntry _createOverlayEntry() {
   // ボトムナビゲーションバーの項目を管理
   List<Widget> get _pages => [
         Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
-        Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
+        //Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
+        RankingScreen(), // ランキング画面を呼び出す
         Center(child: Text('検索画面')),
         DashboardScreen(
           selectedTab: _selectedTab,
