@@ -1,23 +1,42 @@
+buildscript {
+    ext.kotlin_version = '1.8.10'  // Kotlinのバージョンをここで定義
+
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.4.0'  // 使用するAndroid Gradle Pluginのバージョン
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"  // KotlinのGradleプラグイン
+        classpath 'com.google.gms:google-services:4.3.10'  // Google Servicesのプラグイン
+    }
+}
+
 allprojects {
     repositories {
         google()
         mavenCentral()
     }
+
+    subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    project.evaluationDependsOn(":app")
+
+    if (project.hasProperty('android')) {
+            project.android {
+                if (!project.hasProperty('namespace') || project.namespace == null) {
+                    namespace 'com.example.sustudy_add'
+                }
+            }
+        }
+    }
 }
 
 rootProject.buildDir = "../build"
-subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
-subprojects {
-    project.evaluationDependsOn(":app")
-}
+
+
 
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
-}
-
-dependencies {
-    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    classpath 'com.google.gms:google-services:4.3.10'        
 }
