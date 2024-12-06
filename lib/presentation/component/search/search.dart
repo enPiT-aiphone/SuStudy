@@ -11,13 +11,35 @@ class _SearchScreenState extends State<SearchScreen> {
   String _selectedCategory = 'ユーザー'; // 現在選択されているカテゴリ
   String _searchQuery = ''; // 検索クエリ
   List<dynamic> _searchResults = []; // 検索結果
+  List<String> _subjectList = []; // 教科一覧
   bool _isLoading = false; // ローディング状態
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchSubjects(); // 初期化時に教科一覧を取得
+  }
+
+  // 教科一覧を取得
+  Future<void> _fetchSubjects() async {
+    try {
+      final subjectsSnapshot = await FirebaseFirestore.instance
+          .collection('subjects')
+          .get();
+      setState(() {
+        _subjectList = subjectsSnapshot.docs.map((doc) => doc.id).toList();
+      });
+    } catch (e) {
+      print('教科一覧の取得エラー: $e');
+    }
+  }
 
   // カテゴリ変更時の処理
   void _onCategorySelected(String category) {
     setState(() {
       _selectedCategory = category;
       _searchResults = []; // 結果をリセット
+      _searchQuery = ''; // 検索クエリをリセット
     });
   }
 
@@ -41,13 +63,22 @@ class _SearchScreenState extends State<SearchScreen> {
             .collection('Users')
             .where('user_id', isEqualTo: _searchQuery)
             .get();
-        setState(() {
-          _searchResults = [
-            ...querySnapshot.docs,
-            ...idSnapshot.docs,
-          ];
-        });
-      } else if (_selectedCategory == '教科') {
+
+      // 検索結果をマージして重複を除外
+      final allResults = [...querySnapshot.docs, ...idSnapshot.docs];
+      final uniqueResults = allResults
+          .fold<Map<String, dynamic>>({}, (map, doc) {
+            map[doc['user_id']] = doc;
+            return map;
+          })
+          .values
+          .toList();
+
+        
+      setState(() {
+        _searchResults = uniqueResults;
+      });
+    } else if (_selectedCategory == '教科') {
         // Subjectsコレクションから検索
         final querySnapshot = await FirebaseFirestore.instance
             .collection('subjects')
@@ -72,51 +103,77 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  // 検索結果の表示
-  Widget _buildSearchResults() {
+  // 検索結果または教科一覧の表示
+  Widget _buildSearchResultsOrSubjects() {
     if (_isLoading) {
       return Center(child: CircularProgressIndicator());
     }
 
-    if (_searchResults.isEmpty) {
+    if (_searchQuery.isNotEmpty && _searchResults.isEmpty) {
       return Center(child: Text('結果が見つかりませんでした。'));
     }
 
-    if (_selectedCategory == 'ユーザー') {
-      return ListView.builder(
-        itemCount: _searchResults.length,
-        itemBuilder: (context, index) {
-          final user = _searchResults[index];
-          return ListTile(
-            title: Text(user['user_name'] ?? 'Unknown'),
-            subtitle: Text('@${user['user_id'] ?? 'ID Unknown'}'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => UserDetailsPage(
-                    userId: user['user_id'],
-                    userName: user['user_name'],
+    if (_searchQuery.isNotEmpty) {
+      // 検索結果の表示
+      if (_selectedCategory == 'ユーザー') {
+        return ListView.builder(
+          itemCount: _searchResults.length,
+          itemBuilder: (context, index) {
+            final user = _searchResults[index];
+            return ListTile(
+              title: Text(user['user_name'] ?? 'Unknown'),
+              subtitle: Text('@${user['user_id'] ?? 'ID Unknown'}'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UserDetailsPage(
+                      userId: user['user_id'],
+                      userName: user['user_name'],
+                    ),
                   ),
-                ),
-              );
-            },
-          );
-        },
-      );
-    } else if (_selectedCategory == '教科') {
+                );
+              },
+            );
+          },
+        );
+      } else if (_selectedCategory == '教科') {
+        return ListView.builder(
+          itemCount: _searchResults.length,
+          itemBuilder: (context, index) {
+            final subject = _searchResults[index];
+            return ListTile(
+              title: Text(subject.id),
+              subtitle: Text('教科データが見つかりました'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        SubjectDetailsScreen(subjectName: subject.id),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      }
+    }
+
+    // 教科一覧の表示
+    if (_selectedCategory == '教科' && _searchQuery.isEmpty) {
       return ListView.builder(
-        itemCount: _searchResults.length,
+        itemCount: _subjectList.length,
         itemBuilder: (context, index) {
-          final subject = _searchResults[index];
+          final subjectName = _subjectList[index];
           return ListTile(
-            title: Text(subject.id),
-            subtitle: Text('教科データが見つかりました'),
+            title: Text(subjectName),
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => SubjectDetailsScreen(subjectName: subject.id),
+                  builder: (context) =>
+                      SubjectDetailsScreen(subjectName: subjectName),
                 ),
               );
             },
@@ -125,8 +182,7 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    // ダミー表示
-    return Center(child: Text('このカテゴリの検索機能はまだ実装されていません。'));
+    return Center(child: Text('結果が見つかりませんでした。'));
   }
 
   @override
@@ -145,7 +201,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
               onChanged: (value) {
-                _searchQuery = value;
+                setState(() {
+                  _searchQuery = value;
+                });
               },
               onSubmitted: (value) => _performSearch(),
             ),
@@ -181,7 +239,7 @@ class _SearchScreenState extends State<SearchScreen> {
               }).toList(),
             ),
           ),
-          Expanded(child: _buildSearchResults()),
+          Expanded(child: _buildSearchResultsOrSubjects()),
         ],
       ),
     );
