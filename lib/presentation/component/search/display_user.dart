@@ -47,6 +47,14 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
       final currentUserDoc =
           FirebaseFirestore.instance.collection('Users').doc(currentUserId);
 
+    // 自分のuser_idを取得
+    final currentUserSnapshot = await currentUserDoc.get();
+    final currentUserUserId = currentUserSnapshot.data()?['user_id'];
+    if (currentUserUserId == null) {
+      print('自分のuser_idが見つかりません');
+      return;
+    }
+
       // フォローするユーザーのドキュメントを検索
       final targetUserQuery = await FirebaseFirestore.instance
           .collection('Users')
@@ -78,13 +86,16 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
           'follower_count': FieldValue.increment(1),
         });
 
+        // フォローされる側のfollowersサブコレクションに自分のuser_idを追加
+        await targetUserDoc.collection('followers').doc(currentUserUserId).set({
+          'timestamp': FieldValue.serverTimestamp(),
+          'user_id': currentUserUserId,
+        });
+
         setState(() {
           _isFollowed = true;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${widget.userName}をフォローしました。')),
-        );
       }
     } catch (e) {
       print('フォロー中にエラーが発生しました: $e');
@@ -115,18 +126,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
       final targetUserDoc = targetUserQuery.docs.first.reference;
 
       if (_isFollowed) {
-        // 自分のfollowsサブコレクションから削除
-        final followDoc = currentUserDoc
-            .collection('follows')
-            .where('user_id', isEqualTo: widget.userId)
-            .limit(1)
-            .get();
-
-        final followSnapshot = await followDoc;
-        if (followSnapshot.docs.isNotEmpty) {
-          await followSnapshot.docs.first.reference.delete();
-        }
-
+    
         // 自分のfollow_countを-1
         await currentUserDoc.update({
           'follow_count': FieldValue.increment(-1),
@@ -141,9 +141,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
           _isFollowed = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${widget.userName}のフォローを解除しました。')),
-        );
       }
     } catch (e) {
       print('フォロー解除中にエラーが発生しました: $e');
@@ -153,9 +150,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.userName),
-      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

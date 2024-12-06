@@ -5,7 +5,7 @@ import 'notification.dart'; // NotificationPageクラスが定義されている
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
 import '../add_word.dart';
-import 'search.dart';
+import 'search/search.dart';
 import 'ranking_dashboard.dart';
 
 class MyApp extends StatelessWidget {
