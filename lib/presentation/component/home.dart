@@ -30,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0; // 現在選択されているボトムナビゲーションのインデックス
   bool _isRecordPageVisible = false;
+  bool _isPostCreateVisible = false;
   bool _showExtraButtons = false; // サブボタンを表示するかの状態管理
   int _loginStreak = 0; // ログイン日数
   OverlayEntry? _overlayEntry; // OverlayEntryの参照を保持
@@ -215,6 +216,9 @@ void _onMenuItemTap(String menu) {
     setState(() {
       _isRecordPageVisible = true; // 記録ページ表示状態に設定
     });
+  }else if(menu == "btn2") {
+    // btn2 特有の処理:
+    _isPostCreateVisible = true; // 投稿作成ページを表示状態に設定
   }
 }
   
@@ -528,6 +532,7 @@ floatingActionButton: _isRecordPageVisible
                     backgroundColor: Color.fromARGB(255, 23, 214, 208),
                     child: Icon(Icons.text_snippet),
                     onPressed: () {
+                      _onMenuItemTap("btn2");
                     },
                   ),
                 ),
