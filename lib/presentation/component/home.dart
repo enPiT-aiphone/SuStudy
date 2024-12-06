@@ -4,6 +4,7 @@ import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
+import 'post/post.dart';
 import '../add_word.dart';
 import 'search/search.dart';
 import 'ranking_dashboard.dart';
@@ -217,8 +218,10 @@ void _onMenuItemTap(String menu) {
       _isRecordPageVisible = true; // 記録ページ表示状態に設定
     });
   }else if(menu == "btn2") {
-    // btn2 特有の処理:
-    _isPostCreateVisible = true; // 投稿作成ページを表示状態に設定
+    // btn2 特有の処理: NewPostScreen を表示
+    setState(() {
+      _isPostCreateVisible = true; // 投稿作成ページを表示状態に設定
+    });
   }
 }
   
@@ -469,6 +472,14 @@ Widget build(BuildContext context) {
                       onClose: () {
                         setState(() {
                           _isRecordPageVisible = false; // フローティングボタンで開いたページを閉じる
+                        });
+                      },
+                    )
+                  else if (_isPostCreateVisible)
+                    NewPostScreen(
+                      onPostSubmitted: (){
+                        setState(() {
+                          _isPostCreateVisible = false; // 投稿後にページを閉じる
                         });
                       },
                     ),
