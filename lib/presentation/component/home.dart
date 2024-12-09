@@ -396,7 +396,7 @@ OverlayEntry _createOverlayEntry() {
   List<Widget> get _pages => [
         Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
         //Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
-        RankingScreen(), // ランキング画面を呼び出す
+        RankingScreen(selectedTab:_selectedTab), // ランキング画面を呼び出す
         SearchScreen(),
         DashboardScreen(
           selectedTab: _selectedTab,
