@@ -1,13 +1,73 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '/import.dart';
 
 class NewPostScreen extends StatelessWidget {
+  final String selectedCategory;
   final VoidCallback? onPostSubmitted; // 投稿完了時のコールバック
 
-  NewPostScreen({this.onPostSubmitted});
+
+  NewPostScreen({
+    required this.selectedCategory,
+    this.onPostSubmitted});
 
   @override
   Widget build(BuildContext context) {
     final TextEditingController postController = TextEditingController();
+
+    Future<void> _submitPost(String postContent) async {
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ログインしていないため、投稿できません')),
+        );
+        return;
+      }
+
+      try {
+        final userDoc = FirebaseFirestore.instance
+            .collection('Users')
+            .doc(currentUser.uid);
+
+        final newPostRef = userDoc.collection('posts').doc();
+
+        final postData = {
+          'description': postContent,
+          'post_id': newPostRef.id,
+          'createdAt': FieldValue.serverTimestamp(),
+          'like_count': 0,
+          'user_id': currentUser.uid,
+          'category': selectedCategory,
+        };
+
+        // Usersコレクションに追加
+        await newPostRef.set(postData);
+
+        // Timelineコレクションに追加
+        await FirebaseFirestore.instance
+            .collection('Timeline')
+            .doc(newPostRef.id)
+            .set(postData);
+
+        if (onPostSubmitted != null) {
+          onPostSubmitted!();
+        }
+
+        // HomeScreenに戻る
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+          (route) => false,
+        );
+      } catch (e) {
+        print('投稿保存中にエラーが発生しました: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('投稿保存中にエラーが発生しました')),
+        );
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -15,7 +75,12 @@ class NewPostScreen extends StatelessWidget {
         leading: IconButton(
           icon: Icon(Icons.close),
           onPressed: () {
-            Navigator.of(context).pop();
+            // HomeScreenに戻る
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen()),
+              (route) => false,
+            );
           },
         ),
       ),
@@ -36,16 +101,10 @@ class NewPostScreen extends StatelessWidget {
             SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                final postContent = postController.text;
+                final postContent = postController.text.trim();
                 if (postContent.isNotEmpty) {
-                  // 投稿の送信処理を実行
-                  print('投稿内容: $postContent');
-                  if (onPostSubmitted != null) {
-                    onPostSubmitted!();
-                  }
-                  Navigator.of(context).pop();
+                  _submitPost(postContent);
                 } else {
-                  // 入力が空の場合のエラーメッセージを表示
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('投稿内容を入力してください')),
                   );
