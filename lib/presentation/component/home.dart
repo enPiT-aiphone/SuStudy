@@ -7,6 +7,7 @@ import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
 import '../add_word.dart';
 import 'search/search.dart';
 import 'ranking_dashboard.dart';
+import 'group_control.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -395,6 +396,7 @@ OverlayEntry _createOverlayEntry() {
   // ボトムナビゲーションバーの項目を管理
   List<Widget> get _pages => [
         Center(child: Text('$_selectedTabの$_selectedCategoryのタイムライン画面')),
+        
         //Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
         RankingScreen(selectedTab:_selectedTab), // ランキング画面を呼び出す
         SearchScreen(),
@@ -716,6 +718,23 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                     Navigator.pop(context);
                   },
                 ),
+                ListTile(
+  leading: Icon(Icons.settings),
+  title: Text('グループ'),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+         builder: (context) => CreateGroupScreen(
+          onGroupCreated: (groupId, groupName) {
+            // グループ作成後に実行される処理
+            print('Group created: $groupId, $groupName');
+          },
+      ),
+      ),
+    ); 
+  },
+),
                 ListTile(
                   leading: Icon(Icons.settings),
                   title: Text('設定'),
