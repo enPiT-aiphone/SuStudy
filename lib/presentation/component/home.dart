@@ -843,7 +843,7 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           double totalWidth = 0.0;
           List<Widget> categoryButtons = [];
 
-          if (!_isRecordPageVisible && !_isPostCreateVisible && _currentIndex == 0 || !_isRecordPageVisible && !_isPostCreateVisible && _currentIndex == 1 || !_isRecordPageVisible && !_isPostCreateVisible && _currentIndex == 3) {
+          if (!_isRecordPageVisible &&  _currentIndex == 0 || !_isRecordPageVisible &&  _currentIndex == 1 || !_isRecordPageVisible && _currentIndex == 3) {
             double buttonWidth = _calculateButtonWidth('全体');
             categoryButtons.add(_buildCategoryButton('全体'));
             totalWidth += buttonWidth;
