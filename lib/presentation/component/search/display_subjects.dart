@@ -64,19 +64,20 @@ class _SubjectDetailsScreenState extends State<SubjectDetailsScreen> {
     try {
       final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
 
-      // following_subjects フィールドに教科名を追加
-      await userDoc.update({
-        'following_subjects': FieldValue.arrayUnion([widget.subjectName]),
-        't_solved_count_${widget.subjectName}': 0, // t_solved_count_教科名を初期値0で追加
-      });
-
+  
       // following_subjects サブコレクションに教科ドキュメントを作成
       final subCollectionDoc =
           userDoc.collection('following_subjects').doc(widget.subjectName);
       final docSnapshot = await subCollectionDoc.get();
       if (!docSnapshot.exists) {
         await subCollectionDoc.set({'timestamp': FieldValue.serverTimestamp()});
+      
+        // following_subjects フィールドに教科名を追加
+        await subCollectionDoc.update({
+         't_solved_count_${widget.subjectName}': 0, // t_solved_count_教科名を初期値0で追加
+        });
       }
+
 
       setState(() {
         _isFollowed = true; // フォロー状態を更新
