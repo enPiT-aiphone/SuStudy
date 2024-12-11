@@ -93,7 +93,7 @@ class _InformationRegistrationScreenState
           'follow_count':_followcount,
           'following_subjects': [], // 空のリスト
           'login_history': <Timestamp>[],
-          't_solved_count': 0, 
+          't_solved_count': 0
         });
 
         // サブコレクションを作成
@@ -104,6 +104,7 @@ class _InformationRegistrationScreenState
           'timestamp': FieldValue.serverTimestamp(), // 現在のタイムスタンプ
         });
         await userDoc.collection('followers').doc('init').set({});
+        await userDoc.collection('groups').doc('init').set({});
 
 
         // following_subjects サブコレクションにドキュメントを追加
