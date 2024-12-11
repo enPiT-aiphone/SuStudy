@@ -67,6 +67,7 @@ class _SubjectDetailsScreenState extends State<SubjectDetailsScreen> {
       // following_subjects フィールドに教科名を追加
       await userDoc.update({
         'following_subjects': FieldValue.arrayUnion([widget.subjectName]),
+        't_solved_count_${widget.subjectName}': 0, // t_solved_count_教科名を初期値0で追加
       });
 
       // following_subjects サブコレクションに教科ドキュメントを作成
