@@ -48,7 +48,6 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
       for (final subject in followingSubjects) {
         final goal = selectedGoals[subject];
 
-        if (goal != null) {
           if (subject.contains('TOEIC')) {
             // TOEICまたはTOEFLの場合
             final docRef = subCollection.doc('TOEIC');
@@ -59,7 +58,7 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
             } else {
               await docRef.set({'learning_goal': goal});
             }
-          } if (subject.contains('TOEFL')) {
+          } else if (subject.contains('TOEFL')) {
             // TOEICまたはTOEFLの場合
             final docRef = subCollection.doc('TOEFL');
 
@@ -69,30 +68,41 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
             } else {
               await docRef.set({'learning_goal': goal});
             }
-          } if (subject.contains('英検')) {
+          } else if (subject.contains('英検')) {
             // TOEICまたはTOEFLの場合
             final docRef = subCollection.doc('英検');
 
             final docSnapshot = await docRef.get();
             if (docSnapshot.exists) {
+              if (goal != null){
               await docRef.update({'learning_goal': goal});
+              }
+              await docRef.update({'t_solved_count_$subject': 0});
             } else {
-              await docRef.set({'learning_goal': goal});
+              await docRef.set({'t_solved_count_$subject': 0});
+              if (goal != null){
+              await docRef.update({'learning_goal': goal});
+             }
             }
           }
-          if (!subject.contains('TOEFL') && !subject.contains('TOEIC')) {
+          else {
             // その他の教科の場合、新しいドキュメントを作成
             final docRef = subCollection.doc(subject);
 
             final docSnapshot = await docRef.get();
             if (docSnapshot.exists) {
+              if (goal != null){
               await docRef.update({'learning_goal': goal});
+              }
+              await docRef.update({'t_solved_count_$subject': 0});
             } else {
-              await docRef.set({'learning_goal': goal});
+              await docRef.set({'t_solved_count_$subject': 0});
+              if (goal != null){
+              await docRef.update({'learning_goal': goal});
+              }
             }
           }
         }
-      }
 
       Navigator.pushReplacement(
         context,
