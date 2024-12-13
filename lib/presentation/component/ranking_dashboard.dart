@@ -3,8 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポ�
 
 class RankingScreen extends StatefulWidget {
   final String selectedTab;
+  final String selectedCategory; // 追加：カテゴリを受け取る
 
-  RankingScreen({required this.selectedTab}); // selectedTabをコンストラクタで受け取る
+  RankingScreen({
+    required this.selectedTab,
+    required this.selectedCategory, // 追加
+  });
 
   @override
   _RankingScreenState createState() => _RankingScreenState();
@@ -16,85 +20,70 @@ class _RankingScreenState extends State<RankingScreen> {
   @override
   void initState() {
     super.initState();
-    // ランキングデータの取得
     _rankingDataFuture = _fetchRankingData();
   }
-
 
   @override
   void didUpdateWidget(covariant RankingScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.selectedTab != oldWidget.selectedTab) {
-      // selectedTab が変更された場合、データを再取得
+    if (widget.selectedTab != oldWidget.selectedTab ||
+        widget.selectedCategory != oldWidget.selectedCategory) { // カテゴリの変更も監視
       setState(() {
         _rankingDataFuture = _fetchRankingData();
       });
     }
   }
 
-  // Firestoreからランキングデータを取得
   Future<List<Map<String, dynamic>>> _fetchRankingData() async {
     try {
-      // selectedTabが「フォロー中」ならフォローしているユーザーのみを対象
       if (widget.selectedTab == 'フォロー中') {
+        // フォロー中のユーザーのランキング取得ロジックは変更なし
         final user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
-          return []; // ログインしていない場合は空リストを返す
-        }
+        if (user == null) return [];
 
-        // ユーザーの「follows」サブコレクションからフォローしているユーザーのIDを取得
         final followsSnapshot = await FirebaseFirestore.instance
             .collection('Users')
             .doc(user.uid)
             .collection('follows')
             .get();
 
-        //final follows = followsSnapshot.docs.map((doc) => doc.id).toList(); // フォローしているユーザーのIDリスト
-        //final follows = followsSnapshot.docs.map((doc) => doc.data()['user_id']).toList(); // フォローしているユーザーのIDリスト
-
         final follows = followsSnapshot.docs
-    .map((doc) => doc.data()['user_id'])
-    .where((userId) => userId != null) // null を除外
-    .toList();
+            .map((doc) => doc.data()['user_id'])
+            .where((userId) => userId != null)
+            .toList();
 
-    print('Follows list: $follows'); // 最終的な follows リストをプリント
-        
-        if (follows.isEmpty) {
-          return []; // フォロワーがいない場合は空リストを返す
+        if (follows.isEmpty) return [];
+
+        Query query = FirebaseFirestore.instance
+            .collection('Users')
+            .where('user_id', whereIn: follows);
+
+        // カテゴリフィルタリングを追加
+        if (widget.selectedCategory != '全体') {
+          query = query.where('following_subjects', arrayContains: widget.selectedCategory);
         }
 
-        // フォロワーに関連するランキングデータを取得
-        print('Followsリスト: $follows'); // リスト内容を確認
-final querySnapshot = await FirebaseFirestore.instance
-    .collection('Users')
-    .where('user_id', whereIn: follows) // 確認
-    .orderBy('t_solved_count', descending: true)
-    .limit(10)
-    .get();
-print('クエリ結果: ${querySnapshot.docs.map((doc) => doc.data())}');
-
-        return querySnapshot.docs.map((doc) {
-          final data = doc.data();
-          return {
-            'userName': data['user_name'] ?? 'Unknown', // ユーザー名
-            'tSolvedCount': data['t_solved_count'] ?? 0, // 解決数
-          };
-        }).toList();
-      } else {
-        // selectedTabが「最新」なら全体ランキングを表示
-        final querySnapshot = await FirebaseFirestore.instance
-            .collection('Users')
+        final querySnapshot = await query
             .orderBy('t_solved_count', descending: true)
-            .limit(10) // 上位10人のみ取得
+            .limit(10)
             .get();
 
-        return querySnapshot.docs.map((doc) {
-          final data = doc.data();
-          return {
-            'userName': data['user_name'] ?? 'Unknown', // ユーザー名
-            'tSolvedCount': data['t_solved_count'] ?? 0, // 解決数
-          };
-        }).toList();
+        return _processQuerySnapshot(querySnapshot);
+      } else {
+        // 通常のランキング取得
+        Query query = FirebaseFirestore.instance.collection('Users');
+        
+        // カテゴリフィルタリングを追加
+        if (widget.selectedCategory != '全体') {
+          query = query.where('following_subjects', arrayContains: widget.selectedCategory);
+        }
+
+        final querySnapshot = await query
+            .orderBy('t_solved_count', descending: true)
+            .limit(10)
+            .get();
+
+        return _processQuerySnapshot(querySnapshot);
       }
     } catch (e) {
       print('ランキングデータ取得エラー: $e');
@@ -102,14 +91,21 @@ print('クエリ結果: ${querySnapshot.docs.map((doc) => doc.data())}');
     }
   }
 
+  // クエリ結果の処理を共通化
+  List<Map<String, dynamic>> _processQuerySnapshot(QuerySnapshot querySnapshot) {
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return {
+        'userName': data['user_name'] ?? 'Unknown',
+        'tSolvedCount': data['t_solved_count'] ?? 0,
+      };
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('ランキング'),
-        centerTitle: true,
-      ),
-      body: FutureBuilder<List<Map<String, dynamic>>>( 
+      body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _rankingDataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -128,7 +124,7 @@ print('クエリ結果: ${querySnapshot.docs.map((doc) => doc.data())}');
               final user = rankingData[index];
               return ListTile(
                 leading: CircleAvatar(
-                  child: Text('${index + 1}'), // ランキング順位を表示
+                  child: Text('${index + 1}'),
                 ),
                 title: Text(user['userName']),
                 trailing: Text(
