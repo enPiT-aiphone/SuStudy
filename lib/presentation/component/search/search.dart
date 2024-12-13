@@ -1,6 +1,7 @@
 import '/import.dart';
 import 'display_subjects.dart';
 import 'display_user.dart';
+import 'display_groups.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -59,26 +60,11 @@ class _SearchScreenState extends State<SearchScreen> {
             .collection('Users')
             .where('user_name', isEqualTo: _searchQuery)
             .get();
-        final idSnapshot = await FirebaseFirestore.instance
-            .collection('Users')
-            .where('user_id', isEqualTo: _searchQuery)
-            .get();
 
-      // 検索結果をマージして重複を除外
-      final allResults = [...querySnapshot.docs, ...idSnapshot.docs];
-      final uniqueResults = allResults
-          .fold<Map<String, dynamic>>({}, (map, doc) {
-            map[doc['user_id']] = doc;
-            return map;
-          })
-          .values
-          .toList();
-
-        
-      setState(() {
-        _searchResults = uniqueResults;
-      });
-    } else if (_selectedCategory == '教科') {
+        setState(() {
+          _searchResults = querySnapshot.docs;
+        });
+      } else if (_selectedCategory == '教科') {
         // Subjectsコレクションから検索
         final querySnapshot = await FirebaseFirestore.instance
             .collection('subjects')
@@ -93,6 +79,16 @@ class _SearchScreenState extends State<SearchScreen> {
             _searchResults = [];
           });
         }
+      } else if (_selectedCategory == 'グループ') {
+        // Groupsコレクションから検索
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection('Groups')
+            .where('groupName', isEqualTo: _searchQuery)
+            .get();
+
+        setState(() {
+          _searchResults = querySnapshot.docs;
+        });
       }
     } catch (e) {
       print('検索エラー: $e');
@@ -157,29 +153,30 @@ class _SearchScreenState extends State<SearchScreen> {
             );
           },
         );
-      }
-    }
-
-    // 教科一覧の表示
-    if (_selectedCategory == '教科' && _searchQuery.isEmpty) {
-      return ListView.builder(
-        itemCount: _subjectList.length,
-        itemBuilder: (context, index) {
-          final subjectName = _subjectList[index];
-          return ListTile(
-            title: Text(subjectName),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      SubjectDetailsScreen(subjectName: subjectName),
-                ),
-              );
-            },
+      } else if (_selectedCategory == 'グループ') {
+        return ListView.builder(
+          itemCount: _searchResults.length,
+          itemBuilder: (context, index) {
+            final group = _searchResults[index];
+            return ListTile(
+              title: Text(group['groupName'] ?? 'グループ名なし'),
+              subtitle: Text('作成者: ${group['createdBy']}'),
+             onTap: () {
+          // グループ詳細ページへのナビゲーション
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => GroupDetailsPage(
+                groupId: group['groupId'], // 必須パラメータ：グループID
+                groupName: group['groupName'], // 必須パラメータ：グループ名
+              ),
+            ),
           );
         },
-      );
+            );
+          },
+        );
+      }
     }
 
     return Center(child: Text('結果が見つかりませんでした。'));
@@ -212,7 +209,7 @@ class _SearchScreenState extends State<SearchScreen> {
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: ['投稿', 'ユーザー', '教科', 'タグ'].map((category) {
+              children: ['投稿', 'ユーザー', 'グループ', '教科', 'タグ'].map((category) {
                 return GestureDetector(
                   onTap: () => _onCategorySelected(category),
                   child: Container(
