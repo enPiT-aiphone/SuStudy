@@ -1,4 +1,3 @@
-
 // 必要なパッケージのインポート
 import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
@@ -391,11 +390,10 @@ OverlayEntry _createOverlayEntry() {
     );
   }
 
-  // ボトムナビゲーションバーの項目を管理
+// ボトムナビゲーションバーの項目を管理
   List<Widget> get _pages => [
         TimelineScreen(),
-        //Center(child: Text('$_selectedTabの$_selectedCategoryのランキング画面')),
-        RankingScreen(selectedTab:_selectedTab), // ランキング画面を呼び出す
+        RankingScreen(selectedTab:_selectedTab, selectedCategory: _selectedCategory), // ランキング画面を呼び出す
         SearchScreen(),
         DashboardScreen(
           selectedTab: _selectedTab,
@@ -403,6 +401,8 @@ OverlayEntry _createOverlayEntry() {
           onLoginStreakCalculated:  _onLoginStreakCalculated,
         ),
       ];
+
+
 
 @override
 Widget build(BuildContext context) {
@@ -775,7 +775,7 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
               ],
             ),
           ),
-          // 特定のユーザ番号に応じてデータベース管理フォームを表示
+          // ���定のユーザ番号に応じてデータベース管理フォームを表示
         if (_userNumber >= 1 && _userNumber <= 6)
               ListTile(
                 leading: Icon(Icons.build),
