@@ -389,6 +389,19 @@ OverlayEntry _createOverlayEntry() {
     );
   }
 
+// ボトムナビゲーションバーの項目を管理
+  List<Widget> get _pages => [
+        //TimelineScreen(),
+        Center(child: Text('$_selectedTabの$_selectedCategoryのたいむらいん画面')),
+        RankingScreen(selectedTab:_selectedTab, selectedCategory: _selectedCategory), // ランキング画面を呼び出す
+        SearchScreen(),
+        DashboardScreen(
+          selectedTab: _selectedTab,
+          selectedCategory: _selectedCategory,
+          onLoginStreakCalculated:  _onLoginStreakCalculated,
+        ),
+      ];
+
 
 
 @override
