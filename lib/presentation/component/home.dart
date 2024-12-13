@@ -8,6 +8,7 @@ import '../add_word.dart';
 import 'search/search.dart';
 import 'ranking_dashboard.dart';
 import 'group_control.dart';
+import 'timeline.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -391,8 +392,7 @@ OverlayEntry _createOverlayEntry() {
 
 // ボトムナビゲーションバーの項目を管理
   List<Widget> get _pages => [
-        //TimelineScreen(),
-        Center(child: Text('$_selectedTabの$_selectedCategoryのたいむらいん画面')),
+        TimelineScreen(),
         RankingScreen(selectedTab:_selectedTab, selectedCategory: _selectedCategory), // ランキング画面を呼び出す
         SearchScreen(),
         DashboardScreen(
