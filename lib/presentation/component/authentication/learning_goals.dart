@@ -74,18 +74,11 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
 
             final docSnapshot = await docRef.get();
             if (docSnapshot.exists) {
-              if (goal != null){
               await docRef.update({'learning_goal': goal});
-              }
-              await docRef.update({'t_solved_count_$subject': 0});
             } else {
-              await docRef.set({'t_solved_count_$subject': 0});
-              if (goal != null){
-              await docRef.update({'learning_goal': goal});
-             }
+              await docRef.set({'learning_goal': goal});
             }
-          }
-          else {
+          }else {
             // その他の教科の場合、新しいドキュメントを作成
             final docRef = subCollection.doc(subject);
 
