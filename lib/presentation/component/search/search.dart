@@ -13,6 +13,7 @@ class _SearchScreenState extends State<SearchScreen> {
   String _searchQuery = ''; // 検索クエリ
   List<dynamic> _searchResults = []; // 検索結果
   List<String> _subjectList = []; // 教科一覧
+  List<Map<String, String>> _groupList = []; // グループ一覧
   bool _isLoading = false; // ローディング状態
 
   @override
@@ -24,9 +25,8 @@ class _SearchScreenState extends State<SearchScreen> {
   // 教科一覧を取得
   Future<void> _fetchSubjects() async {
     try {
-      final subjectsSnapshot = await FirebaseFirestore.instance
-          .collection('subjects')
-          .get();
+      final subjectsSnapshot =
+          await FirebaseFirestore.instance.collection('subjects').get();
       setState(() {
         _subjectList = subjectsSnapshot.docs.map((doc) => doc.id).toList();
       });
@@ -35,14 +35,52 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  // カテゴリ変更時の処理
-  void _onCategorySelected(String category) {
+  // グループ一覧を取得
+Future<void> _fetchGroups() async {
+  setState(() {
+    _isLoading = true; // ローディング状態を開始
+  });
+
+  try {
+    final groupsSnapshot =
+        await FirebaseFirestore.instance.collection('Groups').limit(10).get();
+        print(groupsSnapshot.docs);
     setState(() {
-      _selectedCategory = category;
-      _searchResults = []; // 結果をリセット
-      _searchQuery = ''; // 検索クエリをリセット
+      // ドキュメントからデータを安全に取得
+      _groupList = groupsSnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'groupName': data['groupName']?.toString() ?? 'グループ名なし',
+          'createdBy': data['createdBy']?.toString() ?? '作成者不明',
+          'groupId': doc.id, // ドキュメントIDをグループIDとして扱う
+        };
+      }).toList();
+
+      _searchResults = _groupList; // 結果を更新
+    });
+  } catch (e) {
+    print('グループ一覧の取得エラー: $e');
+  } finally {
+    setState(() {
+      _isLoading = false; // ローディング状態を終了
     });
   }
+}
+
+  // カテゴリ変更時の処理
+  void _onCategorySelected(String category) {
+  if (category == 'グループ') {
+    _fetchGroups(); // グループ一覧を取得
+  } else {// 他のカテゴリの場合の処理はここに追加
+    _searchResults = [];
+  }
+  setState(() {
+    _selectedCategory = category;
+    _searchResults = []; // 結果をリセット
+    _searchQuery = ''; // 検索クエリをリセット
+  });
+
+}
 
   // 検索処理
   Future<void> _performSearch() async {
@@ -109,7 +147,8 @@ class _SearchScreenState extends State<SearchScreen> {
       return Center(child: Text('結果が見つかりませんでした。'));
     }
 
-    if (_searchQuery.isNotEmpty) {
+    //if (_searchQuery.isNotEmpty) {
+    if (_selectedCategory == 'グループ') {//ユーザや教科も一覧表示実装したらここ消してください
       // 検索結果の表示
       if (_selectedCategory == 'ユーザー') {
         return ListView.builder(
@@ -161,18 +200,18 @@ class _SearchScreenState extends State<SearchScreen> {
             return ListTile(
               title: Text(group['groupName'] ?? 'グループ名なし'),
               subtitle: Text('作成者: ${group['createdBy']}'),
-             onTap: () {
-          // グループ詳細ページへのナビゲーション
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => GroupDetailsPage(
-                groupId: group['groupId'], // 必須パラメータ：グループID
-                groupName: group['groupName'], // 必須パラメータ：グループ名
-              ),
-            ),
-          );
-        },
+              onTap: () {
+                // グループ詳細ページへのナビゲーション
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => GroupDetailsPage(
+                      groupId: group['groupId'], // 必須パラメータ：グループID
+                      groupName: group['groupName'], // 必須パラメータ：グループ名
+                    ),
+                  ),
+                );
+              },
             );
           },
         );
