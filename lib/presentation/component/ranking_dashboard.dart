@@ -1,5 +1,7 @@
 import '/import.dart'; // アプリ全体で使用するインポートファイル
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestoreをインポート
+import 'package:flutter/material.dart'; // Flutterウィジェットをインポート
 
 class RankingScreen extends StatefulWidget {
   final String selectedTab;
@@ -36,8 +38,15 @@ class _RankingScreenState extends State<RankingScreen> {
 
   Future<List<Map<String, dynamic>>> _fetchRankingData() async {
     try {
+      // 今日の開始時刻 (午前0時) と翌日の開始時刻 (午前0時)
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+      print('today: ${todayStart}');
+
+      Query query;
+
       if (widget.selectedTab == 'フォロー中') {
-        // フォロー中のユーザーのランキング取得ロジックは変更なし
+        // フォロー中のユーザーのランキング取得
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) return [];
 
@@ -49,63 +58,67 @@ class _RankingScreenState extends State<RankingScreen> {
 
         final follows = followsSnapshot.docs
             .map((doc) => doc.data()['user_id'])
-            .where((userId) => userId != null)
+            .whereType<String>()
             .toList();
 
         if (follows.isEmpty) return [];
 
-        Query query = FirebaseFirestore.instance
+        query = FirebaseFirestore.instance
             .collection('Users')
             .where('user_id', whereIn: follows);
-
-        // カテゴリフィルタリングを追加
-        if (widget.selectedCategory != '全体') {
-          query = query.where('following_subjects', arrayContains: widget.selectedCategory);
-        }
-
-        final querySnapshot = await query
-            .orderBy('t_solved_count', descending: true)
-            .limit(10)
-            .get();
-
-        return _processQuerySnapshot(querySnapshot);
       } else {
         // 通常のランキング取得
-        Query query = FirebaseFirestore.instance.collection('Users');
-        
-        // カテゴリフィルタリングを追加
-        if (widget.selectedCategory != '全体') {
-          query = query.where('following_subjects', arrayContains: widget.selectedCategory);
-        }
-
-        final querySnapshot = await query
-            .orderBy('t_solved_count', descending: true)
-            .limit(10)
-            .get();
-
-        return _processQuerySnapshot(querySnapshot);
+        query = FirebaseFirestore.instance
+            .collection('Users');
       }
+
+      // カテゴリフィルタリングを追加
+      if (widget.selectedCategory != '全体') {
+        query = query.where('following_subjects', arrayContains: widget.selectedCategory);
+      }
+
+      final querySnapshot = await query.get();
+
+      print('Query snapshot length: ${querySnapshot.docs.length}');
+
+      // 今日ログインしたユーザーのみフィルタリング
+      final List<Map<String, dynamic>> rankingData = [];
+      for (var doc in querySnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+
+        // login_historyを取得
+        final loginHistory = data['login_history'] ?? [];
+        final todayLogins = loginHistory
+            .where((timestamp) => (timestamp as Timestamp).toDate().isAfter(todayStart.subtract(Duration(hours: 24))))
+            .toList();
+
+        // 今日ログインしたユーザーのみランキングに追加
+        if (todayLogins.isNotEmpty) {
+          rankingData.add({
+            'userName': data['user_name'] ?? 'Unknown',
+            'tSolvedCount': data['t_solved_count'] ?? 0,
+          });
+        }
+      }
+
+      // 今日ログインしたユーザーでソート（解決数が多い順）
+      rankingData.sort((a, b) => b['tSolvedCount'].compareTo(a['tSolvedCount']));
+
+      // 上位10人だけを取得
+      return rankingData.take(10).toList();
     } catch (e) {
       print('ランキングデータ取得エラー: $e');
       return [];
     }
   }
 
-  // クエリ結果の処理を共通化
-  List<Map<String, dynamic>> _processQuerySnapshot(QuerySnapshot querySnapshot) {
-    return querySnapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return {
-        'userName': data['user_name'] ?? 'Unknown',
-        'tSolvedCount': data['t_solved_count'] ?? 0,
-      };
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<List<Map<String, dynamic>>>(
+      appBar: AppBar(
+        title: Text('ランキング'),
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(  // ランキングデータを表示
         future: _rankingDataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
