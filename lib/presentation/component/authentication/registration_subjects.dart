@@ -42,13 +42,13 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
       'TOEFL120点',
     ],
     '英検': [
-      '5級',
-      '4級',
-      '3級',
-      '準2級',
-      '2級',
-      '準1級',
-      '1級',
+      '英検5級',
+      '英検4級',
+      '英検3級',
+      '英検準2級',
+      '英検2級',
+      '英検準1級',
+      '英検1級',
     ],
   };
 

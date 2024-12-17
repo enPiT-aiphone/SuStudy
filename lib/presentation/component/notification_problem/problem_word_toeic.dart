@@ -178,6 +178,11 @@ Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, 
       await userDoc.update({
           't_solved_count': FieldValue.increment(1),
       });
+      final subjectDoc = userDoc.collection('following_subjects').doc('TOEIC');
+       await subjectDoc.update({
+          't_solved_count_up_to_$score': FieldValue.increment(1),
+      });
+     
 
       print('todays_count を 1 増やしました');
       

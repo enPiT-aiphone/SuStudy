@@ -1,4 +1,6 @@
 // 必要なパッケージのインポート
+import 'package:sustudy_add/presentation/component/group_navigation.dart';
+
 import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
@@ -478,8 +480,20 @@ Widget build(BuildContext context) {
                             style: TextStyle(fontSize: 25, color: Colors.white),
                           ),
                           Spacer(),
+                          IconButton(
+                            icon: Icon(Icons.group_add),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => GroupNavigationScreen(),
+                                ),
+                              );
+                            },
+                          ),
                           _buildNotificationIcon(), // 通知アイコンを表示
                           IconButton(icon: Icon(Icons.mail), onPressed: () {}),
+                          
                         ],
                       ),
                     ),
@@ -790,23 +804,6 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                       _profileUserId = _accountId; // 自分の userId を設定
                     });
                     Navigator.pop(context); // ドロワーを閉じる
-                  },
-                ),
-                ListTile(
-                  leading: Icon(Icons.settings),
-                  title: Text('グループ'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CreateGroupScreen(
-                          onGroupCreated: (groupId, groupName) {
-                            // グループ作成後に実行される処理
-                            print('Group created: $groupId, $groupName');
-                          },
-                      ),
-                      ),
-                    ); 
                   },
                 ),
                 ListTile(

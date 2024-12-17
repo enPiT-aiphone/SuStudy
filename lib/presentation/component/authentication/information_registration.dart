@@ -93,7 +93,7 @@ class _InformationRegistrationScreenState
           'follow_count':_followcount,
           'following_subjects': [], // 空のリスト
           'login_history': <Timestamp>[],
-          't_solved_count': 0
+          't_solved_count': 0, 
         });
 
         // サブコレクションを作成
@@ -104,13 +104,13 @@ class _InformationRegistrationScreenState
           'timestamp': FieldValue.serverTimestamp(), // 現在のタイムスタンプ
         });
         await userDoc.collection('followers').doc('init').set({});
-        await userDoc.collection('groups').doc('init').set({});
 
 
         // following_subjects サブコレクションにドキュメントを追加
         final List<String> subjects = [
           'TOEIC',
           'TOEFL',
+          '英検',
         ];
         for (String subject in subjects) {
           final subjectDoc = userDoc.collection('following_subjects').doc(subject);
@@ -127,6 +127,9 @@ class _InformationRegistrationScreenState
             for (String level in levels) {
               final levelDoc = subjectDoc.collection(level).doc();
               await levelDoc.set({});
+              await subjectDoc.update({
+              't_solved_count_$level':0, // 必要に応じて追加情報を保存
+              });
 
               // 各レベルに「Words」「Grammar」「Listening」ドキュメントを作成
               final List<String> categories = ['Words', 'Grammar', 'Listening'];
