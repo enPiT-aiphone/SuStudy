@@ -1,28 +1,47 @@
 import '/import.dart';
 import 'display_subjects.dart';
-import 'display_user.dart';
 import 'display_groups.dart';
+import 'user_profile_screen.dart';
+import 'package:collection/collection.dart';
+import 'dart:async';
 
 class SearchScreen extends StatefulWidget {
   @override
   _SearchScreenState createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
-  String _selectedCategory = 'ユーザー'; // 現在選択されているカテゴリ
-  String _searchQuery = ''; // 検索クエリ
-  List<dynamic> _searchResults = []; // 検索結果
-  List<String> _subjectList = []; // 教科一覧
+class _SearchScreenState extends State<SearchScreen> 
+  with SingleTickerProviderStateMixin{
+  String _selectedCategory = 'ユーザー';
+  String _searchQuery = '';
+  List<dynamic> _searchResults = [];
+  List<String> _subjectList = [];
   List<Map<String, String>> _groupList = []; // グループ一覧
-  bool _isLoading = false; // ローディング状態
+  bool _isLoading = false;
+  bool _isUserProfileVisible = false;
+  String _selectedUserId = '';
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    _fetchSubjects(); // 初期化時に教科一覧を取得
+    _fetchSubjects();
   }
 
-  // 教科一覧を取得
+  void _showUserProfile(String userId) {
+    setState(() {
+      _isUserProfileVisible = true;
+      _selectedUserId = userId;
+    });
+  }
+
+  void _hideUserProfile() {
+    setState(() {
+      _isUserProfileVisible = false;
+      _selectedUserId = '';
+    });
+  }
+
   Future<void> _fetchSubjects() async {
     try {
       final subjectsSnapshot =
@@ -35,7 +54,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  // グループ一覧を取得
+    // グループ一覧を取得
 Future<void> _fetchGroups() async {
   setState(() {
     _isLoading = true; // ローディング状態を開始
@@ -67,22 +86,23 @@ Future<void> _fetchGroups() async {
   }
 }
 
-  // カテゴリ変更時の処理
   void _onCategorySelected(String category) {
-  if (category == 'グループ') {
-    _fetchGroups(); // グループ一覧を取得
-  } else {// 他のカテゴリの場合の処理はここに追加
-    _searchResults = [];
+      if (category == 'グループ') {
+      _fetchGroups(); // グループ一覧を取得
+    } else {// 他のカテゴリの場合の処理はここに追加
+      _searchResults = [];
+    }
+    setState(() {
+      _selectedCategory = category;
+      _searchResults = []; // 結果をリセット
+    });
+
+    // 検索クエリが空でない場合に検索を実行
+    if (_searchQuery.isNotEmpty) {
+      _performSearch();
+    }
   }
-  setState(() {
-    _selectedCategory = category;
-    _searchResults = []; // 結果をリセット
-    _searchQuery = ''; // 検索クエリをリセット
-  });
 
-}
-
-  // 検索処理
   Future<void> _performSearch() async {
     if (_searchQuery.isEmpty) return;
 
@@ -92,40 +112,66 @@ Future<void> _fetchGroups() async {
     });
 
     try {
+      final normalizedQuery = _normalizeString(_searchQuery);
+
       if (_selectedCategory == 'ユーザー') {
-        // Usersコレクションから検索
+        final querySnapshot =
+            await FirebaseFirestore.instance.collection('Users').get();
+        final filteredResults = querySnapshot.docs
+            .where((doc) {
+              final data = doc.data();
+              final userName = data['user_name']?.toString() ?? '';
+              final userId = data['user_id']?.toString() ?? '';
+              return _calculateMatchScore(normalizedQuery, userName, userId) > 0;
+            })
+            .map((doc) => doc.data())
+            .toList();
+
+        setState(() {
+          _searchResults = filteredResults;
+        });
+      } else if (_selectedCategory == '投稿') {
+        final querySnapshot =
+            await FirebaseFirestore.instance.collection('Timeline').get();
+        final filteredResults = querySnapshot.docs
+            .where((doc) {
+              final data = doc.data();
+              final description = data['description']?.toString() ?? '';
+              return _calculateMatchScore(normalizedQuery, description, '') > 0;
+            })
+            .map((doc) => doc.data())
+            .toList();
+
+        setState(() {
+          _searchResults = filteredResults;
+        });
+      } else if (_selectedCategory == '教科') {
         final querySnapshot = await FirebaseFirestore.instance
-            .collection('Users')
-            .where('user_name', isEqualTo: _searchQuery)
+            .collection('subjects')
+            .where(FieldPath.documentId, isGreaterThanOrEqualTo: _searchQuery)
+            .where(FieldPath.documentId, isLessThan: _searchQuery + '\uf8ff')
             .get();
 
         setState(() {
           _searchResults = querySnapshot.docs;
         });
-      } else if (_selectedCategory == '教科') {
-        // Subjectsコレクションから検索
-        final querySnapshot = await FirebaseFirestore.instance
-            .collection('subjects')
-            .doc(_searchQuery)
-            .get();
-        if (querySnapshot.exists) {
-          setState(() {
-            _searchResults = [querySnapshot];
-          });
-        } else {
-          setState(() {
-            _searchResults = [];
-          });
-        }
       } else if (_selectedCategory == 'グループ') {
-        // Groupsコレクションから検索
         final querySnapshot = await FirebaseFirestore.instance
             .collection('Groups')
             .where('groupName', isEqualTo: _searchQuery)
             .get();
 
         setState(() {
-          _searchResults = querySnapshot.docs;
+          _searchResults = querySnapshot.docs.map((doc) => doc.data()).toList();
+        });
+      } else if (_selectedCategory == 'タグ') {
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection('Tags')
+            .where('tagName', isEqualTo: _searchQuery)
+            .get();
+
+        setState(() {
+          _searchResults = querySnapshot.docs.map((doc) => doc.data()).toList();
         });
       }
     } catch (e) {
@@ -137,7 +183,89 @@ Future<void> _fetchGroups() async {
     }
   }
 
-  // 検索結果または教科一覧の表示
+  void _onSearchChanged(String value) {
+    setState(() {
+      _searchQuery = value;
+      if (_isUserProfileVisible) {
+        _hideUserProfile();
+      }
+    });
+
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(Duration(milliseconds: 500), () {
+      _performSearch();
+    });
+  }
+
+  String _normalizeString(String input) {
+    return input
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '')
+        .replaceAll('あ', 'a')
+        .replaceAll('い', 'i');
+  }
+
+  int _calculateMatchScore(String query, String target1, String target2) {
+    int score = 0;
+    final normalizedTarget1 = _normalizeString(target1);
+    final normalizedTarget2 = _normalizeString(target2);
+
+    if (normalizedTarget1 == query) score += 100;
+    if (normalizedTarget1.contains(query)) score += 50;
+    if (normalizedTarget2 == query) score += 80;
+    if (normalizedTarget2.contains(query)) score += 40;
+
+    return score;
+  }
+
+    Widget _buildSearchUI() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: '検索ワードを入力してください',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onChanged: _onSearchChanged,
+            onSubmitted: (value) => _performSearch(),
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: ['投稿', 'ユーザー', 'グループ', '教科', 'タグ'].map((category) {
+            return GestureDetector(
+              onTap: () => _onCategorySelected(category),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 8.0),
+                decoration: BoxDecoration(
+                  color: _selectedCategory == category
+                      ? Color(0xFF0ABAB5)
+                      : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  category,
+                  style: TextStyle(
+                    color: _selectedCategory == category
+                        ? Colors.white
+                        : Colors.black,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        Expanded(child: _buildSearchResultsOrSubjects()),
+      ],
+    );
+  }
+
   Widget _buildSearchResultsOrSubjects() {
     if (_isLoading) {
       return Center(child: CircularProgressIndicator());
@@ -147,78 +275,55 @@ Future<void> _fetchGroups() async {
       return Center(child: Text('結果が見つかりませんでした。'));
     }
 
-    //if (_searchQuery.isNotEmpty) {
-    if (_selectedCategory == 'グループ') {//ユーザや教科も一覧表示実装したらここ消してください
-      // 検索結果の表示
-      if (_selectedCategory == 'ユーザー') {
-        return ListView.builder(
-          itemCount: _searchResults.length,
-          itemBuilder: (context, index) {
-            final user = _searchResults[index];
-            return ListTile(
-              title: Text(user['user_name'] ?? 'Unknown'),
-              subtitle: Text('@${user['user_id'] ?? 'ID Unknown'}'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UserDetailsPage(
-                      userId: user['user_id'],
-                      userName: user['user_name'],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        );
-      } else if (_selectedCategory == '教科') {
-        return ListView.builder(
-          itemCount: _searchResults.length,
-          itemBuilder: (context, index) {
-            final subject = _searchResults[index];
-            return ListTile(
-              title: Text(subject.id),
-              subtitle: Text('教科データが見つかりました'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        SubjectDetailsScreen(subjectName: subject.id),
-                  ),
-                );
-              },
-            );
-          },
-        );
-      } else if (_selectedCategory == 'グループ') {
-        return ListView.builder(
-          itemCount: _searchResults.length,
-          itemBuilder: (context, index) {
-            final group = _searchResults[index];
-            return ListTile(
-              title: Text(group['groupName'] ?? 'グループ名なし'),
-              subtitle: Text('作成者: ${group['createdBy']}'),
-              onTap: () {
-                // グループ詳細ページへのナビゲーション
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => GroupDetailsPage(
-                      groupId: group['groupId'], // 必須パラメータ：グループID
-                      groupName: group['groupName'], // 必須パラメータ：グループ名
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        );
-      }
-    }
+    return ListView.builder(
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) {
+        final result = _searchResults[index];
 
-    return Center(child: Text('結果が見つかりませんでした。'));
+        if (_selectedCategory == 'ユーザー') {
+          return ListTile(
+            title: Text(result['user_name'] ?? 'Unknown'),
+            subtitle: Text('@${result['user_id'] ?? 'ID Unknown'}'),
+            onTap: () => _showUserProfile(result['user_id']),
+          );
+        } else if (_selectedCategory == '投稿') {
+          return ListTile(
+            title: Text(result['description'] ?? '内容なし'),
+            subtitle: Text('@ ${result['user_id'] ?? '不明'}'),
+          );
+        } else if (_selectedCategory == '教科') {
+          return ListTile(title: Text(result.id));
+        }  else if (_selectedCategory == 'グループ') {
+              final group = _searchResults[index]; // すでにListView.builderのループ内
+              return ListTile(
+                title: Text(group['groupName'] ?? 'グループ名なし'),
+                subtitle: Text('作成者: ${group['createdBy']}'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => GroupDetailsPage(
+                        groupId: group['groupId'],
+                        groupName: group['groupName'],
+                      ),
+                    ),
+                  );
+                },
+              );
+            } else if (_selectedCategory == 'タグ') {
+          return ListTile(
+            title: Text(result['tagName'] ?? 'タグなし'),
+          );
+        }
+        return SizedBox.shrink();
+      },
+    );
+  }
+  
+    Widget _buildUserProfile() {
+    return Expanded(
+      child: UserProfileScreen(userId: _selectedUserId),
+    );
   }
 
   @override
@@ -226,36 +331,29 @@ Future<void> _fetchGroups() async {
     return Scaffold(
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: '検索ワードを入力してください',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+          if (!_isUserProfileVisible) ...[
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: '検索ワードを入力してください',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
+                onChanged: _onSearchChanged,
+                onSubmitted: (value) => _performSearch(),
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-              onSubmitted: (value) => _performSearch(),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: ['投稿', 'ユーザー', 'グループ', '教科', 'タグ'].map((category) {
                 return GestureDetector(
                   onTap: () => _onCategorySelected(category),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
+                        horizontal: 16.0, vertical: 8.0),
                     decoration: BoxDecoration(
                       color: _selectedCategory == category
                           ? Color(0xFF0ABAB5)
@@ -274,8 +372,19 @@ Future<void> _fetchGroups() async {
                 );
               }).toList(),
             ),
+           ] else ...[
+        Expanded(
+            child: UserProfileScreen(
+              userId: _selectedUserId,
+              onBack: _hideUserProfile, // 戻る矢印でプロフィール画面を閉じる
+            ),
           ),
-          Expanded(child: _buildSearchResultsOrSubjects()),
+        ],
+        // 検索結果表示
+        if (!_isUserProfileVisible)
+          Expanded(
+            child: _buildSearchResultsOrSubjects(),
+          ),
         ],
       ),
     );

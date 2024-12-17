@@ -53,41 +53,57 @@ class _SubjectDetailsScreenState extends State<SubjectDetailsScreen> {
   }
 
   // フォロー処理
-  Future<void> _followSubject() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+Future<void> _followSubject() async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
 
-    if (userId == null) {
-      print('ログイン中のユーザーがいません');
-      return;
-    }
+  if (userId == null) {
+    print('ログイン中のユーザーがいません');
+    return;
+  }
 
-    try {
-      final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+  try {
+    final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
 
-  
-      // following_subjects サブコレクションに教科ドキュメントを作成
-      final subCollectionDoc =
-          userDoc.collection('following_subjects').doc(widget.subjectName);
-      final docSnapshot = await subCollectionDoc.get();
-      if (!docSnapshot.exists) {
-        await subCollectionDoc.set({'timestamp': FieldValue.serverTimestamp()});
-      
-        // following_subjects フィールドに教科名を追加
-        await subCollectionDoc.update({
-         't_solved_count_${widget.subjectName}': 0, // t_solved_count_教科名を初期値0で追加
-        });
+    // following_subjects フィールドに教科名を追加
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final userSnapshot = await transaction.get(userDoc);
+
+      if (!userSnapshot.exists) {
+        print('ユーザー情報が見つかりません');
+        return;
       }
 
+      // 現在の following_subjects を取得し、教科名を追加
+      final currentSubjects = List<String>.from(
+          userSnapshot.data()?['following_subjects'] ?? []);
+      if (!currentSubjects.contains(widget.subjectName)) {
+        currentSubjects.add(widget.subjectName);
+        transaction.update(userDoc, {'following_subjects': currentSubjects});
+      }
+    });
 
-      setState(() {
-        _isFollowed = true; // フォロー状態を更新
+    // following_subjects サブコレクションに教科ドキュメントを作成
+    final subCollectionDoc =
+        userDoc.collection('following_subjects').doc(widget.subjectName);
+
+    final docSnapshot = await subCollectionDoc.get();
+    if (!docSnapshot.exists) {
+      await subCollectionDoc.set({
+        'timestamp': FieldValue.serverTimestamp(),
+        't_solved_count_${widget.subjectName}': 0, // 教科ごとのカウントを初期化
       });
-
-      print('${widget.subjectName} をフォローしました');
-    } catch (e) {
-      print('フォロー処理中にエラーが発生しました: $e');
     }
+
+    setState(() {
+      _isFollowed = true; // フォロー状態を更新
+    });
+
+    print('${widget.subjectName} をフォローしました');
+  } catch (e) {
+    print('フォロー処理中にエラーが発生しました: $e');
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
