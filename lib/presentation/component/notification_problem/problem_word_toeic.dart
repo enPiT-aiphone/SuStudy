@@ -180,7 +180,7 @@ Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, 
       });
       final subjectDoc = userDoc.collection('following_subjects').doc('TOEIC');
        await subjectDoc.update({
-          't_solved_count_up_to_$score': FieldValue.increment(1),
+          't_solved_count_TOEIC$score点': FieldValue.increment(1),
       });
      
 

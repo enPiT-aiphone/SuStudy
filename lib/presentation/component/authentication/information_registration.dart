@@ -21,7 +21,7 @@ class _InformationRegistrationScreenState
   String _occupation = '';
   String _subOccupation = '';
   int _userNumber = 0;
-  int _followcount = 0;
+  int _followcount = 1;
   int _followercount = 0;
 
 
@@ -118,18 +118,38 @@ class _InformationRegistrationScreenState
             'name': subject, // 必要に応じて追加情報を保存
           });
 
-          // TOEIC と TOEFL のサブコレクションを作成
-          if (subject == 'TOEIC' || subject == 'TOEFL') {
-            final List<String> levels = subject == 'TOEIC'
-                ? ['up_to_300', 'up_to_500', 'up_to_700', 'up_to_900', 'up_to_990']
-                : ['up_to_40', 'up_to_60', 'up_to_80', 'up_to_100', 'up_to_120'];
+          // 各試験のレベルを定義
+          final List<String> levels;
+            if (subject == 'TOEIC') {
+              levels = ['up_to_300', 'up_to_500', 'up_to_700', 'up_to_900', 'up_to_990'];
+            } else if (subject == 'TOEFL') {
+              levels = ['up_to_40', 'up_to_60', 'up_to_80', 'up_to_100', 'up_to_120'];
+            } else if (subject == '英検') {
+              levels = ['5級', '4級', '3級', '準2級', '2級', '準1級', '1級'];
+            } else {
+              levels = [];
+            }
 
             for (String level in levels) {
               final levelDoc = subjectDoc.collection(level).doc();
               await levelDoc.set({});
-              await subjectDoc.update({
-              't_solved_count_$level':0, // 必要に応じて追加情報を保存
-              });
+
+               // レベル名の整形
+            String formattedLevel;
+            if (subject == 'TOEIC' || subject == 'TOEFL') {
+            // 'up_to_500' -> 'TOEIC500'
+            formattedLevel = '$subject${level.replaceAll('up_to_', '')}点';
+            } else if (subject == '英検') {
+            // '2級' -> '英検2級'
+            formattedLevel = '$subject$level';
+            } else {
+            formattedLevel = level; // その他の場合
+            }
+
+            // t_solved_count_<formattedLevel>を追加
+            await subjectDoc.update({
+            't_solved_count_$formattedLevel': 0, // 例: t_solved_count_TOEIC500点
+            });
 
               // 各レベルに「Words」「Grammar」「Listening」ドキュメントを作成
               final List<String> categories = ['Words', 'Grammar', 'Listening'];
@@ -151,7 +171,6 @@ class _InformationRegistrationScreenState
               }
             }
           }
-        }
 
         print('ユーザー情報とサブコレクションが保存されました');
 
