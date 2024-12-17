@@ -94,10 +94,27 @@ class _RankingScreenState extends State<RankingScreen> {
 
         // 今日ログインしたユーザーのみランキングに追加
         if (todayLogins.isNotEmpty) {
+          if (widget.selectedCategory == "全体"){
           rankingData.add({
             'userName': data['user_name'] ?? 'Unknown',
             'tSolvedCount': data['t_solved_count'] ?? 0,
           });
+          }
+          else{
+            final followingSubjectsSnapshot = await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(doc.id)  // ユーザーのIDを使ってそのユーザーのサブコレクションにアクセス
+            .collection('following_subjects')
+            .doc(getSubjectName(widget.selectedCategory))  // selectedCategoryに対応する教科ドキュメント
+            .get();
+
+            final categoryData = followingSubjectsSnapshot.data() as Map<String, dynamic>;
+
+            rankingData.add({
+            'userName': data['user_name'] ?? 'Unknown',
+            'tSolvedCount': categoryData['t_solved_count_${widget.selectedCategory}'] ?? 0,
+            });
+          }
         }
       }
 
@@ -109,6 +126,18 @@ class _RankingScreenState extends State<RankingScreen> {
     } catch (e) {
       print('ランキングデータ取得エラー: $e');
       return [];
+    }
+  }
+
+    String getSubjectName(String selectedCategory) {
+      if (selectedCategory.contains('TOEIC')){
+        return 'TOEIC';
+    } else if (selectedCategory.contains('TOEFL')){
+        return 'TOEFL';
+    } else if (selectedCategory.contains('英検')){
+        return '英検';
+    } else{
+      return '英検';
     }
   }
 
@@ -152,3 +181,4 @@ class _RankingScreenState extends State<RankingScreen> {
     );
   }
 }
+

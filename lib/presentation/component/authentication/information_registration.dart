@@ -133,9 +133,23 @@ class _InformationRegistrationScreenState
             for (String level in levels) {
               final levelDoc = subjectDoc.collection(level).doc();
               await levelDoc.set({});
-              await subjectDoc.update({
-              't_solved_count_$level':0, // 必要に応じて追加情報を保存
-              });
+
+               // レベル名の整形
+            String formattedLevel;
+            if (subject == 'TOEIC' || subject == 'TOEFL') {
+            // 'up_to_500' -> 'TOEIC500'
+            formattedLevel = '$subject${level.replaceAll('up_to_', '')}点';
+            } else if (subject == '英検') {
+            // '2級' -> '英検2級'
+            formattedLevel = '$subject$level';
+            } else {
+            formattedLevel = level; // その他の場合
+            }
+
+            // t_solved_count_<formattedLevel>を追加
+            await subjectDoc.update({
+            't_solved_count_$formattedLevel': 0, // 例: t_solved_count_TOEIC500点
+            });
 
               // 各レベルに「Words」「Grammar」「Listening」ドキュメントを作成
               final List<String> categories = ['Words', 'Grammar', 'Listening'];
