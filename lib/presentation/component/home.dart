@@ -3,6 +3,7 @@ import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
+import 'search/user_profile_screen.dart';
 import 'post/post.dart';
 import '../add_word.dart';
 import 'search/search.dart';
@@ -34,6 +35,9 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isRecordPageVisible = false;
   bool _isPostCreateVisible = false;
   bool _showExtraButtons = false; // サブボタンを表示するかの状態管理
+  bool _isProfileVisible = false;
+  String _profileUserId = '';
+  String _currentUserId = "currentUserId"; 
   int _loginStreak = 0; // ログイン日数
   OverlayEntry? _overlayEntry; // OverlayEntryの参照を保持
   bool _isNotificationVisible = false; // 通知が表示されているかどうかを管理
@@ -391,16 +395,43 @@ OverlayEntry _createOverlayEntry() {
   }
 
 // ボトムナビゲーションバーの項目を管理
-  List<Widget> get _pages => [
-        TimelineScreen(),
-        RankingScreen(selectedTab:_selectedTab, selectedCategory: _selectedCategory), // ランキング画面を呼び出す
-        SearchScreen(),
-        DashboardScreen(
-          selectedTab: _selectedTab,
-          selectedCategory: _selectedCategory,
-          onLoginStreakCalculated:  _onLoginStreakCalculated,
-        ),
-      ];
+Widget get _currentScreen {
+  if (_isProfileVisible) {
+    return UserProfileScreen(
+          userId: _profileUserId,
+          onBack: () {
+            setState(() {
+              _isProfileVisible = false; // プロフィール画面を閉じる
+              _profileUserId = ''; // プロフィール表示のユーザーIDをリセット
+            });
+          },
+        );
+      } else if (_currentIndex == 0) {
+    return  TimelineScreen(
+      selectedTab: _selectedTab,
+      onUserProfileTap: (userId) { // コールバックの実装
+        setState(() {
+          _isProfileVisible = true; // プロフィール画面を表示
+          _profileUserId = userId; // ユーザーIDを保存
+        });
+      },
+    );
+  } else if (_currentIndex == 1) {
+    return RankingScreen(
+      selectedTab: _selectedTab,
+      selectedCategory: _selectedCategory,
+    );
+  } else if (_currentIndex == 2) {
+    return SearchScreen();
+  } else {
+    return DashboardScreen(
+      selectedTab: _selectedTab,
+      selectedCategory: _selectedCategory,
+      onLoginStreakCalculated: _onLoginStreakCalculated,
+    );
+  }
+}
+
 
 
 
@@ -408,9 +439,9 @@ OverlayEntry _createOverlayEntry() {
 Widget build(BuildContext context) {
   return Scaffold(
     body: Stack(
-      fit: StackFit.expand, // Stackを画面全体に拡張
       children: [
-        Column(
+        Positioned.fill(
+        child: Column(
           children: [
             Container(
               decoration: BoxDecoration(
@@ -432,7 +463,13 @@ Widget build(BuildContext context) {
                             child: CircleAvatar(
                               backgroundColor: Colors.white,
                               radius: 18,
-                              child: Icon(Icons.person, color: Color(0xFF0ABAB5)),
+                                      child: Text(
+                                _accountName.isNotEmpty ? _accountName[0] : '?', // user_nameの一文字目
+                                style: TextStyle(
+                                  fontSize: 20, // フォントサイズ
+                                  color: Color(0xFF0ABAB5), // テキストカラー
+                                ),
+                              ),
                             ),
                           ),
                           SizedBox(width: 10),
@@ -449,7 +486,7 @@ Widget build(BuildContext context) {
                     backgroundColor: Colors.transparent,
                     elevation: 0,
                   ),
-                  if (!_isRecordPageVisible && !_isPostCreateVisible && _currentIndex == 0 || _currentIndex == 1)
+                  if (!_isProfileVisible && !_isRecordPageVisible && !_isPostCreateVisible && _currentIndex == 0 || _currentIndex == 1)
                     _buildCustomTabBar(), // タブバーを表示
                 ],
               ),
@@ -457,7 +494,7 @@ Widget build(BuildContext context) {
             Expanded(
               child: Stack(
                 children: [
-                  _pages[_currentIndex], // 現在のページを表示
+                  _currentScreen,
                   if (_isRecordPageVisible)
                     LanguageCategoryScreen(
                       selectedCategory: _selectedCategory,
@@ -466,6 +503,7 @@ Widget build(BuildContext context) {
                           _isRecordPageVisible = false; // フローティングボタンで開いたページを閉じる
                         });
                       },
+                      categoryBar: _buildCategoryBar(context), // カテゴリバーを渡す
                     )
                   else if (_isPostCreateVisible)
                     NewPostScreen(
@@ -479,10 +517,19 @@ Widget build(BuildContext context) {
                 ],
               ),
             ),
-            if (!(!_isRecordPageVisible && !_isPostCreateVisible && _currentIndex == 2))
-              _buildCategoryBar(context),
-          ],
+           ],
+         ),
         ),
+          if (!_isRecordPageVisible && !_isPostCreateVisible && _currentIndex != 2)
+          Positioned(
+            bottom: 0, // 画面の下部に配置
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 10.0), // 下のマージン調整
+              child: _buildCategoryBar(context),
+            ),
+          ),
       ],
     ),
     drawerEnableOpenDragGesture: true,
@@ -598,9 +645,10 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       currentIndex: _currentIndex,
       onTap: (index) {
         setState(() {
-          if (_isRecordPageVisible || _isPostCreateVisible) {
+          if (_isRecordPageVisible || _isPostCreateVisible || _isProfileVisible) {
             _isRecordPageVisible = false; // フロート画面を閉じる
             _isPostCreateVisible = false;
+            _isProfileVisible = false; // プロフィール画面を閉じる
           }
           _currentIndex = index; // ボトムナビゲーションバーの選択を反映
         });
@@ -644,7 +692,15 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
             child: ListView(
               padding: EdgeInsets.zero,
               children: <Widget>[
-                Container(
+                GestureDetector(
+                  onTap: () {
+                  setState(() {
+                    _isProfileVisible = true;
+                    _profileUserId = _accountId; // 自分の userId
+                  });
+                  Navigator.pop(context); // ドロワーを閉じる
+                },
+                child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -662,8 +718,13 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                       CircleAvatar(
                         backgroundColor: Colors.white,
                         radius: 30,
-                        child: Icon(Icons.person,
-                            color: Color(0xFF0ABAB5), size: 40),
+                          child: Text(
+                          _accountName.isNotEmpty ? _accountName[0] : '?', // user_nameの一文字目
+                          style: TextStyle(
+                            fontSize: 35, // フォントサイズ
+                            color: Color(0xFF0ABAB5), // テキストカラー
+                          ),
+                        ),
                       ),
                       SizedBox(height: 10),
                       Row(
@@ -719,30 +780,35 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                     ],
                   ),
                 ),
+                ),
                 ListTile(
                   leading: Icon(Icons.person),
                   title: Text('プロフィール'),
                   onTap: () {
-                    Navigator.pop(context);
+                    setState(() {
+                      _isProfileVisible = true;
+                      _profileUserId = _accountId; // 自分の userId を設定
+                    });
+                    Navigator.pop(context); // ドロワーを閉じる
                   },
                 ),
                 ListTile(
-  leading: Icon(Icons.settings),
-  title: Text('グループ'),
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-         builder: (context) => CreateGroupScreen(
-          onGroupCreated: (groupId, groupName) {
-            // グループ作成後に実行される処理
-            print('Group created: $groupId, $groupName');
-          },
-      ),
-      ),
-    ); 
-  },
-),
+                  leading: Icon(Icons.settings),
+                  title: Text('グループ'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CreateGroupScreen(
+                          onGroupCreated: (groupId, groupName) {
+                            // グループ作成後に実行される処理
+                            print('Group created: $groupId, $groupName');
+                          },
+                      ),
+                      ),
+                    ); 
+                  },
+                ),
                 ListTile(
                   leading: Icon(Icons.settings),
                   title: Text('設定'),
@@ -811,81 +877,94 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     }
 
   // タブバーを構築するメソッド
-  Widget _buildCustomTabBar() {
-    return Container(
-      color: Colors.transparent,
-      padding: const EdgeInsets.only(top: 20.0, bottom: 10.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildTabButton('最新'),
-          _buildTabButton('フォロー中'),
-          _buildTabButton('グループ'),
-        ],
-      ),
-    );
-  }
+Widget _buildCustomTabBar() {
+  return Container(
+    color: Colors.transparent,
+    padding: const EdgeInsets.only(top: 20.0, bottom: 10.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _buildTabButton('最新'),
+        _buildTabButton('フォロー中'),
+        _buildTabButton('グループ'),
+      ],
+    ),
+  );
+}
 
-  // タブボタンの構築メソッド
-  Widget _buildTabButton(String tab) {
-    return GestureDetector(
-      onTap: () {
-        _selectTab(tab);
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-        decoration: BoxDecoration(
-          color: _selectedTab == tab ? Color(0xFF0ABAB5) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          tab,
-          style: TextStyle(
-            color: _selectedTab == tab ? Colors.white : Colors.black,
-            fontSize: 14,
-          ),
+Widget _buildTabButton(String tab) {
+  return GestureDetector(
+    onTap: () {
+      setState(() {
+        _selectedTab = tab; // 選択されたタブを更新
+      });
+    },
+    child: Container(
+      padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+      decoration: BoxDecoration(
+        color: _selectedTab == tab ? Color(0xFF0ABAB5) : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        tab,
+        style: TextStyle(
+          color: _selectedTab == tab ? Colors.white : Colors.black,
+          fontSize: 14,
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   // カテゴリバーの構築メソッド
-  Widget _buildCategoryBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20.0),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          // 画面幅の0.7倍を最大幅として設定
-          double maxBarWidth = constraints.maxWidth * 0.68;
+Widget _buildCategoryBar(BuildContext context) {
+  return Align(
+    alignment: Alignment.bottomCenter,
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        // 画面幅の0.7倍を最大幅として設定
+        double maxBarWidth = constraints.maxWidth * 0.68;
 
-          // 各カテゴリのボタンを生成して、その合計幅を計算
-          double totalWidth = 0.0;
-          List<Widget> categoryButtons = [];
+        // 各カテゴリのボタンを生成して、その合計幅を計算
+        double totalWidth = 0.0;
+        List<Widget> categoryButtons = [];
 
-          if (!_isRecordPageVisible &&  _currentIndex == 0 || !_isRecordPageVisible &&  _currentIndex == 1 || !_isRecordPageVisible && _currentIndex == 3) {
-            double buttonWidth = _calculateButtonWidth('全体');
-            categoryButtons.add(_buildCategoryButton('全体'));
-            totalWidth += buttonWidth;
-          }
+        if (!_isRecordPageVisible && _currentIndex == 0 ||
+            !_isRecordPageVisible && _currentIndex == 1 ||
+            !_isRecordPageVisible && _currentIndex == 3) {
+          double buttonWidth = _calculateButtonWidth('全体');
+          categoryButtons.add(_buildCategoryButton('全体'));
+          totalWidth += buttonWidth;
+        }
 
-          for (String subject in _followingSubjects) {
-            double buttonWidth = _calculateButtonWidth(subject);
-            categoryButtons.add(_buildCategoryButton(subject));
-            totalWidth += buttonWidth;
-          }
+        for (String subject in _followingSubjects) {
+          double buttonWidth = _calculateButtonWidth(subject);
+          categoryButtons.add(_buildCategoryButton(subject));
+          totalWidth += buttonWidth;
+        }
 
-          // カテゴリバーの幅を、教科に依存する合計幅と最大幅の小さい方に設定
-          double barWidth = totalWidth < maxBarWidth ? totalWidth : maxBarWidth;
+        // カテゴリバーの幅を、教科に依存する合計幅と最大幅の小さい方に設定
+        double barWidth = totalWidth < maxBarWidth ? totalWidth : maxBarWidth;
 
-          return Container(
+        return Padding(
+          padding: EdgeInsets.only(bottom: 10.0), // 上下の余白を調整
+          child: Container(
             width: barWidth,
             padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
             decoration: BoxDecoration(
-              color: Colors.grey[200],
+              color: Colors.grey[200], // バーの背景色
               borderRadius: BorderRadius.horizontal(
                 left: Radius.circular(50),
                 right: Radius.circular(50),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12, // 軽い影をつけてバーを浮かせる
+                  blurRadius: 4.0,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -893,11 +972,13 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                 children: categoryButtons,
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
+
 
   // 各カテゴリボタンの幅を計算するメソッド
   double _calculateButtonWidth(String text) {

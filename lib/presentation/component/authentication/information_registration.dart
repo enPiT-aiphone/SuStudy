@@ -21,7 +21,7 @@ class _InformationRegistrationScreenState
   String _occupation = '';
   String _subOccupation = '';
   int _userNumber = 0;
-  int _followcount = 1;
+  int _followcount = 0;
   int _followercount = 0;
 
 
