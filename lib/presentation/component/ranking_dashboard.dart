@@ -19,6 +19,9 @@ class RankingScreen extends StatefulWidget {
 class _RankingScreenState extends State<RankingScreen> {
   late Future<List<Map<String, dynamic>>> _rankingDataFuture;
 
+  late Map<String, dynamic> _userData; // 自分のデータを保持
+  int? _userRank = -1; // 自分の順位
+
   @override
   void initState() {
     super.initState();
@@ -38,15 +41,12 @@ class _RankingScreenState extends State<RankingScreen> {
 
   Future<List<Map<String, dynamic>>> _fetchRankingData() async {
     try {
-      // 今日の開始時刻 (午前0時) と翌日の開始時刻 (午前0時)
       final today = DateTime.now();
       final todayStart = DateTime(today.year, today.month, today.day);
-      print('today: ${todayStart}');
 
       Query query;
 
       if (widget.selectedTab == 'フォロー中') {
-        // フォロー中のユーザーのランキング取得
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) return [];
 
@@ -66,38 +66,34 @@ class _RankingScreenState extends State<RankingScreen> {
         query = FirebaseFirestore.instance
             .collection('Users')
             .where('user_id', whereIn: follows);
+
+        follows.add(user.uid);
       } else {
-        // 通常のランキング取得
-        query = FirebaseFirestore.instance
-            .collection('Users');
+        query = FirebaseFirestore.instance.collection('Users');
       }
 
-      // カテゴリフィルタリングを追加
       if (widget.selectedCategory != '全体') {
         query = query.where('following_subjects', arrayContains: widget.selectedCategory);
       }
 
       final querySnapshot = await query.get();
 
-      print('Query snapshot length: ${querySnapshot.docs.length}');
-
-      // 今日ログインしたユーザーのみフィルタリング
       final List<Map<String, dynamic>> rankingData = [];
       for (var doc in querySnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
 
-        // login_historyを取得
         final loginHistory = data['login_history'] ?? [];
         final todayLogins = loginHistory
-            .where((timestamp) => (timestamp as Timestamp).toDate().isAfter(todayStart.subtract(Duration(hours: 24))))
+            .where((timestamp) =>
+                (timestamp as Timestamp).toDate().isAfter(todayStart.subtract(Duration(hours: 24))))
             .toList();
 
-        // 今日ログインしたユーザーのみランキングに追加
         if (todayLogins.isNotEmpty) {
           if (widget.selectedCategory == "全体"){
           rankingData.add({
             'userName': data['user_name'] ?? 'Unknown',
             'tSolvedCount': data['t_solved_count'] ?? 0,
+            'userId': data['user_id'],
           });
           }
           else{
@@ -118,11 +114,51 @@ class _RankingScreenState extends State<RankingScreen> {
         }
       }
 
-      // 今日ログインしたユーザーでソート（解決数が多い順）
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return [];
+
+      final userSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .where('auth_uid', isEqualTo: user.uid)
+          .get();
+
+      if (userSnapshot.docs.isNotEmpty) {
+        final userData = userSnapshot.docs.first.data();
+        _userData = {
+          'userName': userData['user_name'] ?? 'Unknown',
+          'tSolvedCount': userData['t_solved_count'] ?? 0,
+          'userId': userData['user_id'],
+        };
+      }
+
+      if (widget.selectedTab == 'フォロー中') {
+        rankingData.add({
+          'userName': _userData['userName'],
+          'tSolvedCount': _userData['tSolvedCount'],
+          'userId': _userData['userId'],
+        });
+      }
+
       rankingData.sort((a, b) => b['tSolvedCount'].compareTo(a['tSolvedCount']));
 
-      // 上位10人だけを取得
-      return rankingData.take(10).toList();
+      // 同率順位の計算
+      int rank = 1;
+      for (int i = 0; i < rankingData.length; i++) {
+        if (i > 0 &&
+            rankingData[i]['tSolvedCount'] == rankingData[i - 1]['tSolvedCount']) {
+          rankingData[i]['rank'] = rankingData[i - 1]['rank'];
+        } else {
+          rankingData[i]['rank'] = rank;
+        }
+        rank++;
+      }
+
+      _userRank = rankingData
+              .firstWhere((user) => user['userId'] == _userData['userId'],
+                  orElse: () => {'rank': -1})['rank'] ??
+          -1;
+
+      return rankingData.take(100).toList();
     } catch (e) {
       print('ランキングデータ取得エラー: $e');
       return [];
@@ -142,12 +178,13 @@ class _RankingScreenState extends State<RankingScreen> {
   }
 
   @override
+
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('ランキング'),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(  // ランキングデータを表示
+      body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _rankingDataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -160,21 +197,35 @@ class _RankingScreenState extends State<RankingScreen> {
 
           final rankingData = snapshot.data!;
 
-          return ListView.builder(
-            itemCount: rankingData.length,
-            itemBuilder: (context, index) {
-              final user = rankingData[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  child: Text('${index + 1}'),
+          return Column(
+            children: [
+              if (_userRank != -1)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    'あなたの順位: $_userRank 位',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                title: Text(user['userName']),
-                trailing: Text(
-                  '${user['tSolvedCount']} 解決',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: rankingData.length,
+                  itemBuilder: (context, index) {
+                    final user = rankingData[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        child: Text('${user['rank']}'),
+                      ),
+                      title: Text(user['userName']),
+                      trailing: Text(
+                        '${user['tSolvedCount']} 問',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ],
           );
         },
       ),
