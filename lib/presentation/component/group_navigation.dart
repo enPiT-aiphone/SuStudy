@@ -4,8 +4,15 @@ import 'group_list.dart'; // グループ一覧画面
 
 
 class GroupNavigationScreen extends StatelessWidget {
-  // コンストラクタを追加
-  const GroupNavigationScreen({Key? key}) : super(key: key);
+  final VoidCallback onGroupMenuTap; // グループ一覧表示コールバック
+  final VoidCallback onCreateGroupTap; // グループ作成コールバック
+
+  // コンストラクタでコールバックを受け取る
+  const GroupNavigationScreen({
+    Key? key,
+    required this.onGroupMenuTap,
+    required this.onCreateGroupTap,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -19,15 +26,7 @@ class GroupNavigationScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ElevatedButton(
-              onPressed: () {
-                // グループ作成画面へ遷移
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CreateGroupScreen(),
-                  ),
-                );
-              },
+              onPressed: onCreateGroupTap, // グループ作成コールバックを呼び出し
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF0ABAB5),
               ),
@@ -38,15 +37,7 @@ class GroupNavigationScreen extends StatelessWidget {
             ),
             SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                // グループ一覧画面へ遷移
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UserGroupsScreen(),
-                  ),
-                );
-              },
+              onPressed: onGroupMenuTap, // グループ一覧コールバックを呼び出し
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF0ABAB5),
               ),
