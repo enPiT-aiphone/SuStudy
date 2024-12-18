@@ -259,7 +259,7 @@ Widget build(BuildContext context) {
                                 GestureDetector(
                                   onTap: () {
                                     // プロフィール表示のコールバックを実行
-                                    widget.onUserProfileTap(post['user_id']);
+                                    widget.onUserProfileTap(post['auth_uid']);
                                   },
                                   child: CircleAvatar(
                                     radius: 27,

@@ -71,7 +71,7 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
       .collection('Users')
       .doc(currentUserId)
       .collection('follows')
-      .where('user_id', isEqualTo: widget.userId)
+      .where('auth_uid', isEqualTo: widget.userId)
       .get();
 
   setState(() {
@@ -87,33 +87,15 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
       final currentUserDoc =
           FirebaseFirestore.instance.collection('Users').doc(currentUserId);
 
-    // 自分のuser_idを取得
-    final currentUserSnapshot = await currentUserDoc.get();
-    final currentUserUserId = currentUserSnapshot.data()?['user_id'];
-    if (currentUserUserId == null) {
-      print('自分のuser_idが見つかりません');
-      return;
-    }
-
-      // フォローするユーザーのドキュメントを検索
-      final targetUserQuery = await FirebaseFirestore.instance
-          .collection('Users')
-          .where('user_id', isEqualTo: widget.userId)
-          .limit(1)
-          .get();
-
-      if (targetUserQuery.docs.isEmpty) {
-        print('フォローする対象ユーザーが見つかりません');
-        return;
-      }
-
-      final targetUserDoc = targetUserQuery.docs.first.reference;
+      final targetUserDoc =
+        FirebaseFirestore.instance.collection('Users').doc(widget.userId);
 
       if (!_isFollowed) {
         // 自分のfollowsサブコレクションに追加
         await currentUserDoc.collection('follows').doc(widget.userId).set({
           'timestamp': FieldValue.serverTimestamp(),
-          'user_id': widget.userId,
+          'auth_uid': widget.userId,
+          'is_followed': true,
         });
 
         // 自分のfollow_countを+1
@@ -127,9 +109,10 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
         });
 
         // フォローされる側のfollowersサブコレクションに自分のuser_idを追加
-        await targetUserDoc.collection('followers').doc(currentUserUserId).set({
+        await targetUserDoc.collection('followers').doc(currentUserId).set({
           'timestamp': FieldValue.serverTimestamp(),
-          'user_id': currentUserUserId,
+          'auth_uid': currentUserId,
+          'is_isfollowed': true,
         });
 
         setState(() {
@@ -151,21 +134,14 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
       final currentUserDoc =
           FirebaseFirestore.instance.collection('Users').doc(currentUserId);
 
-      // フォロー解除するユーザーのドキュメントを検索
-      final targetUserQuery = await FirebaseFirestore.instance
-          .collection('Users')
-          .where('user_id', isEqualTo: widget.userId)
-          .limit(1)
-          .get();
-
-      if (targetUserQuery.docs.isEmpty) {
-        print('フォロー解除する対象ユーザーが見つかりません');
-        return;
-      }
-
-      final targetUserDoc = targetUserQuery.docs.first.reference;
+      final targetUserDoc =
+        FirebaseFirestore.instance.collection('Users').doc(widget.userId);
 
       if (_isFollowed) {
+
+        await currentUserDoc.collection('follows').doc(widget.userId).set({
+          'is_followed': false,
+        });
     
         // 自分のfollow_countを-1
         await currentUserDoc.update({
@@ -175,6 +151,10 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
         // 対象ユーザーのfollower_countを-1
         await targetUserDoc.update({
           'follower_count': FieldValue.increment(-1),
+        });
+
+        await targetUserDoc.collection('followers').doc(currentUserId).set({
+          'is_isfollowed': false,
         });
 
         setState(() {
@@ -196,86 +176,75 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
     }
   }
 
-Future<Map<String, dynamic>> _fetchUserData() async {
-  try {
-    final userSnapshot = await FirebaseFirestore.instance
-        .collection('Users')
-        .where('user_id', isEqualTo: widget.userId)
-        .get();
+  Future<Map<String, dynamic>> _fetchUserData() async {
+    try {
+      // FirestoreのUsersコレクションからwidget.userIdのドキュメントを直接取得
+      final userSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId) // ドキュメントIDがwidget.userId
+          .get();
 
-    if (userSnapshot.docs.isNotEmpty) {
-      final userData = userSnapshot.docs.first.data();
-      return {
-        ...userData,
-        'following_subjects':
-            userData['following_subjects'] ?? [], // following_subjectsを追加
-      };
-    } else {
+      if (userSnapshot.exists) {
+        final userData = userSnapshot.data() as Map<String, dynamic>;
+
+        // following_subjectsがnullの場合は空のリストを設定
+        return {
+          ...userData,
+          'following_subjects': userData['following_subjects'] ?? [],
+        };
+      } else {
+        print('ユーザードキュメントが見つかりません: ${widget.userId}');
+        return {};
+      }
+    } catch (e) {
+      print('エラー: $e');
       return {};
     }
-  } catch (e) {
-    print('エラー: $e');
-    return {};
   }
-}
 
-Future<List<Map<String, dynamic>>> _fetchUserPosts() async {
-  if (_currentUserId == null) return []; // ユーザーIDが取得できない場合は空リスト
+  Future<List<Map<String, dynamic>>> _fetchUserPosts() async {
+    if (_currentUserId == null) return []; // ユーザーIDが取得できない場合は空リスト
 
-  try {
-    // Usersコレクションから投稿の親ドキュメントを取得
-    final userSnapshot = await FirebaseFirestore.instance
-        .collection('Users')
-        .where('user_id', isEqualTo: widget.userId)
-        .limit(1)
-        .get();
+    try {
+      // postsサブコレクションから投稿データを取得
+      final postsSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId)
+          .collection('posts')
+          .orderBy('createdAt', descending: true)
+          .get();
 
-    if (userSnapshot.docs.isEmpty) {
-      print('該当するユーザーが見つかりません');
+      // いいねの状態も含めて投稿データをリストにまとめる
+      final List<Future<Map<String, dynamic>?>> postFutures =
+          postsSnapshot.docs.map((postDoc) async {
+        final postData = postDoc.data();
+
+        // いいねの状態を取得
+        final isLiked = await _checkIfLiked(postDoc.id);
+
+        return {
+          'id': postDoc.id,
+          'description': postData['description'] ?? '内容なし',
+          'like_count': postData['like_count'] ?? 0,
+          'createdAt': postData['createdAt'],
+          'is_liked': isLiked,
+        };
+      }).toList();
+
+      final posts = await Future.wait(postFutures);
+      return posts.where((post) => post != null).cast<Map<String, dynamic>>().toList();
+    } catch (e) {
+      print('投稿データ取得中にエラーが発生しました: $e');
       return [];
     }
-
-    final userDocId = userSnapshot.docs.first.id;
-
-    // postsサブコレクションから投稿データを取得
-    final postsSnapshot = await FirebaseFirestore.instance
-        .collection('Users')
-        .doc(userDocId)
-        .collection('posts')
-        .orderBy('createdAt', descending: true)
-        .get();
-
-    // いいねの状態も含めて投稿データをリストにまとめる
-    final List<Future<Map<String, dynamic>?>> postFutures =
-        postsSnapshot.docs.map((postDoc) async {
-      final postData = postDoc.data();
-
-      // いいねの状態を取得
-      final isLiked = await _checkIfLiked(postDoc.id);
-
-      return {
-        'id': postDoc.id,
-        'description': postData['description'] ?? '内容なし',
-        'like_count': postData['like_count'] ?? 0,
-        'createdAt': postData['createdAt'],
-        'is_liked': isLiked,
-      };
-    }).toList();
-
-    final posts = await Future.wait(postFutures);
-    return posts.where((post) => post != null).cast<Map<String, dynamic>>().toList();
-  } catch (e) {
-    print('投稿データ取得中にエラーが発生しました: $e');
-    return [];
   }
-}
 
-Future<void> _loadUserPosts() async {
-  final posts = await _fetchUserPosts();
-  setState(() {
-    _posts = posts; // 投稿データを更新
-  });
-}
+  Future<void> _loadUserPosts() async {
+    final posts = await _fetchUserPosts();
+    setState(() {
+      _posts = posts; // 投稿データを更新
+    });
+  }
 
   Future<bool> _checkIfLiked(String postId) async {
     if (_currentUserId == null) return false;
@@ -300,25 +269,10 @@ Future<void> _toggleLike(String postId, bool isLiked, int currentLikeCount) asyn
   if (_currentUserId == null) return;
 
   try {
-    // Users コレクション内で user_id が一致するドキュメントを取得
-    final userSnapshot = await FirebaseFirestore.instance
-        .collection('Users')
-        .where('user_id', isEqualTo: widget.userId)
-        .limit(1)
-        .get();
-
-    if (userSnapshot.docs.isEmpty) {
-      print('該当するユーザーが見つかりません: user_id=${widget.userId}');
-      return;
-    }
-
-    // 該当ドキュメントのIDを取得
-    final userDocId = userSnapshot.docs.first.id;
-
     // Usersコレクションのpostsサブコレクション内の投稿参照
     final postRef = FirebaseFirestore.instance
         .collection('Users')
-        .doc(userDocId)
+        .doc(widget.userId)
         .collection('posts')
         .doc(postId);
 
@@ -356,13 +310,12 @@ Future<void> _toggleLike(String postId, bool isLiked, int currentLikeCount) asyn
 }
 
 Future<void> _loadUserData() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+  if (_currentUserId == null) return;
 
   try {
     final userDoc = await FirebaseFirestore.instance
         .collection('Users')
-        .doc(user.uid)
+        .doc(_currentUserId)
         .get();
 
     if (userDoc.exists) {
