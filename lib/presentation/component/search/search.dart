@@ -16,6 +16,7 @@ class _SearchScreenState extends State<SearchScreen>
   String _searchQuery = '';
   List<dynamic> _searchResults = [];
   List<String> _subjectList = [];
+  List<Map<String, String>> _groupList = []; // グループ一覧
   bool _isLoading = false;
   bool _isUserProfileVisible = false;
   String _selectedUserId = '';
@@ -53,7 +54,44 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
+    // グループ一覧を取得
+Future<void> _fetchGroups() async {
+  setState(() {
+    _isLoading = true; // ローディング状態を開始
+  });
+
+  try {
+    final groupsSnapshot =
+        await FirebaseFirestore.instance.collection('Groups').limit(10).get();
+        print(groupsSnapshot.docs);
+    setState(() {
+      // ドキュメントからデータを安全に取得
+      _groupList = groupsSnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'groupName': data['groupName']?.toString() ?? 'グループ名なし',
+          'createdBy': data['createdBy']?.toString() ?? '作成者不明',
+          'groupId': doc.id, // ドキュメントIDをグループIDとして扱う
+        };
+      }).toList();
+
+      _searchResults = _groupList; // 結果を更新
+    });
+  } catch (e) {
+    print('グループ一覧の取得エラー: $e');
+  } finally {
+    setState(() {
+      _isLoading = false; // ローディング状態を終了
+    });
+  }
+}
+
   void _onCategorySelected(String category) {
+      if (category == 'グループ') {
+      _fetchGroups(); // グループ一覧を取得
+    } else {// 他のカテゴリの場合の処理はここに追加
+      _searchResults = [];
+    }
     setState(() {
       _selectedCategory = category;
       _searchResults = []; // 結果をリセット
@@ -255,30 +293,24 @@ class _SearchScreenState extends State<SearchScreen>
           );
         } else if (_selectedCategory == '教科') {
           return ListTile(title: Text(result.id));
-        } else if (_selectedCategory == 'グループ') {
-          return ListView.builder(
-            itemCount: _searchResults.length,
-            itemBuilder: (context, index) {
-              final group = _searchResults[index];
+        }  else if (_selectedCategory == 'グループ') {
+              final group = _searchResults[index]; // すでにListView.builderのループ内
               return ListTile(
                 title: Text(group['groupName'] ?? 'グループ名なし'),
                 subtitle: Text('作成者: ${group['createdBy']}'),
                 onTap: () {
-                // グループ詳細ページへのナビゲーション
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => GroupDetailsPage(
-                        groupId: group['groupId'], // 必須パラメータ：グループID
-                        groupName: group['groupName'], // 必須パラメータ：グループ名
+                        groupId: group['groupId'],
+                        groupName: group['groupName'],
                       ),
                     ),
                   );
                 },
               );
-            },
-          );
-        } else if (_selectedCategory == 'タグ') {
+            } else if (_selectedCategory == 'タグ') {
           return ListTile(
             title: Text(result['tagName'] ?? 'タグなし'),
           );
