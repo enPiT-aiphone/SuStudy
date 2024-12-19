@@ -37,79 +37,59 @@ class _FollowFollowerListScreenState extends State<FollowFollowerListScreen>
 
   // ユーザーリスト表示UI (共通)
   Widget _buildUserList(String collectionName) {
-    return FutureBuilder<QuerySnapshot>(
-      // targetUserIdとuser_idが一致するドキュメントを検索
-      future: FirebaseFirestore.instance
+    return StreamBuilder<QuerySnapshot>(
+      // targetUserIdのドキュメントからサブコレクションをリアルタイムで取得
+      stream: FirebaseFirestore.instance
           .collection('Users')
-          .where('user_id', isEqualTo: widget.targetUserId)
-          .limit(1)
-          .get(),
-      builder: (context, userSnapshot) {
-        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          .doc(widget.targetUserId) // ドキュメントIDがwidget.targetUserId
+          .collection(collectionName) // 'follows' または 'followers'
+          .where('user_id', isNotEqualTo: 'init') // 無効データを除外
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         }
 
-        if (!userSnapshot.hasData || userSnapshot.data!.docs.isEmpty) {
-          return Center(child: Text('対象のユーザーが見つかりません'));
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+              child: Text(collectionName == 'follows'
+                  ? 'フォロー中のユーザーはいません'
+                  : 'フォロワーはいません'));
         }
 
-        final userDocId = userSnapshot.data!.docs.first.id;
+        final userList = snapshot.data!.docs;
 
-        return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('Users')
-              .doc(userDocId)
-              .collection(collectionName) // follows または followers
-              .where('user_id', isNotEqualTo: 'init') // initドキュメントを除外
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            }
+        return ListView.builder(
+          itemCount: userList.length,
+          itemBuilder: (context, index) {
+            final followData = userList[index].data() as Map<String, dynamic>;
+            final userId = followData['auth_uid'];
 
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return Center(
-                  child: Text(collectionName == 'follows'
-                      ? 'フォロー中のユーザーはいません'
-                      : 'フォロワーはいません'));
-            }
+            return FutureBuilder<DocumentSnapshot>(
+              // user_idを元にユーザー情報を取得
+              future: FirebaseFirestore.instance
+                  .collection('Users')
+                  .doc(userId) // ドキュメントIDがuserId
+                  .get(),
+              builder: (context, userSnapshot) {
+                if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                  return SizedBox.shrink();
+                }
 
-            final userList = snapshot.data!.docs;
+                final user = userSnapshot.data!;
+                final userName = user['user_name'] ?? '不明';
+                final userId = user['user_id'] ?? '';
 
-            return ListView.builder(
-              itemCount: userList.length,
-              itemBuilder: (context, index) {
-                final followData = userList[index].data() as Map<String, dynamic>;
-                final userId = followData['user_id'];
-
-                return FutureBuilder<DocumentSnapshot>(
-                  future: FirebaseFirestore.instance
-                      .collection('Users')
-                      .where('user_id', isEqualTo: userId)
-                      .limit(1)
-                      .get()
-                      .then((query) => query.docs.first),
-                  builder: (context, userSnapshot) {
-                    if (!userSnapshot.hasData) {
-                      return SizedBox.shrink();
-                    }
-
-                    final user = userSnapshot.data!;
-                    final userName = user['user_name'] ?? '不明';
-                    final userId = user['user_id'] ?? '';
-
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.grey[300],
-                        child: Text(
-                          userName.isNotEmpty ? userName[0] : '?',
-                          style: TextStyle(color: Colors.black),
-                        ),
-                      ),
-                      title: Text(userName),
-                      subtitle: Text('@$userId'),
-                    );
-                  },
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.grey[300],
+                    child: Text(
+                      userName.isNotEmpty ? userName[0] : '?',
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+                  title: Text(userName),
+                  subtitle: Text('@$userId'),
                 );
               },
             );

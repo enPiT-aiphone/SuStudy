@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isGroupCreateVisible = false;
   bool _isGroupShowVisible = false;
   String _profileUserId = '';
-  String _currentUserId = "currentUserId"; 
+  String _currentUserId = ''; 
   int _loginStreak = 0; // ログイン日数
   OverlayEntry? _overlayEntry; // OverlayEntryの参照を保持
   bool _isNotificationVisible = false; // 通知が表示されているかどうかを管理
@@ -118,6 +118,7 @@ class _HomeScreenState extends State<HomeScreen>
         setState(() {
           _accountName = userData['user_name'] ?? 'Unknown'; // ユーザー名
           _accountId = userData['user_id'] ?? 'ID Unknown'; // ユーザーID
+          _currentUserId = userData['auth_uid'] ?? 'uid Unknown';
           _userNumber = userData['user_number'] ?? 0; // ユーザー番号
           _followers = userData['follower_count'];
           _follows = userData['follow_count'];
@@ -489,7 +490,7 @@ Widget get _currentScreen {
       return CreateGroupScreen(); // グループ作成画面
     } if (_isProfileVisible) {
     return UserProfileScreen(
-          userId: _profileUserId,
+          userId: _currentUserId,
           onBack: () {
             setState(() {
               _isProfileVisible = false; // プロフィール画面を閉じる

@@ -77,13 +77,13 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
         // フォロー中タブの場合、フォローしていないユーザーの投稿は除外
         if (widget.selectedTab == 'フォロー中' &&
-            !_followingUserIds.contains(postData['user_id'])) {
+            !_followingUserIds.contains(postData['auth_uid'])) {
           return null;
         }
 
         final userSnapshot = await FirebaseFirestore.instance
             .collection('Users')
-            .where('user_id', isEqualTo: postData['user_id'])
+            .where('auth_uid', isEqualTo: postData['auth_uid'])
             .limit(1)
             .get();
 
@@ -94,6 +94,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
             'post_id': postDoc.id,
             'description': postData['description'],
             'user_name': userData['user_name'],
+            'auth_uid': userData['auth_uid'],
             'user_id': userData['user_id'],
             'createdAt': postData['createdAt'],
             'like_count': postData['like_count'],
@@ -152,30 +153,11 @@ Future<void> _toggleLike(String postId, bool isLiked, int currentLikeCount) asyn
     }
 
     final postData = postSnapshot.data();
-    final userIdInTimeline = postData?['user_id'];
-
-    if (userIdInTimeline == null) {
-      print('userIdInTimeline is null for postId: $postId');
-      return;
-    }
-
-    // Users コレクションから auth_uid を取得
-    final userSnapshot = await FirebaseFirestore.instance
-        .collection('Users')
-        .where('user_id', isEqualTo: userIdInTimeline)
-        .limit(1)
-        .get();
-
-    if (userSnapshot.docs.isEmpty) {
-      print('No user found with user_id: $userIdInTimeline');
-      return;
-    }
-
-    final postOwnerAuthUid = userSnapshot.docs.first.id; // auth_uid を取得
+    final userIdInTimeline = postData?['auth_uid'];
 
     final userPostRef = FirebaseFirestore.instance
         .collection('Users')
-        .doc(postOwnerAuthUid)
+        .doc(userIdInTimeline)
         .collection('posts')
         .doc(postId);
 
@@ -259,7 +241,7 @@ Widget build(BuildContext context) {
                                 GestureDetector(
                                   onTap: () {
                                     // プロフィール表示のコールバックを実行
-                                    widget.onUserProfileTap(post['user_id']);
+                                    widget.onUserProfileTap(post['auth_uid']);
                                   },
                                   child: CircleAvatar(
                                     radius: 27,

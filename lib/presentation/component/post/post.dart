@@ -65,8 +65,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
       }
 
       final userData = userDoc.data();
-      final userId = userData != null && userData['user_id'] != null
-          ? userData['user_id']
+      final userId = userData != null && userData['auth_uid'] != null
+          ? userData['auth_uid']
           : currentUser.uid;
 
       final newPostRef = FirebaseFirestore.instance
@@ -80,7 +80,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
         'post_id': newPostRef.id,
         'createdAt': FieldValue.serverTimestamp(),
         'like_count': 0,
-        'user_id': userId,
+        'auth_uid': userId,
         'category': widget.selectedCategory,
       };
 

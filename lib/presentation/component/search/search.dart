@@ -284,16 +284,34 @@ Future<void> _fetchGroups() async {
           return ListTile(
             title: Text(result['user_name'] ?? 'Unknown'),
             subtitle: Text('@${result['user_id'] ?? 'ID Unknown'}'),
-            onTap: () => _showUserProfile(result['user_id']),
+            onTap: () => _showUserProfile(result['auth_uid']),
           );
         } else if (_selectedCategory == '投稿') {
           return ListTile(
             title: Text(result['description'] ?? '内容なし'),
             subtitle: Text('@ ${result['user_id'] ?? '不明'}'),
           );
-        } else if (_selectedCategory == '教科') {
-          return ListTile(title: Text(result.id));
-        }  else if (_selectedCategory == 'グループ') {
+
+        } else if (_selectedCategory == '教科' && _searchQuery.isEmpty) {
+      return ListView.builder(
+        itemCount: _subjectList.length,
+        itemBuilder: (context, index) {
+          final subjectName = _subjectList[index];
+          return ListTile(
+            title: Text(subjectName),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      SubjectDetailsScreen(subjectName: subjectName),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } else if (_selectedCategory == 'グループ') {
               final group = _searchResults[index]; // すでにListView.builderのループ内
               return ListTile(
                 title: Text(group['groupName'] ?? 'グループ名なし'),
