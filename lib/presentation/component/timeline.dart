@@ -19,6 +19,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
   bool _isLoading = true;
   String? _currentUserId; // 現在のユーザーID
   List<String> _followingUserIds = []; // フォロー中のユーザーIDリスト
+  DocumentSnapshot? _lastDocument; // 最後に読み取ったドキュメント
+  bool _isFetchingMore = false;    // データ取得中かどうか
+  final int _fetchLimit = 10;      // 一度に読み取る投稿数
+
 
   @override
   void initState() {
@@ -60,64 +64,91 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   // Timelineコレクションから投稿を取得
-  Future<void> _fetchTimelinePosts() async {
-    setState(() {
-      _isLoading = true;
-    });
+// Timelineコレクションから投稿を取得
+Future<void> _fetchTimelinePosts({bool isFetchingMore = false}) async {
+  if (_isFetchingMore) return;
 
-    try {
-      final timelineSnapshot = await FirebaseFirestore.instance
-          .collection('Timeline')
-          .orderBy('createdAt', descending: true)
+  setState(() {
+    _isFetchingMore = true;
+    if (!isFetchingMore) _isLoading = true;
+  });
+
+  try {
+    // クエリ作成
+    Query query = FirebaseFirestore.instance
+        .collection('Timeline')
+        .orderBy('createdAt', descending: true)
+        .limit(_fetchLimit);
+
+    if (_lastDocument != null && isFetchingMore) {
+      query = query.startAfterDocument(_lastDocument!);
+    }
+
+    // クエリを実行
+    final timelineSnapshot = await query.get();
+
+    if (timelineSnapshot.docs.isNotEmpty) {
+      final List<Map<String, dynamic>> newPosts = [];
+      final List<String> userIds = timelineSnapshot.docs
+          .map((doc) => (doc.data() as Map<String, dynamic>)['auth_uid'] as String)
+          .toList();
+
+      // ユーザー情報を一括で取得
+      final usersSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .where('auth_uid', whereIn: userIds)
           .get();
 
-      final List<Future<Map<String, dynamic>?>> postFutures =
-          timelineSnapshot.docs.map((postDoc) async {
-        final postData = postDoc.data();
+      final Map<String, Map<String, dynamic>> usersMap = {
+        for (var userDoc in usersSnapshot.docs)
+          userDoc.data()['auth_uid']: userDoc.data()
+      };
 
-        // フォロー中タブの場合、フォローしていないユーザーの投稿は除外
+      for (var postDoc in timelineSnapshot.docs) {
+        final postData = postDoc.data() as Map<String, dynamic>;
+
+        // フォロー中タブの場合、フォローしていないユーザーの投稿を除外
         if (widget.selectedTab == 'フォロー中' &&
             !_followingUserIds.contains(postData['auth_uid'])) {
-          return null;
+          continue;
         }
 
-        final userSnapshot = await FirebaseFirestore.instance
-            .collection('Users')
-            .where('auth_uid', isEqualTo: postData['auth_uid'])
-            .limit(1)
-            .get();
+        // ユーザー情報を取得
+        final userData = usersMap[postData['auth_uid']];
+        if (userData == null) continue;
 
-        if (userSnapshot.docs.isNotEmpty) {
-          final userData = userSnapshot.docs.first.data();
-
-          return {
-            'post_id': postDoc.id,
-            'description': postData['description'],
-            'user_name': userData['user_name'],
-            'auth_uid': userData['auth_uid'],
-            'user_id': userData['user_id'],
-            'createdAt': postData['createdAt'],
-            'like_count': postData['like_count'],
-            'is_liked': await _checkIfLiked(postDoc.id),
-          };
-        }
-        return null;
-      }).toList();
-
-      final posts = await Future.wait(postFutures);
+        newPosts.add({
+          'post_id': postDoc.id,
+          'description': postData['description'],
+          'user_name': userData['user_name'],
+          'auth_uid': userData['auth_uid'],
+          'user_id': userData['user_id'],
+          'createdAt': postData['createdAt'],
+          'like_count': postData['like_count'],
+          'is_liked': await _checkIfLiked(postDoc.id),
+        });
+      }
 
       setState(() {
-        _timelinePosts =
-            posts.where((post) => post != null).cast<Map<String, dynamic>>().toList();
-        _isLoading = false;
+        _timelinePosts.addAll(newPosts);
+        _lastDocument = timelineSnapshot.docs.last; // 最後のドキュメントを更新
+        _isFetchingMore = false;
+        if (!isFetchingMore) _isLoading = false;
       });
-    } catch (e) {
-      print('タイムラインデータの取得中にエラーが発生しました: $e');
+    } else {
       setState(() {
-        _isLoading = false;
+        _isFetchingMore = false;
+        if (!isFetchingMore) _isLoading = false;
       });
     }
+  } catch (e) {
+    print('タイムラインデータの取得中にエラーが発生しました: $e');
+    setState(() {
+      _isFetchingMore = false;
+      _isLoading = false;
+    });
   }
+}
 
   // 投稿がいいねされているか確認
   Future<bool> _checkIfLiked(String postId) async {
@@ -209,121 +240,131 @@ void didUpdateWidget(TimelineScreen oldWidget) {
   }
 }
 
-
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    body: _isLoading
-        ? Center(child: CircularProgressIndicator())
-        : _timelinePosts.isEmpty
-            ? Center(child: Text('投稿がありません'))
-            : ListView.separated(
-                itemCount: _timelinePosts.length,
-                separatorBuilder: (context, index) => Divider(
-                  color: Colors.grey[300], // 線の色を指定
-                  thickness: 1, // 線の太さを指定
-                  height: 1, // 線の高さ
-                ),
-                itemBuilder: (context, index) {
-                  final post = _timelinePosts[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12.0, horizontal: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    // プロフィール表示のコールバックを実行
-                                    widget.onUserProfileTap(post['auth_uid']);
-                                  },
-                                  child: CircleAvatar(
-                                    radius: 27,
-                                    backgroundColor: Colors.grey[200],
-                                    child: Text(
-                                      post['user_name'] != null ? post['user_name'][0] : '?',
-                                      style: TextStyle(
-                                        fontSize: 25,
-                                        color: Colors.black,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : NotificationListener<ScrollNotification>(
+              onNotification: (ScrollNotification scrollInfo) {
+                if (scrollInfo.metrics.pixels ==
+                        scrollInfo.metrics.maxScrollExtent &&
+                    !_isFetchingMore) {
+                  // スクロール位置が一番下に到達した場合、次の投稿を取得
+                  _fetchTimelinePosts(isFetchingMore: true);
+                }
+                return false;
+              },
+              child: _timelinePosts.isEmpty
+                  ? Center(child: Text('投稿がありません'))
+                  : ListView.separated(
+                      itemCount: _timelinePosts.length,
+                      separatorBuilder: (context, index) => Divider(
+                        color: Colors.grey[300], // 線の色を指定
+                        thickness: 1, // 線の太さを指定
+                        height: 1, // 線の高さ
+                      ),
+                      itemBuilder: (context, index) {
+                        final post = _timelinePosts[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12.0, horizontal: 16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () {
+                                          // プロフィール表示のコールバックを実行
+                                          widget.onUserProfileTap(post['auth_uid']);
+                                        },
+                                        child: CircleAvatar(
+                                          radius: 27,
+                                          backgroundColor: Colors.grey[200],
+                                          child: Text(
+                                            post['user_name'] != null ? post['user_name'][0] : '?',
+                                            style: TextStyle(
+                                              fontSize: 25,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ),
                                       ),
+                                      SizedBox(width: 10),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                post['user_name'],
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Text(
+                                                '@${post['user_id']}',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    post['createdAt'] != null
+                                        ? _timeAgo(post['createdAt'])
+                                        : '',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
                                     ),
                                   ),
+                                ],
+                              ),
+                              SizedBox(height: 10),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 64.0), // descriptionの位置を調整
+                                child: Text(
+                                  post['description'],
+                                  style: TextStyle(fontSize: 16),
                                 ),
-                                SizedBox(width: 10),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          post['user_name'],
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          '@${post['user_id']}',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      ],
+                              ),
+                              SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      post['is_liked']
+                                          ? Icons.thumb_up_alt
+                                          : Icons.thumb_up_alt_outlined,
+                                      color: post['is_liked'] ? Colors.blue : Colors.grey,
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Text(
-                              post['createdAt'] != null
-                                  ? _timeAgo(post['createdAt'])
-                                  : '',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
+                                    onPressed: () {
+                                      _toggleLike(post['post_id'], post['is_liked'],
+                                          post['like_count']);
+                                    },
+                                  ),
+                                  Text('${post['like_count']}'),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 10),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 64.0), // descriptionの位置を調整
-                          child: Text(
-                            post['description'],
-                            style: TextStyle(fontSize: 16),
+                            ],
                           ),
-                        ),
-                        SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                post['is_liked']
-                                    ? Icons.thumb_up_alt
-                                    : Icons.thumb_up_alt_outlined,
-                                color: post['is_liked'] ? Colors.blue : Colors.grey,
-                              ),
-                              onPressed: () {
-                                _toggleLike(post['post_id'], post['is_liked'],
-                                    post['like_count']);
-                              },
-                            ),
-                            Text('${post['like_count']}'),
-                          ],
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-  );
-}
+            ),
+    );
+  }
 }
