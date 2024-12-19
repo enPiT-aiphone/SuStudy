@@ -334,6 +334,12 @@ Future<void> _saveResult(
       await userDoc.update({
           't_solved_count': FieldValue.increment(1),
       });
+
+      final subjectDoc = userDoc.collection('following_subjects').doc('TOEIC');
+      await subjectDoc.update({
+          't_solved_count_TOEIC$score点': FieldValue.increment(1),
+      });
+
       print('todays_count を 1 増やしました');
     
     } catch (e) {
