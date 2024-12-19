@@ -291,6 +291,7 @@ Future<void> _fetchGroups() async {
             title: Text(result['description'] ?? '内容なし'),
             subtitle: Text('@ ${result['user_id'] ?? '不明'}'),
           );
+
         } else if (_selectedCategory == '教科' && _searchQuery.isEmpty) {
       return ListView.builder(
         itemCount: _subjectList.length,

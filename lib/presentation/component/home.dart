@@ -1,6 +1,5 @@
 // 必要なパッケージのインポート
 import 'package:sustudy_add/presentation/component/group_navigation.dart';
-
 import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
@@ -10,8 +9,10 @@ import 'post/post.dart';
 import '../add_word.dart';
 import 'search/search.dart';
 import 'ranking_dashboard.dart';
+import 'group_navigation.dart';
 import 'group_control.dart';
 import 'timeline.dart';
+import 'group_list.dart';
 
 class MyApp extends StatelessWidget {
   @override
@@ -38,6 +39,8 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isPostCreateVisible = false;
   bool _showExtraButtons = false; // サブボタンを表示するかの状態管理
   bool _isProfileVisible = false;
+  bool _isGroupCreateVisible = false;
+  bool _isGroupShowVisible = false;
   String _profileUserId = '';
   String _currentUserId = ''; 
   int _loginStreak = 0; // ログイン日数
@@ -397,9 +400,95 @@ OverlayEntry _createOverlayEntry() {
     );
   }
 
+
+
+  OverlayEntry _createGroupNavigationOverlay() {
+  return OverlayEntry(
+    builder: (context) => Stack(
+      children: [
+        // 背景をタップするとオーバーレイを閉じる
+        GestureDetector(
+          onTap: () => _removeOverlay(), // オーバーレイを閉じる
+          child: Container(color: Colors.transparent),
+        ),
+        // グループナビゲーション画面
+        Positioned(
+          top: kToolbarHeight + 10,
+          right: 50,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            alignment: Alignment.topRight,
+            child: FadeTransition(
+              opacity: _opacityAnimation,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 250,
+                  height: 300,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: GroupNavigationScreen(
+                      onGroupMenuTap: () {
+                        // グループ一覧を表示
+                        setState(() {
+                          _isGroupShowVisible = true;
+                          _removeOverlay(); // オーバーレイを閉じる
+                        });
+                      },
+                      onCreateGroupTap: () {
+                        // グループ作成を表示
+                        setState(() {
+                          _isGroupCreateVisible = true;
+                          _removeOverlay(); // オーバーレイを閉じる
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+void _toggleGroupNavigationOverlay(BuildContext context) {
+  if (_isNotificationVisible) {
+    _animationController.reverse().then((_) {
+      _removeOverlay();
+    });
+  } else {
+    _overlayEntry = _createGroupNavigationOverlay(); // 新しいオーバーレイを作成
+    Overlay.of(context).insert(_overlayEntry!);
+    _isNotificationVisible = true; // オーバーレイ表示状態を管理
+    _animationController.reset();
+    _animationController.forward();
+  }
+}
+
+
 // ボトムナビゲーションバーの項目を管理
 Widget get _currentScreen {
-  if (_isProfileVisible) {
+  if (_isGroupShowVisible) {
+      return UserGroupsScreen(); // グループ一覧画面
+    } else if (_isGroupCreateVisible) {
+      return CreateGroupScreen(); // グループ作成画面
+    } if (_isProfileVisible) {
     return UserProfileScreen(
           userId: _currentUserId,
           onBack: () {
@@ -484,12 +573,7 @@ Widget build(BuildContext context) {
                           IconButton(
                             icon: Icon(Icons.group_add),
                             onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => GroupNavigationScreen(),
-                                ),
-                              );
+                              _toggleGroupNavigationOverlay(context);
                             },
                           ),
                           _buildNotificationIcon(), // 通知アイコンを表示
@@ -660,10 +744,12 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       currentIndex: _currentIndex,
       onTap: (index) {
         setState(() {
-          if (_isRecordPageVisible || _isPostCreateVisible || _isProfileVisible) {
+          if (_isRecordPageVisible || _isPostCreateVisible || _isProfileVisible ||_isGroupShowVisible ||_isGroupCreateVisible) {
             _isRecordPageVisible = false; // フロート画面を閉じる
             _isPostCreateVisible = false;
             _isProfileVisible = false; // プロフィール画面を閉じる
+            _isGroupShowVisible = false;
+            _isGroupCreateVisible = false;
           }
           _currentIndex = index; // ボトムナビゲーションバーの選択を反映
         });
