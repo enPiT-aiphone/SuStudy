@@ -490,7 +490,7 @@ Widget get _currentScreen {
       return CreateGroupScreen(); // グループ作成画面
     } if (_isProfileVisible) {
     return UserProfileScreen(
-          userId: _currentUserId,
+          userId: _profileUserId ,
           onBack: () {
             setState(() {
               _isProfileVisible = false; // プロフィール画面を閉じる
@@ -797,7 +797,7 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                   onTap: () {
                   setState(() {
                     _isProfileVisible = true;
-                    _profileUserId = _accountId; // 自分の userId
+                    _profileUserId = _currentUserId; // 自分の userId
                   });
                   Navigator.pop(context); // ドロワーを閉じる
                 },
@@ -888,7 +888,7 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                   onTap: () {
                     setState(() {
                       _isProfileVisible = true;
-                      _profileUserId = _accountId; // 自分の userId を設定
+                      _profileUserId = _currentUserId; // 自分の userId を設定
                     });
                     Navigator.pop(context); // ドロワーを閉じる
                   },

@@ -231,14 +231,17 @@ Future<void> _toggleLike(String postId, bool isLiked, int currentLikeCount) asyn
   }
 
   @override
-void didUpdateWidget(TimelineScreen oldWidget) {
-  super.didUpdateWidget(oldWidget);
+  void didUpdateWidget(TimelineScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
 
-  if (widget.selectedTab != oldWidget.selectedTab) {
-    // タブが変更された場合、タイムラインのデータを再取得
-    _fetchTimelinePosts();
+    if (widget.selectedTab != oldWidget.selectedTab) {
+      setState(() {
+        _timelinePosts.clear(); // タイムライン投稿をクリア
+        _lastDocument = null; // 最後のドキュメントもリセット
+      });
+      _fetchTimelinePosts(); // 新しいタブに基づいて投稿を再取得
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {

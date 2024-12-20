@@ -17,6 +17,7 @@ class _SearchScreenState extends State<SearchScreen>
   List<dynamic> _searchResults = [];
   List<String> _subjectList = [];
   List<Map<String, String>> _groupList = []; // グループ一覧
+  List<String> _cachedSubjectList = []; // 教科のキャッシュ
   bool _isLoading = false;
   bool _isUserProfileVisible = false;
   String _selectedUserId = '';
@@ -27,7 +28,11 @@ class _SearchScreenState extends State<SearchScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
-    _fetchSubjects();
+    _fetchSubjects().then((_) {
+      if (_selectedCategory == '教科' && _searchQuery.isEmpty) {
+        _performSearch(); // 初期表示のため実行
+      }
+    });
     _tabController.addListener(_onTabChanged);
 
     _selectedCategory = ['投稿', 'ユーザー', 'グループ', '教科', 'タグ'][_tabController.index];
@@ -56,7 +61,15 @@ class _SearchScreenState extends State<SearchScreen>
     if (mounted) {
       setState(() {
         _selectedCategory = ['投稿', 'ユーザー', 'グループ', '教科', 'タグ'][_tabController.index];
-        _searchResults = _tabResults[_selectedCategory] ?? [];
+        if (_selectedCategory == '教科' && _searchQuery.isEmpty) {
+          _searchResults = List.from(_cachedSubjectList); // キャッシュを使用
+        } else {
+          _searchResults = []; // 他のカテゴリはリセット
+        }
+        _isLoading = false;  // ローディング状態をリセット
+        if (_isUserProfileVisible) {
+          _hideUserProfile();
+        }
       });
 
       // タブ変更時に検索を実行
@@ -84,8 +97,16 @@ class _SearchScreenState extends State<SearchScreen>
     try {
       final subjectsSnapshot =
           await FirebaseFirestore.instance.collection('subjects').get();
+      final subjects = subjectsSnapshot.docs.map((doc) => doc.id).toList();
+
       setState(() {
         _subjectList = subjectsSnapshot.docs.map((doc) => doc.id).toList();
+        _cachedSubjectList = List.from(subjects);
+        
+        // 教科カテゴリが選択されている場合、_searchResultsに教科一覧をセット
+        if (_selectedCategory == '教科' && _searchQuery.isEmpty) {
+          _searchResults = List.from(_subjectList);
+        }
       });
     } catch (e) {
       print('教科一覧の取得エラー: $e');
@@ -104,7 +125,16 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   Future<void> _performSearch() async {
-    if (_searchQuery.isEmpty) return;
+    if (_searchQuery.isEmpty) {
+      setState(() {
+        if (_selectedCategory == '教科') {
+          _searchResults = List.from(_subjectList); // 教科一覧をセット
+        } else {
+          _searchResults = []; // 他カテゴリは空にする
+        }
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -179,16 +209,22 @@ class _SearchScreenState extends State<SearchScreen>
         });
       }
     } else if (_selectedCategory == '教科') {
-        final querySnapshot = await FirebaseFirestore.instance
-            .collection('subjects')
-            .where(FieldPath.documentId, isGreaterThanOrEqualTo: _searchQuery)
-            .where(FieldPath.documentId, isLessThan: _searchQuery + '\uf8ff')
-            .get();
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('subjects')
+          .where(FieldPath.documentId, isGreaterThanOrEqualTo: _searchQuery)
+          .where(FieldPath.documentId, isLessThan: _searchQuery + '\uf8ff')
+          .get();
 
-        setState(() {
-          _searchResults = querySnapshot.docs;
-        });
-      } else if (_selectedCategory == 'グループ') {
+      setState(() {
+        if (querySnapshot.docs.isNotEmpty) {
+          // 検索結果が存在する場合、_searchResultsに保存
+          _searchResults = querySnapshot.docs.map((doc) => doc.id).toList();
+        } else {
+          // 検索結果が存在しない場合、_searchResultsは空のまま
+          _searchResults = [];
+        }
+      });
+    }else if (_selectedCategory == 'グループ') {
         final querySnapshot = await FirebaseFirestore.instance
             .collection('Groups')
             .where('groupName', isEqualTo: _searchQuery)
@@ -322,129 +358,160 @@ Widget _buildSearchResultsOrSubjects() {
     return Center(child: CircularProgressIndicator());
   }
 
+  // 検索クエリが存在するが結果がない場合
   if (_searchQuery.isNotEmpty && _searchResults.isEmpty) {
     return Center(child: Text('結果が見つかりませんでした。'));
   }
 
-  // 投稿カテゴリの場合、タイムラインと同じレイアウトを使用
-  if (_selectedCategory == '投稿') {
-    if (_searchResults.isEmpty) {
-      return Center(child: Text('投稿は見つかりませんでした。'));
-    }
-
-    return NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification scrollInfo) {
-        if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent &&
-            !_isLoading) {
-          // スクロール位置が一番下に到達した場合、次の投稿を取得
-          _performSearch(); // 必要であれば投稿データを追加で取得
-        }
-        return false;
-      },
-      child: ListView.separated(
-        itemCount: _searchResults.length,
-        separatorBuilder: (context, index) => Divider(
-          color: Colors.grey[300], // 線の色を指定
-          thickness: 1, // 線の太さを指定
-          height: 1, // 線の高さ
-        ),
-        itemBuilder: (context, index) {
-          if (index >= _searchResults.length) {
-            return SizedBox.shrink();
-          }
-          final post = _searchResults[index];
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            _showUserProfile(post['auth_uid']);
-                          },
-                          child: CircleAvatar(
-                            radius: 27,
-                            backgroundColor: Colors.grey[200],
-                            child: Text(
-                              post['user_name'] != null
-                                  ? post['user_name'][0]
-                                  : '?',
-                              style: TextStyle(fontSize: 25, color: Colors.black),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  post['user_name'] ?? 'Unknown',
-                                  style: TextStyle(
-                                      fontSize: 18, fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  '@${post['user_id'] ?? 'ID Unknown'}',
-                                  style: TextStyle(fontSize: 13, color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    Text(
-                      post['createdAt'] != null ? _timeAgo(post['createdAt']) : '',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.only(left: 64.0),
-                  child: Text(
-                    post['description'] ?? '内容なし',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ),
-                SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        post['is_liked'] == true
-                            ? Icons.thumb_up_alt
-                            : Icons.thumb_up_alt_outlined,
-                        color: post['is_liked'] == true ? Colors.blue : Colors.grey,
-                      ),
-                      onPressed: () {
-                        // 必要であれば、いいね処理を実装
-                      },
-                    ),
-                    Text('${post['like_count'] ?? 0}'),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+  if (_selectedCategory == '教科' && _searchResults.isEmpty) {
+    return _buildSubjectListView(_subjectList); // 教科一覧を表示
   }
 
-  // その他のカテゴリ
-  if (_searchResults.isEmpty) {
+  if (_selectedCategory == '投稿') {
+    return _buildPostListView();
+  } else if (_selectedCategory == '教科') {
+    return _buildSubjectListView(
+      _searchResults.cast<String>() // 型変換して渡す
+    );
+  } else {
+    return _buildGeneralListView();
+  }
+}
+
+Widget _buildPostListView() {
+  return NotificationListener<ScrollNotification>(
+    onNotification: (ScrollNotification scrollInfo) {
+      if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent &&
+          !_isLoading) {
+        _performSearch(); // 必要であれば投稿データを追加で取得
+      }
+      return false;
+    },
+    child: ListView.separated(
+      itemCount: _searchResults.length,
+      separatorBuilder: (context, index) => Divider(
+        color: Colors.grey[300],
+        thickness: 1,
+        height: 1,
+      ),
+      itemBuilder: (context, index) {
+        if (index >= _searchResults.length) {
+          return SizedBox.shrink();
+        }
+        final post = _searchResults[index];
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          _showUserProfile(post['auth_uid']);
+                        },
+                        child: CircleAvatar(
+                          radius: 27,
+                          backgroundColor: Colors.grey[200],
+                          child: Text(
+                            post['user_name'] != null
+                                ? post['user_name'][0]
+                                : '?',
+                            style: TextStyle(fontSize: 25, color: Colors.black),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                post['user_name'] ?? 'Unknown',
+                                style: TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '@${post['user_id'] ?? 'ID Unknown'}',
+                                style: TextStyle(fontSize: 13, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Text(
+                    post['createdAt'] != null ? _timeAgo(post['createdAt']) : '',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.only(left: 64.0),
+                child: Text(
+                  post['description'] ?? '内容なし',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+              SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      post['is_liked'] == true
+                          ? Icons.thumb_up_alt
+                          : Icons.thumb_up_alt_outlined,
+                      color: post['is_liked'] == true ? Colors.blue : Colors.grey,
+                    ),
+                    onPressed: () {
+                      // 必要であれば、いいね処理を実装
+                    },
+                  ),
+                  Text('${post['like_count'] ?? 0}'),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    ),
+  );
+}
+
+Widget _buildSubjectListView(List<String> listToDisplay) {
+  if (listToDisplay.isEmpty) {
     return Center(child: Text('該当するデータがありません。'));
   }
 
+  return ListView.builder(
+    itemCount: listToDisplay.length,
+    itemBuilder: (context, index) {
+      final subjectName = listToDisplay[index];
+      return ListTile(
+        title: Text(subjectName),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SubjectDetailsScreen(subjectName: subjectName),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+
+Widget _buildGeneralListView() {
   return ListView.builder(
     itemCount: _searchResults.length,
     itemBuilder: (context, index) {
@@ -453,16 +520,20 @@ Widget _buildSearchResultsOrSubjects() {
       }
       final result = _searchResults[index];
       if (_selectedCategory == 'ユーザー') {
-        return ListTile(
-          title: Text(result['user_name'] ?? 'Unknown'),
-          subtitle: Text('@${result['user_id'] ?? 'ID Unknown'}'),
-          onTap: () => _showUserProfile(result['auth_uid']),
-        );
+        if (result is Map<String, dynamic>) {
+          return ListTile(
+            title: Text(result['user_name']?.toString() ?? 'Unknown'), // 型安全性を確保
+            subtitle: Text('@${result['user_id']?.toString() ?? 'ID Unknown'}'),
+            onTap: () => _showUserProfile(result['auth_uid']),
+          );
+        } else {
+          return SizedBox.shrink(); // 不明な型の場合は何も表示しない
+        }
       } else if (_selectedCategory == 'グループ') {
         final group = _searchResults[index];
         return ListTile(
           title: Text(group['groupName'] ?? 'グループ名なし'),
-          subtitle: Text('作成者: ${group['createdBy']}'),
+          subtitle: Text('作成者: ${group['createdBy'] ?? '不明'}'),
           onTap: () {
             Navigator.push(
               context,
@@ -471,20 +542,6 @@ Widget _buildSearchResultsOrSubjects() {
                   groupId: group['groupId'],
                   groupName: group['groupName'],
                 ),
-              ),
-            );
-          },
-        );
-      } else if (_selectedCategory == '教科' && _searchQuery.isEmpty) {
-        final subjectName = _subjectList[index];
-        return ListTile(
-          title: Text(subjectName),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    SubjectDetailsScreen(subjectName: subjectName),
               ),
             );
           },
@@ -528,7 +585,6 @@ Widget _buildSearchResultsOrSubjects() {
                       }
 
                       if (_selectedCategory == 'ユーザー') {
-                        // ユーザー検索のみリアルタイム検索
                         if (_debounce?.isActive ?? false) _debounce!.cancel();
                         _debounce = Timer(Duration(milliseconds: 500), () {
                           if (mounted) {
@@ -541,7 +597,7 @@ Widget _buildSearchResultsOrSubjects() {
                   onSubmitted: (value) {
                     setState(() {
                       _searchQuery = value;
-                      if (_selectedCategory == '投稿') {
+                      if (_selectedCategory == '投稿' || _selectedCategory == '教科' || _selectedCategory == 'グループ') {
                         // 投稿検索はエンターキーで実行
                         _performSearch();
                       }
