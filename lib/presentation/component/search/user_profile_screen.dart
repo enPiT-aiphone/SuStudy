@@ -354,10 +354,13 @@ Future<void> _loadUserData() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back), // 戻る矢印
-          onPressed: widget.onBack ?? () {}, // onBackコールバックが設定されていれば実行
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(40.0), // AppBarの高さを設定
+        child: AppBar(
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back), // 戻る矢印
+            onPressed: widget.onBack ?? () {}, // onBackコールバックが設定されていれば実行
+          ),
         ),
       ),
       body: FutureBuilder(

@@ -57,7 +57,7 @@ class _RankingScreenState extends State<RankingScreen> {
             .get();
 
         final follows = followsSnapshot.docs
-            .map((doc) => doc.data()['user_id'])
+            .map((doc) => doc.data()['auth_uid'])
             .whereType<String>()
             .toList();
 
@@ -65,7 +65,7 @@ class _RankingScreenState extends State<RankingScreen> {
 
         query = FirebaseFirestore.instance
             .collection('Users')
-            .where('user_id', whereIn: follows);
+            .where('auth_uid', whereIn: follows);
 
         follows.add(user.uid);
       } else {
@@ -93,7 +93,7 @@ class _RankingScreenState extends State<RankingScreen> {
           rankingData.add({
             'userName': data['user_name'] ?? 'Unknown',
             'tSolvedCount': data['t_solved_count'] ?? 0,
-            'userId': data['user_id'],
+            'auth_uid': data['auth_uid'],
           });
           }
           else{
@@ -119,23 +119,25 @@ class _RankingScreenState extends State<RankingScreen> {
 
       final userSnapshot = await FirebaseFirestore.instance
           .collection('Users')
-          .where('auth_uid', isEqualTo: user.uid)
+          .doc(user.uid)
           .get();
 
-      if (userSnapshot.docs.isNotEmpty) {
-        final userData = userSnapshot.docs.first.data();
-        _userData = {
-          'userName': userData['user_name'] ?? 'Unknown',
-          'tSolvedCount': userData['t_solved_count'] ?? 0,
-          'userId': userData['user_id'],
-        };
+      if (userSnapshot.exists) {
+        final userData = userSnapshot.data();
+        if (userData != null) {
+          _userData = {
+            'userName': userData['user_name'] ?? 'Unknown',
+            'tSolvedCount': userData['t_solved_count'] ?? 0,
+            'auth_uid': userData['auth_uid'],
+          };
+        }
       }
 
       if (widget.selectedTab == 'フォロー中') {
         rankingData.add({
           'userName': _userData['userName'],
           'tSolvedCount': _userData['tSolvedCount'],
-          'userId': _userData['userId'],
+          'auth_uid': _userData['auth_uid'],
         });
       }
 
@@ -154,7 +156,7 @@ class _RankingScreenState extends State<RankingScreen> {
       }
 
       _userRank = rankingData
-              .firstWhere((user) => user['userId'] == _userData['userId'],
+              .firstWhere((user) => user['auth_uid'] == _userData['auth_uid'],
                   orElse: () => {'rank': -1})['rank'] ??
           -1;
 

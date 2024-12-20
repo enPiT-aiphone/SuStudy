@@ -43,7 +43,7 @@ class _FollowFollowerListScreenState extends State<FollowFollowerListScreen>
           .collection('Users')
           .doc(widget.targetUserId) // ドキュメントIDがwidget.targetUserId
           .collection(collectionName) // 'follows' または 'followers'
-          .where('user_id', isNotEqualTo: 'init') // 無効データを除外
+          .where('auth_uid', isNotEqualTo: 'init') // 無効データを除外
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
