@@ -5,7 +5,7 @@ class TOEFLWordQuiz extends StatefulWidget {
   final String level; // TOEFLレベル
   final String questionType; // 出題タイプ（random, unanswered, incorrect, recent_incorrect）
 
-  const TOEFLWordQuiz({required this.level, required this.questionType, Key? key}) : super(key: key);
+  const TOEFLWordQuiz({required this.level, required this.questionType, super.key});
 
   @override
   _TOEFLWordQuizState createState() => _TOEFLWordQuizState();
@@ -300,7 +300,7 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
     final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
     final attemptNumber = attemptsSnapshot.docs.length + 1;
     final Nextname = '$attemptNumber';
-      await wordDocRef.collection('Attempts')..doc(Nextname).set({
+      wordDocRef.collection('Attempts')..doc(Nextname).set({
         'attempt_number': attemptNumber,
         'timestamp': FieldValue.serverTimestamp(),
         'selected_answer': selectedAnswer,
@@ -377,8 +377,8 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
             automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 Text(
                   'SuStudy, ',
                   style: TextStyle(
@@ -424,7 +424,7 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
                       fontSize: 30,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     "【${wordData['Phonetic_Symbols']}】",
                     style: const TextStyle(

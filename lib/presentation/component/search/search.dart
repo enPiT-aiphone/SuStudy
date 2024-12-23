@@ -6,6 +6,8 @@ import 'package:collection/collection.dart';
 import 'dart:async';
 
 class SearchScreen extends StatefulWidget {
+  const SearchScreen({super.key});
+
   @override
   _SearchScreenState createState() => _SearchScreenState();
 }
@@ -16,7 +18,7 @@ class _SearchScreenState extends State<SearchScreen>
   String _searchQuery = '';
   List<dynamic> _searchResults = [];
   List<String> _subjectList = [];
-  List<Map<String, String>> _groupList = []; // グループ一覧
+  final List<Map<String, String>> _groupList = []; // グループ一覧
   List<String> _cachedSubjectList = []; // 教科のキャッシュ
   bool _isLoading = false;
   bool _isUserProfileVisible = false;
@@ -49,7 +51,7 @@ class _SearchScreenState extends State<SearchScreen>
     super.dispose();
   }
 
-  Map<String, List<dynamic>> _tabResults = {
+  final Map<String, List<dynamic>> _tabResults = {
     '投稿': [],
     'ユーザー': [],
     'グループ': [],
@@ -164,7 +166,7 @@ class _SearchScreenState extends State<SearchScreen>
       final querySnapshot = await FirebaseFirestore.instance
           .collection('Timeline')
           .where('description', isGreaterThanOrEqualTo: normalizedQuery)
-          .where('description', isLessThan: normalizedQuery + '\uf8ff')
+          .where('description', isLessThan: '$normalizedQuery\uf8ff')
           .orderBy('createdAt', descending: true)
           .get();
 
@@ -212,7 +214,7 @@ class _SearchScreenState extends State<SearchScreen>
       final querySnapshot = await FirebaseFirestore.instance
           .collection('subjects')
           .where(FieldPath.documentId, isGreaterThanOrEqualTo: _searchQuery)
-          .where(FieldPath.documentId, isLessThan: _searchQuery + '\uf8ff')
+          .where(FieldPath.documentId, isLessThan: '$_searchQuery\uf8ff')
           .get();
 
       setState(() {
@@ -266,7 +268,7 @@ void _onSearchChanged(String value) {
     if (_selectedCategory == 'ユーザー') {
       // ユーザー検索のみリアルタイム検索
       if (_debounce?.isActive ?? false) _debounce!.cancel();
-      _debounce = Timer(Duration(milliseconds: 500), () {
+      _debounce = Timer(const Duration(milliseconds: 500), () {
         if (mounted) {
           _performSearch();
         }
@@ -330,7 +332,7 @@ void _onSearchChanged(String value) {
           child: TextField(
             decoration: InputDecoration(
               hintText: '検索ワードを入力してください',
-              prefixIcon: Icon(Icons.search),
+              prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -355,12 +357,12 @@ void _onSearchChanged(String value) {
 
 Widget _buildSearchResultsOrSubjects() {
   if (_isLoading) {
-    return Center(child: CircularProgressIndicator());
+    return const Center(child: CircularProgressIndicator());
   }
 
   // 検索クエリが存在するが結果がない場合
   if (_searchQuery.isNotEmpty && _searchResults.isEmpty) {
-    return Center(child: Text('結果が見つかりませんでした。'));
+    return const Center(child: Text('結果が見つかりませんでした。'));
   }
 
   if (_selectedCategory == '教科' && _searchResults.isEmpty) {
@@ -396,7 +398,7 @@ Widget _buildPostListView() {
       ),
       itemBuilder: (context, index) {
         if (index >= _searchResults.length) {
-          return SizedBox.shrink();
+          return const SizedBox.shrink();
         }
         final post = _searchResults[index];
         return Padding(
@@ -421,11 +423,11 @@ Widget _buildPostListView() {
                             post['user_name'] != null
                                 ? post['user_name'][0]
                                 : '?',
-                            style: TextStyle(fontSize: 25, color: Colors.black),
+                            style: const TextStyle(fontSize: 25, color: Colors.black),
                           ),
                         ),
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -433,12 +435,12 @@ Widget _buildPostListView() {
                             children: [
                               Text(
                                 post['user_name'] ?? 'Unknown',
-                                style: TextStyle(
+                                style: const TextStyle(
                                     fontSize: 18, fontWeight: FontWeight.bold),
                               ),
                               Text(
                                 '@${post['user_id'] ?? 'ID Unknown'}',
-                                style: TextStyle(fontSize: 13, color: Colors.grey),
+                                style: const TextStyle(fontSize: 13, color: Colors.grey),
                               ),
                             ],
                           ),
@@ -448,19 +450,19 @@ Widget _buildPostListView() {
                   ),
                   Text(
                     post['createdAt'] != null ? _timeAgo(post['createdAt']) : '',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.only(left: 64.0),
                 child: Text(
                   post['description'] ?? '内容なし',
-                  style: TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 16),
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -488,7 +490,7 @@ Widget _buildPostListView() {
 
 Widget _buildSubjectListView(List<String> listToDisplay) {
   if (listToDisplay.isEmpty) {
-    return Center(child: Text('該当するデータがありません。'));
+    return const Center(child: Text('該当するデータがありません。'));
   }
 
   return ListView.builder(
@@ -516,7 +518,7 @@ Widget _buildGeneralListView() {
     itemCount: _searchResults.length,
     itemBuilder: (context, index) {
       if (index >= _searchResults.length) {
-        return SizedBox.shrink();
+        return const SizedBox.shrink();
       }
       final result = _searchResults[index];
       if (_selectedCategory == 'ユーザー') {
@@ -527,7 +529,7 @@ Widget _buildGeneralListView() {
             onTap: () => _showUserProfile(result['auth_uid']),
           );
         } else {
-          return SizedBox.shrink(); // 不明な型の場合は何も表示しない
+          return const SizedBox.shrink(); // 不明な型の場合は何も表示しない
         }
       } else if (_selectedCategory == 'グループ') {
         final group = _searchResults[index];
@@ -551,7 +553,7 @@ Widget _buildGeneralListView() {
           title: Text(result['tagName'] ?? 'タグなし'),
         );
       }
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     },
   );
 }
@@ -562,7 +564,7 @@ Widget _buildGeneralListView() {
     return Scaffold(
       appBar: AppBar(
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(80.0), // 検索バー + タブバーの高さ
+          preferredSize: const Size.fromHeight(80.0), // 検索バー + タブバーの高さ
           child: Column(
             children: [
               Padding(
@@ -570,7 +572,7 @@ Widget _buildGeneralListView() {
                 child: TextField(
                   decoration: InputDecoration(
                     hintText: '検索ワードを入力してください',
-                    suffixIcon: Icon(Icons.search),
+                    suffixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -586,7 +588,7 @@ Widget _buildGeneralListView() {
 
                       if (_selectedCategory == 'ユーザー') {
                         if (_debounce?.isActive ?? false) _debounce!.cancel();
-                        _debounce = Timer(Duration(milliseconds: 500), () {
+                        _debounce = Timer(const Duration(milliseconds: 500), () {
                           if (mounted) {
                             _performSearch();
                           }
@@ -607,10 +609,10 @@ Widget _buildGeneralListView() {
               ),
               TabBar(
                 controller: _tabController,
-                indicatorColor: Color(0xFF0ABAB5), // インジケーターの色
-                labelColor: Color(0xFF0ABAB5), // 選択中のタブの色
+                indicatorColor: const Color(0xFF0ABAB5), // インジケーターの色
+                labelColor: const Color(0xFF0ABAB5), // 選択中のタブの色
                 unselectedLabelColor: Colors.grey, // 未選択のタブの色
-                tabs: [
+                tabs: const [
                   Tab(text: '投稿'),
                   Tab(text: 'ユーザー'),
                   Tab(text: 'グループ'),

@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 class TOEFLWordQuiz extends StatefulWidget {
   final String level;
 
-  const TOEFLWordQuiz({required this.level, Key? key}) : super(key: key);
+  const TOEFLWordQuiz({required this.level, super.key});
 
   @override
   _TOEFLWordQuizState createState() => _TOEFLWordQuizState();
@@ -20,7 +20,7 @@ class CrossPainter extends CustomPainter {
       ..strokeWidth = 6;
 
     canvas.drawLine(Offset(0, size.height), Offset(size.width, 0), paint);
-    canvas.drawLine(Offset(size.width, size.height), Offset(0, 0), paint);
+    canvas.drawLine(Offset(size.width, size.height), const Offset(0, 0), paint);
   }
 
   @override
@@ -208,7 +208,7 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
     final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
     final attemptNumber = attemptsSnapshot.docs.length + 1;
     final Nextname = '$attemptNumber';
-      await wordDocRef.collection('Attempts')..doc(Nextname).set({
+      wordDocRef.collection('Attempts')..doc(Nextname).set({
         'attempt_number': attemptNumber,
         'timestamp': FieldValue.serverTimestamp(),
         'selected_answer': selectedAnswer,
@@ -247,8 +247,8 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
             automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 Text(
                   'SuStudy, ',
                   style: TextStyle(
@@ -294,7 +294,7 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
                       fontSize: 30,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     "【${wordData['Phonetic_Symbols']}】",
                     style: const TextStyle(

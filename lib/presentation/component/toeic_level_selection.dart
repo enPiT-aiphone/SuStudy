@@ -2,7 +2,7 @@ import '/import.dart';  // 必要なパッケージをインポート
 
 // TOEICレベル選択画面を表示するためのStatelessWidget
 class TOEICLevelSelection extends StatelessWidget {
-  const TOEICLevelSelection({Key? key}) : super(key: key);  // コンストラクタ
+  const TOEICLevelSelection({super.key});  // コンストラクタ
 
   @override
   Widget build(BuildContext context) {
@@ -20,8 +20,8 @@ class TOEICLevelSelection extends StatelessWidget {
           child: AppBar(
             backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
             elevation: 0,
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 // アプリのタイトル「SuStudy,」を表示
                 Text(
                   'SuStudy, ',
@@ -38,10 +38,10 @@ class TOEICLevelSelection extends StatelessWidget {
       body: Column(
         children: [
           // 画面の上半分にタイトルを表示
-          Expanded(
+          const Expanded(
             child: Center(
               // タイトル「TOEICのレベルを選んでください」を中央に配置
-              child: const Text(
+              child: Text(
                 'TOEICのレベルを選んでください',
                 style: TextStyle(fontSize: 20),  // フォントサイズを20に設定
                 textAlign: TextAlign.center,  // テキストを中央揃えに設定

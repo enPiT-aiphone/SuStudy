@@ -117,7 +117,7 @@ class ViewToeicWord extends StatelessWidget {
           );
         },  // プラスボタンアイコン
         tooltip: 'Add Word',
-        child: Icon(Icons.add),  // ツールチップ
+        child: const Icon(Icons.add),  // ツールチップ
       ),
     );
   }

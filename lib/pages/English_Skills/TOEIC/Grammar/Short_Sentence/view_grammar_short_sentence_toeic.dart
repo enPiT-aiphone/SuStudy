@@ -129,7 +129,7 @@ class ViewShortSentences extends StatelessWidget {
           );
         },  // プラスボタンアイコン
         tooltip: 'Add Short Sentence',
-        child: Icon(Icons.add),  // ツールチップ
+        child: const Icon(Icons.add),  // ツールチップ
       ),
     );
   }

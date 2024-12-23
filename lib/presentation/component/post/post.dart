@@ -7,7 +7,7 @@ class NewPostScreen extends StatefulWidget {
   final String selectedCategory;
   final VoidCallback? onPostSubmitted;
 
-  NewPostScreen({
+  const NewPostScreen({super.key, 
     required this.selectedCategory,
     this.onPostSubmitted,
   });
@@ -45,7 +45,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ログインしていないため、投稿できません')),
+        const SnackBar(content: Text('ログインしていないため、投稿できません')),
       );
       return;
     }
@@ -59,7 +59,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
       if (!userDoc.exists) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ユーザーデータが見つかりません')),
+          const SnackBar(content: Text('ユーザーデータが見つかりません')),
         );
         return;
       }
@@ -102,7 +102,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
     } catch (e) {
       print('投稿保存中にエラーが発生しました: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('投稿保存中にエラーが発生しました')),
+        const SnackBar(content: Text('投稿保存中にエラーが発生しました')),
       );
     }
   }
@@ -140,9 +140,9 @@ class _NewPostScreenState extends State<NewPostScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('記録なし投稿'),
+        title: const Text('記録なし投稿'),
         leading: IconButton(
-          icon: Icon(Icons.close),
+          icon: const Icon(Icons.close),
           onPressed: () {
             Navigator.pushAndRemoveUntil(
               context,
@@ -168,7 +168,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
             TextField(
               controller: postController,
               maxLines: 5,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 hintText: 'ここに投稿内容を入力してください',
               ),

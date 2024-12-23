@@ -1,6 +1,8 @@
 import '/import.dart';
 
 class AuthenticationScreen extends StatelessWidget {
+  const AuthenticationScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,7 +25,7 @@ class AuthenticationScreen extends StatelessWidget {
                   top: screenHeight * 0.4 - 30, // 40%の位置に配置（-30は文字の高さ調整）
                   left: 0,
                   right: 0,
-                  child: Center(
+                  child: const Center(
                     child: Text(
                       'SuStudy,',
                       style: TextStyle(
@@ -64,7 +66,7 @@ class AuthenticationScreen extends StatelessWidget {
                           MaterialPageRoute(builder: (context) => LogInScreen()),
                         );
                       },
-                      child: Text(
+                      child: const Text(
                         'すでにアカウントをお持ちの方',
                         style: TextStyle(
                           color: Colors.grey, // テキストの色をグレーに設定

@@ -15,19 +15,23 @@ import 'timeline.dart';
 import 'group_list.dart';
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     // メインのFlutterアプリケーション構築
     return MaterialApp(
       home: HomeScreen(), // アプリの初期画面をHomeScreenに設定
       theme: ThemeData(
-        primaryColor: Color(0xFF0ABAB5), // テーマカラーを設定
+        primaryColor: const Color(0xFF0ABAB5), // テーマカラーを設定
       ),
     );
   }
 }
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -69,6 +73,7 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  @override
   void initState() {
     super.initState();
     _fetchUserData(); // Firebaseからのユーザーデータ取得を呼び出し
@@ -376,7 +381,7 @@ OverlayEntry _createOverlayEntry() {
     return Stack(
       children: [
         IconButton(
-          icon: Icon(Icons.notifications),
+          icon: const Icon(Icons.notifications),
           onPressed: () => _toggleNotificationOverlay(context),
         ),
         Positioned(
@@ -389,7 +394,7 @@ OverlayEntry _createOverlayEntry() {
                       backgroundColor: Colors.red,
                       child: Text(
                         '${badgeViewModel.badgeCount}', // バッジに未読数を表示
-                        style: TextStyle(color: Colors.white, fontSize: 12),
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     )
                   : Container();
@@ -485,7 +490,7 @@ void _toggleGroupNavigationOverlay(BuildContext context) {
 // ボトムナビゲーションバーの項目を管理
 Widget get _currentScreen {
   if (_isGroupShowVisible) {
-      return UserGroupsScreen(); // グループ一覧画面
+      return const UserGroupsScreen(); // グループ一覧画面
     } else if (_isGroupCreateVisible) {
       return CreateGroupScreen(); // グループ作成画面
     } if (_isProfileVisible) {
@@ -536,7 +541,7 @@ Widget build(BuildContext context) {
         child: Column(
           children: [
             Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF0ABAB5), Color(0xFFFFFFFF)],
                   begin: Alignment.topCenter,
@@ -557,27 +562,27 @@ Widget build(BuildContext context) {
                               radius: 18,
                                       child: Text(
                                 _accountName.isNotEmpty ? _accountName[0] : '?', // user_nameの一文字目
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 20, // フォントサイズ
                                   color: Color(0xFF0ABAB5), // テキストカラー
                                 ),
                               ),
                             ),
                           ),
-                          SizedBox(width: 10),
-                          Text(
+                          const SizedBox(width: 10),
+                          const Text(
                             'SuStudy,',
                             style: TextStyle(fontSize: 25, color: Colors.white),
                           ),
-                          Spacer(),
+                          const Spacer(),
                           IconButton(
-                            icon: Icon(Icons.group_add),
+                            icon: const Icon(Icons.group_add),
                             onPressed: () {
                               _toggleGroupNavigationOverlay(context);
                             },
                           ),
                           _buildNotificationIcon(), // 通知アイコンを表示
-                          IconButton(icon: Icon(Icons.mail), onPressed: () {}),
+                          IconButton(icon: const Icon(Icons.mail), onPressed: () {}),
                           
                         ],
                       ),
@@ -625,7 +630,7 @@ Widget build(BuildContext context) {
             left: 0,
             right: 0,
             child: Padding(
-              padding: EdgeInsets.only(bottom: 10.0), // 下のマージン調整
+              padding: const EdgeInsets.only(bottom: 10.0), // 下のマージン調整
               child: _buildCategoryBar(context),
             ),
           ),
@@ -664,9 +669,9 @@ floatingActionButton: _isRecordPageVisible || _isPostCreateVisible
                   right: MediaQuery.of(context).size.width * 0 + 10,
                   child: FloatingActionButton(
                     heroTag: null,
-                    shape: CircleBorder(),
-                    backgroundColor: Color(0xFF0ABAB5),
-                    child: Icon(Icons.edit_note),
+                    shape: const CircleBorder(),
+                    backgroundColor: const Color(0xFF0ABAB5),
+                    child: const Icon(Icons.edit_note),
                     onPressed: () {
                       _onMenuItemTap("btn1");
                     },
@@ -678,9 +683,9 @@ floatingActionButton: _isRecordPageVisible || _isPostCreateVisible
                   right: MediaQuery.of(context).size.width * 0+ 70,
                   child: FloatingActionButton(
                     heroTag: null,
-                    shape: CircleBorder(),
-                    backgroundColor: Color.fromARGB(255, 23, 214, 208),
-                    child: Icon(Icons.text_snippet),
+                    shape: const CircleBorder(),
+                    backgroundColor: const Color.fromARGB(255, 23, 214, 208),
+                    child: const Icon(Icons.text_snippet),
                     onPressed: () {
                       _onMenuItemTap("btn2");
                     },
@@ -692,9 +697,9 @@ floatingActionButton: _isRecordPageVisible || _isPostCreateVisible
                   right: MediaQuery.of(context).size.width * 0 + 100,
                   child: FloatingActionButton(
                     heroTag: null,
-                    shape: CircleBorder(),
-                    backgroundColor: Color.fromARGB(255, 64, 239, 234),
-                    child: Icon(Icons.done),
+                    shape: const CircleBorder(),
+                    backgroundColor: const Color.fromARGB(255, 64, 239, 234),
+                    child: const Icon(Icons.done),
                     onPressed: () {
                     },
                   ),
@@ -722,12 +727,12 @@ floatingActionButton: _isRecordPageVisible || _isPostCreateVisible
                       }
                     });
                   },
-                  backgroundColor: Color(0xFF0ABAB5),
+                  backgroundColor: const Color(0xFF0ABAB5),
+                  shape: const CircleBorder(),
                   child: Icon(
                     _showExtraButtons ? Icons.close : Icons.post_add,
                     size: 36,
                   ),
-                  shape: CircleBorder(),
                 ),
               ),
             ),
@@ -739,7 +744,7 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
 
     bottomNavigationBar: BottomNavigationBar(
-      backgroundColor: Color(0xFF0ABAB5),
+      backgroundColor: const Color(0xFF0ABAB5),
       type: BottomNavigationBarType.fixed,
       currentIndex: _currentIndex,
       onTap: (index) {
@@ -755,10 +760,10 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         });
       },
       selectedItemColor: _isRecordPageVisible || _isPostCreateVisible
-          ? Color.fromARGB(255, 68, 68, 68) // フロート画面時は全てグレー
+          ? const Color.fromARGB(255, 68, 68, 68) // フロート画面時は全てグレー
           : Colors.white, // 通常時は選択された項目を白色に
-      unselectedItemColor: Color.fromARGB(255, 68, 68, 68), // 未選択は常にグレー
-      items: [
+      unselectedItemColor: const Color.fromARGB(255, 68, 68, 68), // 未選択は常にグレー
+      items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
           label: 'タイムライン',
@@ -783,7 +788,7 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
 
  Widget _buildDrawer() {
-  return Container(
+  return SizedBox(
     width: MediaQuery.of(context).size.width * 0.8,
     child: Drawer(
       child: Column(
@@ -802,7 +807,7 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                   Navigator.pop(context); // ドロワーを閉じる
                 },
                 child: Container(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
                         Color(0xFF0ABAB5),
@@ -812,7 +817,7 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                       end: Alignment.bottomCenter,
                     ),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -821,13 +826,13 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                         radius: 30,
                           child: Text(
                           _accountName.isNotEmpty ? _accountName[0] : '?', // user_nameの一文字目
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 35, // フォントサイズ
                             color: Color(0xFF0ABAB5), // テキストカラー
                           ),
                         ),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Row(
                         children: <Widget>[
                           if (_loginStreak < 8)
@@ -838,10 +843,10 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                             Image.asset('images/middleCrown.png', width: 24, height: 24)
                           else
                             Image.asset('images/bigCrown.png', width: 24, height: 24),
-                          SizedBox(width: 5),
+                          const SizedBox(width: 5),
                           Text(
                             _accountName,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Color.fromARGB(255, 100, 100, 100),
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -851,31 +856,31 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                       ),
                       Text(
                         '@$_accountId',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Color.fromARGB(179, 160, 160, 160),
                           fontSize: 14,
                         ),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Row(
                         children: [
                           Text(
                             'フォロワー: $_followers',
-                            style: TextStyle(
+                            style: const TextStyle(
                                 color: Color.fromARGB(255, 100, 100, 100)),
                           ),
-                          SizedBox(width: 10),
+                          const SizedBox(width: 10),
                           Text(
                             'フォロー中: $_follows',
-                            style: TextStyle(
+                            style: const TextStyle(
                                 color: Color.fromARGB(255, 100, 100, 100)),
                           ),
                         ],
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Text(
                         'フォロー中の教科: ${_followingSubjects.join(', ')}',
-                        style: TextStyle(
+                        style: const TextStyle(
                             color: Color.fromARGB(255, 100, 100, 100)),
                       ),
                     ],
@@ -883,8 +888,8 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                 ),
                 ),
                 ListTile(
-                  leading: Icon(Icons.person),
-                  title: Text('プロフィール'),
+                  leading: const Icon(Icons.person),
+                  title: const Text('プロフィール'),
                   onTap: () {
                     setState(() {
                       _isProfileVisible = true;
@@ -894,15 +899,15 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.settings),
-                  title: Text('設定'),
+                  leading: const Icon(Icons.settings),
+                  title: const Text('設定'),
                   onTap: () {
                     Navigator.pop(context);
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.logout),
-                  title: Text('ログアウト'),
+                  leading: const Icon(Icons.logout),
+                  title: const Text('ログアウト'),
                   onTap: () async {
                     try {
                       await FirebaseAuth.instance.signOut(); // Firebaseでログアウト
@@ -928,24 +933,24 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           // ���定のユーザ番号に応じてデータベース管理フォームを表示
         if (_userNumber >= 1 && _userNumber <= 6)
               ListTile(
-                leading: Icon(Icons.build),
-                title: Text('データベース管理フォーム'),
+                leading: const Icon(Icons.build),
+                title: const Text('データベース管理フォーム'),
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => ViewFormSelection()),
+                    MaterialPageRoute(builder: (context) => const ViewFormSelection()),
                   );
                 },
               ),
           if (_userNumber == 1)
               ListTile(
-                leading: Icon(Icons.add),
-                title: Text('単語を追加'),
+                leading: const Icon(Icons.add),
+                title: const Text('単語を追加'),
                 onTap: () async {
                   try {
                     await uploadWordsToFirestore(); // add_word.dartの関数を呼び出し
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('単語の追加が完了しました！')),
+                      const SnackBar(content: Text('単語の追加が完了しました！')),
                     );
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -984,9 +989,9 @@ Widget _buildTabButton(String tab) {
       });
     },
     child: Container(
-      padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
       decoration: BoxDecoration(
-        color: _selectedTab == tab ? Color(0xFF0ABAB5) : Colors.transparent,
+        color: _selectedTab == tab ? const Color(0xFF0ABAB5) : Colors.transparent,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -1032,17 +1037,17 @@ Widget _buildCategoryBar(BuildContext context) {
         double barWidth = totalWidth < maxBarWidth ? totalWidth : maxBarWidth;
 
         return Padding(
-          padding: EdgeInsets.only(bottom: 10.0), // 上下の余白を調整
+          padding: const EdgeInsets.only(bottom: 10.0), // 上下の余白を調整
           child: Container(
             width: barWidth,
-            padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
+            padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
             decoration: BoxDecoration(
               color: Colors.grey[200], // バーの背景色
-              borderRadius: BorderRadius.horizontal(
+              borderRadius: const BorderRadius.horizontal(
                 left: Radius.circular(50),
                 right: Radius.circular(50),
               ),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
                   color: Colors.black12, // 軽い影をつけてバーを浮かせる
                   blurRadius: 4.0,
@@ -1067,7 +1072,7 @@ Widget _buildCategoryBar(BuildContext context) {
   // 各カテゴリボタンの幅を計算するメソッド
   double _calculateButtonWidth(String text) {
     // テキストスタイルを定義
-    TextStyle textStyle = TextStyle(
+    TextStyle textStyle = const TextStyle(
       fontSize: 14.0, // ボタン内のテキストのフォントサイズ
     );
 
@@ -1090,10 +1095,10 @@ Widget _buildCategoryBar(BuildContext context) {
         _selectCategory(category);
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         decoration: BoxDecoration(
           color: _selectedCategory == category
-              ? Color(0xFF0ABAB5)
+              ? const Color(0xFF0ABAB5)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),

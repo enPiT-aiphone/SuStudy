@@ -2,6 +2,8 @@ import '/import.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 
 class SignInScreen extends StatefulWidget {
+  const SignInScreen({super.key});
+
   @override
   _SignInScreenState createState() => _SignInScreenState();
 }
@@ -29,11 +31,11 @@ class _SignInScreenState extends State<SignInScreen> {
             automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
             elevation: 0,
-            iconTheme: IconThemeData(
+            iconTheme: const IconThemeData(
               color: Colors.white,
             ),
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 // アプリのタイトル「SuStudy,」を表示
                 Text(
                   'SuStudy, ',
@@ -56,32 +58,32 @@ class _SignInScreenState extends State<SignInScreen> {
             if (_errorMessage != null)
               Text(
                 _errorMessage!,
-                style: TextStyle(color: Colors.red),
+                style: const TextStyle(color: Colors.red),
               ),
-            SizedBox(height: 10),
-            Text('メールドレスを登録',
+            const SizedBox(height: 10),
+            const Text('メールドレスを登録',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: const Color.fromARGB(255, 50, 50, 50),
+                color: Color.fromARGB(255, 50, 50, 50),
                 ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             TextFormField(
-              decoration: InputDecoration(labelText: 'メールアドレス'),
+              decoration: const InputDecoration(labelText: 'メールアドレス'),
               onChanged: (value) => setState(() => _email = value),
             ),
             TextFormField(
-              decoration: InputDecoration(labelText: 'パスワード'),
+              decoration: const InputDecoration(labelText: 'パスワード'),
               obscureText: true,
               onChanged: (value) => setState(() => _password = value),
             ),
             TextFormField(
-              decoration: InputDecoration(labelText: 'パスワードの確認'),
+              decoration: const InputDecoration(labelText: 'パスワードの確認'),
               obscureText: true,
               onChanged: (value) => setState(() => _confirmPassword = value),
             ),
-            Spacer(), // ボタンを画面下部に押し出す
+            const Spacer(), // ボタンを画面下部に押し出す
             _buildAuthenticationButton(
               context,
               'サインイン',
@@ -151,7 +153,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 }
               },
             ),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
           ],
         ),
       ),

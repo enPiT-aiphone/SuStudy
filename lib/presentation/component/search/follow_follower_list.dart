@@ -5,7 +5,7 @@ class FollowFollowerListScreen extends StatefulWidget {
   final String targetUserId;
   final int initialTabIndex;
 
-  FollowFollowerListScreen({
+  const FollowFollowerListScreen({super.key, 
     required this.targetUserId,
     this.initialTabIndex = 0,
   });
@@ -47,7 +47,7 @@ class _FollowFollowerListScreenState extends State<FollowFollowerListScreen>
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator());
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -73,7 +73,7 @@ class _FollowFollowerListScreenState extends State<FollowFollowerListScreen>
                   .get(),
               builder: (context, userSnapshot) {
                 if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-                  return SizedBox.shrink();
+                  return const SizedBox.shrink();
                 }
 
                 final user = userSnapshot.data!;
@@ -85,7 +85,7 @@ class _FollowFollowerListScreenState extends State<FollowFollowerListScreen>
                     backgroundColor: Colors.grey[300],
                     child: Text(
                       userName.isNotEmpty ? userName[0] : '?',
-                      style: TextStyle(color: Colors.black),
+                      style: const TextStyle(color: Colors.black),
                     ),
                   ),
                   title: Text(userName),
@@ -105,10 +105,10 @@ class _FollowFollowerListScreenState extends State<FollowFollowerListScreen>
       appBar: AppBar(
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Color(0xFF0ABAB5), // インジケーターの色を変更
-          labelColor: Color(0xFF0ABAB5), // 選択されたタブのテキスト色
+          indicatorColor: const Color(0xFF0ABAB5), // インジケーターの色を変更
+          labelColor: const Color(0xFF0ABAB5), // 選択されたタブのテキスト色
           unselectedLabelColor: Colors.grey, // 選択されていないタブのテキスト色
-          tabs: [
+          tabs: const [
             Tab(text: 'フォロワー'), // 左にフォロワータブ
             Tab(text: 'フォロー中'), // 右にフォロー中タブ
           ],

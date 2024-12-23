@@ -9,17 +9,17 @@ class GroupNavigationScreen extends StatelessWidget {
 
   // コンストラクタでコールバックを受け取る
   const GroupNavigationScreen({
-    Key? key,
+    super.key,
     required this.onGroupMenuTap,
     required this.onCreateGroupTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('グループメニュー'),
-        backgroundColor: Color(0xFF0ABAB5),
+        title: const Text('グループメニュー'),
+        backgroundColor: const Color(0xFF0ABAB5),
       ),
       body: Center(
         child: Column(
@@ -28,20 +28,20 @@ class GroupNavigationScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: onCreateGroupTap, // グループ作成コールバックを呼び出し
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0ABAB5),
+                backgroundColor: const Color(0xFF0ABAB5),
               ),
-              child: Text(
+              child: const Text(
                 'グループを作成',
                 style: TextStyle(color: Colors.white),
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: onGroupMenuTap, // グループ一覧コールバックを呼び出し
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0ABAB5),
+                backgroundColor: const Color(0xFF0ABAB5),
               ),
-              child: Text(
+              child: const Text(
                 'グループ一覧を見る',
                 style: TextStyle(color: Colors.white),
               ),

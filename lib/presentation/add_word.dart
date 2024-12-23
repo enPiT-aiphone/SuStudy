@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 Future<void> uploadWordsToFirestore() async {
   final firestore = FirebaseFirestore.instance;
-  final collectionPath = 'English_Skills/TOEIC/up_to_500/Words/Word';
+  const collectionPath = 'English_Skills/TOEIC/up_to_500/Words/Word';
 
   // 登録するデータ
   final List<Map<String, dynamic>> wordsData = [

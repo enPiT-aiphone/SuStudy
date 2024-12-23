@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserGroupsScreen extends StatelessWidget {
-  const UserGroupsScreen({Key? key}) : super(key: key);
+  const UserGroupsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +73,7 @@ class GroupMembersScreen extends StatelessWidget {
   final String groupId;
   final String groupName;
 
-  const GroupMembersScreen({Key? key, required this.groupId, required this.groupName}) : super(key: key);
+  const GroupMembersScreen({super.key, required this.groupId, required this.groupName});
 
   @override
   Widget build(BuildContext context) {

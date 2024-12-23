@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class QuizReviewScreen extends StatefulWidget {
+  const QuizReviewScreen({super.key});
+
   @override
   _QuizReviewScreenState createState() => _QuizReviewScreenState();
 }
@@ -140,16 +142,16 @@ class _QuizReviewScreenState extends State<QuizReviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('間違えた問題の復習'),
+        title: const Text('間違えた問題の復習'),
       ),
       body: incorrectQuestions.isEmpty
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
               itemCount: incorrectQuestions.length,
               itemBuilder: (context, index) {
                 final question = incorrectQuestions[index];
                 return Card(
-                  margin: EdgeInsets.all(8),
+                  margin: const EdgeInsets.all(8),
                   child: ListTile(
                     title: Text('問題 ID: ${question['quiz_id']}'),
                     subtitle: Column(
@@ -160,7 +162,7 @@ class _QuizReviewScreenState extends State<QuizReviewScreen> {
                       ],
                     ),
                     trailing: IconButton(
-                      icon: Icon(Icons.arrow_forward),
+                      icon: const Icon(Icons.arrow_forward),
                       onPressed: () {
                         // 詳細ページに遷移する場合
                       },

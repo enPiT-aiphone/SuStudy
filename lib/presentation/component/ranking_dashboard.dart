@@ -7,7 +7,7 @@ class RankingScreen extends StatefulWidget {
   final String selectedTab;
   final String selectedCategory; // 追加：カテゴリを受け取る
 
-  RankingScreen({
+  const RankingScreen({super.key, 
     required this.selectedTab,
     required this.selectedCategory, // 追加
   });
@@ -85,7 +85,7 @@ class _RankingScreenState extends State<RankingScreen> {
         final loginHistory = data['login_history'] ?? [];
         final todayLogins = loginHistory
             .where((timestamp) =>
-                (timestamp as Timestamp).toDate().isAfter(todayStart.subtract(Duration(hours: 24))))
+                (timestamp as Timestamp).toDate().isAfter(todayStart.subtract(const Duration(hours: 24))))
             .toList();
 
         if (todayLogins.isNotEmpty) {
@@ -184,17 +184,17 @@ class _RankingScreenState extends State<RankingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('ランキング'),
+        title: const Text('ランキング'),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _rankingDataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text('データ取得エラー: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('ランキングデータがありません'));
+            return const Center(child: Text('ランキングデータがありません'));
           }
 
           final rankingData = snapshot.data!;
@@ -206,7 +206,7 @@ class _RankingScreenState extends State<RankingScreen> {
                   padding: const EdgeInsets.all(8.0),
                   child: Text(
                     'あなたの順位: $_userRank 位',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
               Expanded(
@@ -221,7 +221,7 @@ class _RankingScreenState extends State<RankingScreen> {
                       title: Text(user['userName']),
                       trailing: Text(
                         '${user['tSolvedCount']} 問',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     );
                   },

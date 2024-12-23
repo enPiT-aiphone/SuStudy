@@ -6,7 +6,7 @@ import 'record_problem_toefl_word.dart';
 class LanguageTOEFLScreen extends StatefulWidget {
   final String selectedCategory;
 
-  LanguageTOEFLScreen({required this.selectedCategory});
+  const LanguageTOEFLScreen({super.key, required this.selectedCategory});
 
   @override
   _LanguageTOEFLScreenState createState() => _LanguageTOEFLScreenState();
@@ -58,9 +58,9 @@ class _LanguageTOEFLScreenState extends State<LanguageTOEFLScreen> {
     return Scaffold(
       body: Column(
         children: [
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
           _buildTextLabel(context, "${widget.selectedCategory} の問題"),
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
           Expanded(
             child: ListView.builder(
               itemCount: primaryCategories.length,
@@ -89,7 +89,7 @@ class _LanguageTOEFLScreenState extends State<LanguageTOEFLScreen> {
                           })
                           .toList(),
                     ),
-                    SizedBox(height: 10), // 各カテゴリ間の間隔を広げる
+                    const SizedBox(height: 10), // 各カテゴリ間の間隔を広げる
                   ],
                 );
               },
@@ -139,7 +139,7 @@ class _LanguageTOEFLScreenState extends State<LanguageTOEFLScreen> {
               child: Container(
                 width: MediaQuery.of(context).size.width,
                 height: MediaQuery.of(context).size.height * 0.6,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(20),
@@ -150,7 +150,7 @@ class _LanguageTOEFLScreenState extends State<LanguageTOEFLScreen> {
                   color: Colors.transparent,
                   child: Column(
                     children: [
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       _buildSelectableOption(
                         context,
                         'ランダム',
@@ -191,7 +191,7 @@ class _LanguageTOEFLScreenState extends State<LanguageTOEFLScreen> {
                           });
                         },
                       ),
-                      Spacer(),
+                      const Spacer(),
                       _buildStartButton(
                         context,
                         'スタート',
@@ -210,7 +210,7 @@ class _LanguageTOEFLScreenState extends State<LanguageTOEFLScreen> {
                               }
                             : null, // チェックがない場合は無効
                       ),
-                      SizedBox(height: 40),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
@@ -222,8 +222,8 @@ class _LanguageTOEFLScreenState extends State<LanguageTOEFLScreen> {
       transitionBuilder: (context, animation1, animation2, child) {
         return SlideTransition(
           position: Tween(
-            begin: Offset(0, 1),
-            end: Offset(0, 0),
+            begin: const Offset(0, 1),
+            end: const Offset(0, 0),
           ).animate(animation1),
           child: child,
         );
@@ -278,12 +278,12 @@ class _LanguageTOEFLScreenState extends State<LanguageTOEFLScreen> {
           padding: const EdgeInsets.symmetric(vertical: 15),
           margin: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: Color(0xFF0ABAB5),
+            color: const Color(0xFF0ABAB5),
             borderRadius: BorderRadius.circular(15),
           ),
           child: Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
             ),

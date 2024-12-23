@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class CreateGroupScreen extends StatefulWidget {
   final Function(String groupId, String groupName)? onGroupCreated;
 
-  CreateGroupScreen({Key? key, this.onGroupCreated}) : super(key: key);
+  const CreateGroupScreen({super.key, this.onGroupCreated});
 
   @override
   _CreateGroupScreenState createState() => _CreateGroupScreenState();
@@ -21,7 +21,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     if (currentUser == null) {
       // ユーザーがログインしていない場合
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ログインが必要です')),
+        const SnackBar(content: Text('ログインが必要です')),
       );
       return;
     }
@@ -29,7 +29,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     final groupName = _groupNameController.text.trim();
     if (groupName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('グループ名を入力してください')),
+        const SnackBar(content: Text('グループ名を入力してください')),
       );
       return;
     }
@@ -85,7 +85,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     } catch (e) {
       print('グループ作成エラー: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('グループ作成に失敗しました')),
+        const SnackBar(content: Text('グループ作成に失敗しました')),
       );
     } finally {
       setState(() {
@@ -98,7 +98,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('グループ作成'),
+        title: const Text('グループ作成'),
         centerTitle: true,
       ),
       body: Padding(
@@ -107,17 +107,17 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           children: [
             TextField(
               controller: _groupNameController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'グループ名',
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _isCreating
-                ? CircularProgressIndicator()
+                ? const CircularProgressIndicator()
                 : ElevatedButton(
                     onPressed: _createGroup,
-                    child: Text('グループを作成'),
+                    child: const Text('グループを作成'),
                   ),
           ],
         ),

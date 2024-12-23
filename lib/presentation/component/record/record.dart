@@ -8,7 +8,7 @@ class LanguageCategoryScreen extends StatelessWidget {
   final VoidCallback? onClose; // onClose コールバック
   final Widget categoryBar;
 
-  LanguageCategoryScreen({
+  const LanguageCategoryScreen({super.key, 
     required this.selectedCategory,
     this.onClose,
     required this.categoryBar,
@@ -28,7 +28,7 @@ class LanguageCategoryScreen extends StatelessWidget {
                   child: Builder(
                     builder: (context) {
                       if (selectedCategory.contains('全体')) {
-                        return Center(
+                        return const Center(
                           child: Text(
                             '勉強するカテゴリーを下から選択してください',
                             style: TextStyle(fontSize: 18),
@@ -47,7 +47,7 @@ class LanguageCategoryScreen extends StatelessWidget {
                       return Center(
                         child: Text(
                           '$selectedCategory のカテゴリーは未実装です',
-                          style: TextStyle(fontSize: 18),
+                          style: const TextStyle(fontSize: 18),
                         ),
                       );
                     },
@@ -62,7 +62,7 @@ class LanguageCategoryScreen extends StatelessWidget {
             left: 0,
             right: 0,
             child: Padding(
-              padding: EdgeInsets.only(bottom: 10.0),
+              padding: const EdgeInsets.only(bottom: 10.0),
               child: categoryBar,
             ),
           ),

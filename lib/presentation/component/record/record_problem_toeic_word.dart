@@ -5,7 +5,7 @@ class TOEICWordQuiz extends StatefulWidget {
   final String level; // TOEICレベル
   final String questionType; // 出題タイプ（random, unanswered, incorrect, recent_incorrect）
 
-  const TOEICWordQuiz({required this.level, required this.questionType, Key? key}) : super(key: key);
+  const TOEICWordQuiz({required this.level, required this.questionType, super.key});
 
   @override
   _TOEICWordQuizState createState() => _TOEICWordQuizState();
@@ -269,6 +269,122 @@ Future<void> _fetchQuestions() async {
     _animationController.forward();
   }
 
+
+Future<void> _updateTierProgress(
+    QueryDocumentSnapshot wordData, String wordName, bool isCorrect) async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+
+  if (userId == null) {
+    print('ユーザーがログインしていません');
+    return;
+  }
+
+  try {
+    // ユーザードキュメントを取得
+    final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+
+    // following_subjects から TOEIC スコアを取得
+    final userSnapshot = await userDoc.get();
+    if (!userSnapshot.exists) {
+      print('ユーザー情報が見つかりません');
+      return;
+    }
+
+    final followingSubjects = List<String>.from(
+        userSnapshot.data()?['following_subjects'] ?? []);
+    final matchedScore = followingSubjects
+        .firstWhere((subject) => subject.startsWith('TOEIC'), orElse: () => '');
+
+    if (matchedScore.isEmpty) {
+      print('TOEICスコアが見つかりません');
+      return;
+    }
+
+    // スコア部分を抽出 (例: 500)
+    final scoreMatch = RegExp(r'\d+').firstMatch(matchedScore);
+    if (scoreMatch == null) {
+      print('TOEICスコアが不正な形式です');
+      return;
+    }
+
+    final score = scoreMatch.group(0)!; // 抽出されたスコア部分
+    final wordDocRef = userDoc
+        .collection('following_subjects')
+        .doc('TOEIC')
+        .collection('up_to_$score')
+        .doc('Words')
+        .collection('Word')
+        .doc(wordName); // 解いた単語のドキュメント参照
+
+    // Wordsドキュメントの参照
+    final wordsDocRef = userDoc
+        .collection('following_subjects')
+        .doc('TOEIC')
+        .collection('up_to_$score')
+        .doc('Words');
+
+    int tierProgress = 0;
+
+    // Wordsドキュメントの進捗状況を取得
+    final wordsSnapshot = await wordsDocRef.get();
+    if (wordsSnapshot.exists) {
+      tierProgress = wordsSnapshot.data()?['tierProgress_all'] ?? 0;
+    }
+
+    // Attempts サブコレクションから最新の試行データを取得
+    final attemptsSnapshot = await wordDocRef
+        .collection('Attempts')
+        .orderBy('attempt_number', descending: true)
+        .limit(1)
+        .get();
+
+    // 最新試行データがない場合（初めての試行）
+    if (attemptsSnapshot.docs.isEmpty) {
+      if (isCorrect) {
+        tierProgress += 1;
+        await wordsDocRef.set({'tierProgress_all': tierProgress}, SetOptions(merge: true));
+        print('初めての試行: 正解 +1');
+      } else {
+        await wordsDocRef.set({'tierProgress_all': tierProgress}, SetOptions(merge: true));
+        print('初めての試行: 不正解のためそのまま');
+      }
+      return;
+    }
+
+    // 最新試行データを取得
+    final latestAttempt = attemptsSnapshot.docs.first;
+    final bool? latestIsCorrect = latestAttempt.data()['is_correct'];
+
+    // `is_correct` フィールドがない場合の初期化
+    if (latestIsCorrect == null) {
+      print('最新試行データに is_correct フィールドが存在しません');
+      return;
+    }
+
+    // tierProgress_all の更新ロジック
+    if (!latestIsCorrect && isCorrect) {
+      // 直近間違えていて、今回正解した場合
+      tierProgress += 1;
+      print('直近間違えていて、今回正解: +1');
+    } else if (latestIsCorrect && !isCorrect) {
+      // 直近正解していて、今回間違えた場合
+      tierProgress -= 1;
+      print('直近正解していて、今回間違え: -1');
+    } else if (latestIsCorrect && isCorrect) {
+      print('直近正解していて、今回も正解: そのまま');
+    } else if (!latestIsCorrect && !isCorrect) {
+      print('直近間違えていて、今回も間違え: そのまま');
+    }
+
+    // Wordsドキュメントを更新
+    await wordsDocRef.update({'tierProgress_all': tierProgress});
+    print('Words ドキュメントの tierProgress_all が更新されました: $tierProgress');
+  } catch (e) {
+    print('tierProgress_all 更新に失敗しました: $e');
+  }
+}
+
+
 // 保存メソッド
 Future<void> _saveResult(
     String selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
@@ -318,7 +434,10 @@ Future<void> _saveResult(
     final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
     final attemptNumber = attemptsSnapshot.docs.length + 1;
     final Nextname = '$attemptNumber';
-      await wordDocRef.collection('Attempts')..doc(Nextname).set({
+
+      await _updateTierProgress(wordData, wordData['Word'], isCorrect);
+
+      wordDocRef.collection('Attempts')..doc(Nextname).set({
         'attempt_number': attemptNumber,
         'timestamp': FieldValue.serverTimestamp(),
         'selected_answer': selectedAnswer,
@@ -409,8 +528,8 @@ Future<void> _saveResult(
             automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 Text(
                   'SuStudy, ',
                   style: TextStyle(
@@ -456,7 +575,7 @@ Future<void> _saveResult(
                       fontSize: 30,
                     ),
                   ),
-                  SizedBox(height: 8), 
+                  const SizedBox(height: 8), 
                   Text(
                     "【${wordData['Phonetic_Symbols']}】", 
                     style: const TextStyle(
