@@ -6,7 +6,7 @@ import 'record_problem_toeic_word.dart';
 class LanguageTOEICScreen extends StatefulWidget {
   final String selectedCategory;
 
-  LanguageTOEICScreen({required this.selectedCategory});
+  const LanguageTOEICScreen({super.key, required this.selectedCategory});
 
   @override
   _LanguageTOEICScreenState createState() => _LanguageTOEICScreenState();
@@ -58,9 +58,9 @@ class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
     return Scaffold(
       body: Column(
         children: [
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
           _buildTextLabel(context, "${widget.selectedCategory} の問題"),
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
           Expanded(
             child: ListView.builder(
               itemCount: primaryCategories.length,
@@ -89,7 +89,7 @@ class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
                           })
                           .toList(),
                     ),
-                    SizedBox(height: 10), // 各カテゴリ間の間隔を広げる
+                    const SizedBox(height: 10), // 各カテゴリ間の間隔を広げる
                   ],
                 );
               },
@@ -139,7 +139,7 @@ class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
               child: Container(
                 width: MediaQuery.of(context).size.width,
                 height: MediaQuery.of(context).size.height * 0.6,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(20),
@@ -148,7 +148,7 @@ class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
                 ),
                 child: Column(
                   children: [
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     Expanded(
                       child: Column(
                         children: [
@@ -213,7 +213,7 @@ class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
                             }
                           : null, // チェックがない場合は無効
                     ),
-                    SizedBox(height: 40),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -224,8 +224,8 @@ class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
       transitionBuilder: (context, animation1, animation2, child) {
         return SlideTransition(
           position: Tween(
-            begin: Offset(0, 1),
-            end: Offset(0, 0),
+            begin: const Offset(0, 1),
+            end: const Offset(0, 0),
           ).animate(animation1),
           child: child,
         );
@@ -280,12 +280,12 @@ Widget _buildStartButton(BuildContext context, String label, VoidCallback? onPre
         padding: const EdgeInsets.symmetric(vertical: 15),
         margin: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: Color(0xFF0ABAB5),
+          color: const Color(0xFF0ABAB5),
           borderRadius: BorderRadius.circular(15),
         ),
         child: Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 18,
           ),

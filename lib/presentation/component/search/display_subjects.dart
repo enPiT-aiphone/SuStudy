@@ -4,8 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 class SubjectDetailsScreen extends StatefulWidget {
   final String subjectName;
 
-  const SubjectDetailsScreen({required this.subjectName, Key? key})
-      : super(key: key);
+  const SubjectDetailsScreen({required this.subjectName, super.key});
 
   @override
   _SubjectDetailsScreenState createState() => _SubjectDetailsScreenState();
@@ -134,7 +133,7 @@ Future<void> _followSubject() async {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isFollowed 
                       ? Colors.grey 
-                      : Color(0xFF0ABAB5),
+                      : const Color(0xFF0ABAB5),
                     ),
                     child: Text(_isFollowed ? 'フォロー済み' : 'フォローする'),
                   ),

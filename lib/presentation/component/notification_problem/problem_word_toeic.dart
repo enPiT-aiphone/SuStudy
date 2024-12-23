@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 class NotificationTOEICWordQuiz extends StatefulWidget {
   final String level; // LanguageTOEICScreen から渡される TOEIC レベル
 
-  const NotificationTOEICWordQuiz({required this.level, Key? key}) : super(key: key);
+  const NotificationTOEICWordQuiz({required this.level, super.key});
 
   @override
   _TOEICWordQuizState createState() => _TOEICWordQuizState();
@@ -20,7 +20,7 @@ class CrossPainter extends CustomPainter {
       ..strokeWidth = 6;
 
     canvas.drawLine(Offset(0, size.height), Offset(size.width, 0), paint);
-    canvas.drawLine(Offset(size.width, size.height), Offset(0, 0), paint);
+    canvas.drawLine(Offset(size.width, size.height), const Offset(0, 0), paint);
   }
 
   @override
@@ -163,7 +163,7 @@ Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, 
     final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
     final attemptNumber = attemptsSnapshot.docs.length + 1;
     final Nextname = '$attemptNumber';
-      await wordDocRef.collection('Attempts')..doc(Nextname).set({
+      wordDocRef.collection('Attempts')..doc(Nextname).set({
         'attempt_number': attemptNumber,
         'timestamp': FieldValue.serverTimestamp(),
         'selected_answer': selectedAnswer,
@@ -253,8 +253,8 @@ Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, 
             automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 Text(
                   'SuStudy, ',
                   style: TextStyle(
@@ -300,7 +300,7 @@ Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, 
                       fontSize: 30,
                     ),
                   ),
-                  SizedBox(height: 8), // スペースを追加
+                  const SizedBox(height: 8), // スペースを追加
                   Text(
                     "【${wordData['Phonetic_Symbols']}】", // 発音記号を表示
                     style: const TextStyle(

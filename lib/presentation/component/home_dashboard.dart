@@ -11,7 +11,7 @@ class DashboardScreen extends StatefulWidget {
   final Function(int) onLoginStreakCalculated; // コールバック関数を追加
 
   // コンストラクタで初期化
-  DashboardScreen({
+  const DashboardScreen({super.key, 
     required this.selectedTab, 
     required this.selectedCategory, 
     required this.onLoginStreakCalculated,
@@ -50,7 +50,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
     // アニメーションコントローラの初期化
     _controller = AnimationController(
-      duration: Duration(seconds: 1), // 1秒間のアニメーション
+      duration: const Duration(seconds: 1), // 1秒間のアニメーション
       vsync: this, // アニメーションの更新を同期
     );
 
@@ -276,7 +276,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
       future: _userDataFuture, // 初期化時に設定したFutureを使用
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator()); // データ取得中のインジケーター
+          return const Center(child: CircularProgressIndicator()); // データ取得中のインジケーター
         } else if (snapshot.hasError) {
           return Center(child: Text('データ取得エラー: ${snapshot.error}')); // エラーが発生した場合の表示
         } else {
@@ -288,24 +288,24 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     // ユーザーの名前を表示
                     Text(
                       "$userNameさん、ナイスログイン！",
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 25,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 10),
-                    Text(
+                    const SizedBox(height: 10),
+                    const Text(
                       "今日も学習を重ねていこう",
                       style: TextStyle(
                         fontSize: 15,
-                        color: const Color.fromARGB(255, 130, 130, 130),
+                        color: Color.fromARGB(255, 130, 130, 130),
                       ),
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     // 統計、進捗、活動セクション
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,13 +315,13 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                         Expanded(child: Align(alignment: Alignment.center, child: _buildActivitySection())),
                       ],
                     ),
-                    SizedBox(height: 20),
-                    Divider(color: const Color.fromARGB(255, 200, 200, 200)),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 20),
+                    const Divider(color: Color.fromARGB(255, 200, 200, 200)),
+                    const SizedBox(height: 10),
                     // 日付情報の表示
                     Text(
                       _getDisplayDate(),
-                      style: TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 16),
                     ),
                   ],
                 ),
@@ -336,56 +336,56 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
   Widget _buildStatSection() {
   return Column(
     children: [
-      SizedBox(height: 8),
+      const SizedBox(height: 8),
       SizedBox(
         height: 200,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
+            const Text(
               "連続ログイン日数",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: const Color.fromARGB(255, 100, 100, 100),
+                color: Color.fromARGB(255, 100, 100, 100),
                 fontSize: 13,
               ),
             ),
             Text(
               "$loginStreak日",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            Text(
+            const Text(
               "最高連続ログイン日数",
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: const Color.fromARGB(255, 130, 130, 130),
+                color: Color.fromARGB(255, 130, 130, 130),
               ),
             ),
             Text(
               "$longestStreak日",
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: const Color.fromARGB(255, 130, 130, 130),
+                color: Color.fromARGB(255, 130, 130, 130),
               ),
             ),
-            SizedBox(height: 10),
-            Text(
+            const SizedBox(height: 10),
+            const Text(
               "総ログイン回数",
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: const Color.fromARGB(255, 130, 130, 130),
+                color: Color.fromARGB(255, 130, 130, 130),
               ),
             ),
             Text(
               "$totalLogins回",
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: const Color.fromARGB(255, 130, 130, 130),
+                color: Color.fromARGB(255, 130, 130, 130),
               ),
             ),
           ],
@@ -399,7 +399,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
   Widget _buildProgressSection() {
     return Column(
       children: [
-        SizedBox(height: 50),
+        const SizedBox(height: 50),
         Stack(
           alignment: Alignment.center,
           children: [
@@ -407,26 +407,26 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
             AnimatedBuilder(
               animation: _progressAllAnimation,
               builder: (context, child) {
-                return Container(
+                return SizedBox(
                   width: 140,
                   height: 140,
                   child: CircularProgressIndicator(
                     value: _progressAllAnimation.value,
                     strokeWidth: 5,
                     backgroundColor: Colors.grey[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
                   ),
                 );
               },
             ),
-            Positioned(
+            const Positioned(
               top: 9,
               child: Text(
                 "目標への達成度",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 9,
-                  color: const Color.fromARGB(255, 100, 100, 100),
+                  color: Color.fromARGB(255, 100, 100, 100),
                 ),
               ),
             ),
@@ -437,7 +437,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                   bottom: 0,
                   child: Text(
                     "${(_progressAllAnimation.value * 100).toInt()}%",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                 );
               },
@@ -446,14 +446,14 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
             AnimatedBuilder(
               animation: _progressAnimation,
               builder: (context, child) {
-                return Container(
+                return SizedBox(
                   width: 90,
                   height: 90,
                   child: CircularProgressIndicator(
                     value: _progressAnimation.value,
                     strokeWidth: 5,
                     backgroundColor: Colors.grey[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
                   ),
                 );
               },
@@ -466,19 +466,19 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                       ? "今日の学習達成度"
                       : "${DateFormat('yyyy年M月d日').format(_selectedDay!)}\n学習達成度",
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 9,
-                    color: const Color.fromARGB(255, 100, 100, 100),
+                    color: Color.fromARGB(255, 100, 100, 100),
                   ),
                 ),
-                SizedBox(height: 5),
+                const SizedBox(height: 5),
                 AnimatedBuilder(
                   animation: _progressAnimation,
                   builder: (context, child) {
                     return Text(
                       "${(_progressAnimation.value * 100).toInt()}%",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
                     );
                   },
                 ),
@@ -494,7 +494,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
   Widget _buildActivitySection() {
     return Column(
       children: [
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         SizedBox(
           width: 200,
           height: 200,
@@ -511,15 +511,15 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
               titleTextFormatter: (date, locale) {
                 return '${DateFormat('yyyy年', locale).format(date)}\n${DateFormat('M月', locale).format(date)}';
               },
-              titleTextStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-              decoration: BoxDecoration(color: Colors.transparent),
+              titleTextStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              decoration: const BoxDecoration(color: Colors.transparent),
             ),
             daysOfWeekStyle: DaysOfWeekStyle(
               dowTextFormatter: (date, locale) => DateFormat.E(locale).format(date)[0],
-              weekdayStyle: TextStyle(fontSize: 12),
-              weekendStyle: TextStyle(fontSize: 12, color: Colors.red),
+              weekdayStyle: const TextStyle(fontSize: 12),
+              weekendStyle: const TextStyle(fontSize: 12, color: Colors.red),
             ),
-            calendarStyle: CalendarStyle(
+            calendarStyle: const CalendarStyle(
               todayDecoration: BoxDecoration(
                 color: Color(0xFF0ABAB5),
                 shape: BoxShape.circle,
@@ -542,11 +542,11 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                   children: [
                     Text(
                       DateFormat('yyyy年').format(date),
-                      style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.grey),
+                      style: const TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.grey),
                     ),
                     Text(
                       DateFormat('M月').format(date),
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black),
                     ),
                   ],
                 );
@@ -565,7 +565,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                     ),
                   );
                 }
-                return Center(
+                return const Center(
                   child: Text(
                     '・',
                     style: TextStyle(fontSize: 12),
@@ -574,32 +574,32 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
               },
               todayBuilder: (context, day, focusedDay) {
                 return Container(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Color(0xFF0ABAB5),
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     DateFormat.d().format(day),
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 );
               },
               selectedBuilder: (context, day, focusedDay) {
                 return Container(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.orange,
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     DateFormat.d().format(day),
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 );
               },
               outsideBuilder: (context, day, focusedDay) {
-                return Center(
+                return const Center(
                   child: Text(
                     '•',
                     style: TextStyle(fontSize: 12, color: Colors.grey),

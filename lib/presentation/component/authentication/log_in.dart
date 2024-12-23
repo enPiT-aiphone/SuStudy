@@ -2,6 +2,8 @@ import '/import.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 
 class LogInScreen extends StatefulWidget {
+  const LogInScreen({super.key});
+
   @override
   _LogInScreenState createState() => _LogInScreenState();
 }
@@ -27,11 +29,11 @@ class _LogInScreenState extends State<LogInScreen> {
           child: AppBar(
             backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
             elevation: 0,
-            iconTheme: IconThemeData(
+            iconTheme: const IconThemeData(
               color: Colors.white,
             ),
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 // アプリのタイトル「SuStudy,」を表示
                 Text(
                   'SuStudy, ',
@@ -54,27 +56,27 @@ class _LogInScreenState extends State<LogInScreen> {
             if (_errorMessage != null)
               Text(
                 _errorMessage!,
-                style: TextStyle(color: Colors.red),
+                style: const TextStyle(color: Colors.red),
               ),
-            SizedBox(height: 10),
-            Text('登録したメールアドレスでログイン',
+            const SizedBox(height: 10),
+            const Text('登録したメールアドレスでログイン',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: const Color.fromARGB(255, 50, 50, 50),
+                color: Color.fromARGB(255, 50, 50, 50),
                 ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             TextFormField(
-              decoration: InputDecoration(labelText: 'メールアドレス'),
+              decoration: const InputDecoration(labelText: 'メールアドレス'),
               onChanged: (value) => setState(() => _email = value),
             ),
             TextFormField(
-              decoration: InputDecoration(labelText: 'パスワード'),
+              decoration: const InputDecoration(labelText: 'パスワード'),
               obscureText: true,
               onChanged: (value) => setState(() => _password = value),
             ),
-            Spacer(), // ボタンを画面下部に押し出す
+            const Spacer(), // ボタンを画面下部に押し出す
             _buildAuthenticationButton(
               context,
               'ログイン',
@@ -86,14 +88,12 @@ class _LogInScreenState extends State<LogInScreen> {
                   final user = await FirebaseAuth.instance
                       .signInWithEmailAndPassword(
                           email: _email, password: _password);
-                  if (user != null) {
-                    print('ログイン成功: ${user.user?.email}');
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => HomeScreen()),
-                    ); // 遷移先の画面を指定
-                  }
-                } on FirebaseAuthException catch (e) {
+                  print('ログイン成功: ${user.user?.email}');
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => HomeScreen()),
+                  ); // 遷移先の画面を指定
+                                } on FirebaseAuthException catch (e) {
                   // エラーメッセージを設定
                   setState(() {
                     if (e.code == 'user-not-found') {
@@ -114,7 +114,7 @@ class _LogInScreenState extends State<LogInScreen> {
                 }
               },
             ),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
           ],
         ),
       ),

@@ -3,7 +3,7 @@ import '/import.dart';
 class LearningGoalsScreen extends StatefulWidget {
   final String userId; // ユーザーIDを受け取る
 
-  LearningGoalsScreen({required this.userId});
+  const LearningGoalsScreen({super.key, required this.userId});
 
   @override
   _LearningGoalsScreenState createState() => _LearningGoalsScreenState();
@@ -171,8 +171,8 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
             automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 Text(
                   'SuStudy, ',
                   style: TextStyle(fontSize: 25, color: Colors.white),
@@ -184,17 +184,17 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
       ),
       body: Column(
         children: [
-          SizedBox(height: 10),
-          Text(
+          const SizedBox(height: 10),
+          const Text(
             '学習目標を登録',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: const Color.fromARGB(255, 50, 50, 50),
+              color: Color.fromARGB(255, 50, 50, 50),
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -227,7 +227,7 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
             padding: const EdgeInsets.all(16.0),
             child: _buildAuthenticationButton(context, '保存', _saveGoals),
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
         ],
       ),
     );

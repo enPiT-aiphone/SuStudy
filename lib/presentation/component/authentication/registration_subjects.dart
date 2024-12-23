@@ -4,7 +4,7 @@ import 'learning_goals.dart';
 class SubjectSelectionScreen extends StatefulWidget {
   final String userId; // ユーザーIDを受け取る
 
-  SubjectSelectionScreen({required this.userId});
+  const SubjectSelectionScreen({super.key, required this.userId});
 
   @override
   _SubjectSelectionScreenState createState() => _SubjectSelectionScreenState();
@@ -179,8 +179,8 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
             automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 Text(
                   'SuStudy, ',
                   style: TextStyle(fontSize: 25, color: Colors.white),
@@ -197,20 +197,20 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
               padding: const EdgeInsets.all(16.0),
               child: ListView(
                 children: [
-                  Text(
+                  const Text(
                     '勉強するカテゴリーを登録',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: const Color.fromARGB(255, 50, 50, 50),
+                      color: Color.fromARGB(255, 50, 50, 50),
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   ListTile(
                     title: Text(
                       selectedMainCategory ?? 'メインカテゴリーを選択',
-                      style: TextStyle(fontSize: 18),
+                      style: const TextStyle(fontSize: 18),
                     ),
                     trailing: const Icon(Icons.keyboard_arrow_down),
                     onTap: () {
@@ -242,7 +242,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
                     ListTile(
                       title: Text(
                         selectedSubCategory ?? 'サブカテゴリーを選択',
-                        style: TextStyle(fontSize: 18),
+                        style: const TextStyle(fontSize: 18),
                       ),
                       trailing: const Icon(Icons.keyboard_arrow_down),
                       onTap: () {
@@ -275,7 +275,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
                     ListTile(
                       title: Text(
                         selectedScore ?? 'スコアカテゴリーを選択',
-                        style: TextStyle(fontSize: 18),
+                        style: const TextStyle(fontSize: 18),
                       ),
                       trailing: const Icon(Icons.keyboard_arrow_down),
                       onTap: () => _selectScore(selectedSubCategory!),

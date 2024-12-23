@@ -7,7 +7,7 @@ class ResultPage extends StatefulWidget {
   final List<bool?> isCorrectAnswers;
   final List<QueryDocumentSnapshot> wordDetails;
 
-  ResultPage({
+  const ResultPage({super.key, 
     required this.selectedAnswers,
     required this.isCorrectAnswers,
     required this.wordDetails,
@@ -115,9 +115,9 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                 ),
                 child: Column(
                   children: [
-                    Text(
+                    const Text(
                       '正答率',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -139,7 +139,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                       child: AnimatedBuilder(
                         animation: _progressAnimation,
                         builder: (context, child) {
-                          return Container(
+                          return SizedBox(
                             height: 20,
                             child: Stack(
                               children: [

@@ -6,7 +6,7 @@ class GroupDetailsPage extends StatefulWidget {
   final String groupId;
   final String groupName;
 
-  GroupDetailsPage({required this.groupId, required this.groupName});
+  const GroupDetailsPage({super.key, required this.groupId, required this.groupName});
 
   @override
   _GroupDetailsPageState createState() => _GroupDetailsPageState();
@@ -100,7 +100,7 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.groupName),
-        backgroundColor: Color(0xFF0ABAB5),
+        backgroundColor: const Color(0xFF0ABAB5),
       ),
       body: Center(
         child: Column(
@@ -108,22 +108,22 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
           children: [
             Text(
               widget.groupName,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
               'グループID: ${widget.groupId}',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _isJoined ? _leaveGroup : _joinGroup,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isJoined ? Colors.grey : Color(0xFF0ABAB5),
+                backgroundColor: _isJoined ? Colors.grey : const Color(0xFF0ABAB5),
               ),
               child: Text(
                 _isJoined ? '参加をキャンセル' : '参加する',
-                style: TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ],

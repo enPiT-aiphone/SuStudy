@@ -127,7 +127,7 @@ class ViewToeflWord extends StatelessWidget {
           );
         },  // プラスアイコン
         tooltip: 'Add Word',
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
       ),
     );
   }

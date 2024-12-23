@@ -6,7 +6,7 @@ class NotificationPage extends StatelessWidget {
   final Function(String) onNotificationTap; // 通知がタップされた際の処理を受け取るコールバック関数
 
   // コンストラクタ：必須の引数として通知リストとコールバック関数を受け取る
-  NotificationPage({required this.notifications, required this.onNotificationTap});
+  const NotificationPage({super.key, required this.notifications, required this.onNotificationTap});
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +21,7 @@ class NotificationPage extends StatelessWidget {
                 final isRead = notification['isRead'] as bool; // 'isRead'フィールドで既読状態を判定
 
                 return ListTile( // 通知アイテムを表示するListTileウィジェットを作成
-                  leading: Icon(Icons.notification_important), // アイコンを表示
+                  leading: const Icon(Icons.notification_important), // アイコンを表示
                   title: Text(
                     notification['title'] ?? 'No Title', // タイトルを表示、nullの場合はデフォルト値
                     style: TextStyle(
@@ -42,7 +42,7 @@ class NotificationPage extends StatelessWidget {
               },
             ),
           )
-        : Center( // 通知リストが空の場合
+        : const Center( // 通知リストが空の場合
             child: Text('通知はありません'), // メッセージを表示
           );
   }

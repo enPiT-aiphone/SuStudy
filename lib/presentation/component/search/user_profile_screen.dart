@@ -9,7 +9,7 @@ class UserProfileScreen extends StatefulWidget {
   final String userId;
    final VoidCallback? onBack; // 戻るボタンが押された時の処理
 
-  UserProfileScreen({required this.userId, this.onBack});
+  const UserProfileScreen({super.key, required this.userId, this.onBack});
 
   @override
   _UserProfileScreenState createState() => _UserProfileScreenState();
@@ -40,7 +40,7 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
     backgroundColor: Colors.transparent, // 背景色を透明にする
     builder: (context) => Container(
       height: MediaQuery.of(context).size.height * 0.8, // 画面の高さの80%
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white, // 背景色を白に設定
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20.0),  // 左上の角を丸く
@@ -48,7 +48,7 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
         ),
       ),
       child: ClipRRect( // 角丸をしっかり適用するために追加
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(20.0),
           topRight: Radius.circular(20.0),
         ),
@@ -355,10 +355,10 @@ Future<void> _loadUserData() async {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(40.0), // AppBarの高さを設定
+        preferredSize: const Size.fromHeight(40.0), // AppBarの高さを設定
         child: AppBar(
           leading: IconButton(
-            icon: Icon(Icons.arrow_back), // 戻る矢印
+            icon: const Icon(Icons.arrow_back), // 戻る矢印
             onPressed: widget.onBack ?? () {}, // onBackコールバックが設定されていれば実行
           ),
         ),
@@ -370,14 +370,14 @@ Future<void> _loadUserData() async {
         ]),
         builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
           if (!snapshot.hasData) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           final userData = snapshot.data![0] as Map<String, dynamic>;
           final userPosts = snapshot.data![1] as List<Map<String, dynamic>>;
 
           if (userData.isEmpty) {
-            return Center(child: Text('ユーザーが見つかりませんでした。'));
+            return const Center(child: Text('ユーザーが見つかりませんでした。'));
           }
 
           return SingleChildScrollView(
@@ -393,7 +393,7 @@ Future<void> _loadUserData() async {
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Color(0xFF0ABAB5), width: 1.0),
+                        border: Border.all(color: const Color(0xFF0ABAB5), width: 1.0),
                       ),
                       child: CircleAvatar(
                         radius: 40,
@@ -402,33 +402,33 @@ Future<void> _loadUserData() async {
                           userData['user_name'] != null && userData['user_name'].isNotEmpty
                               ? userData['user_name'][0]
                               : '?',
-                          style: TextStyle(fontSize: 30, color: Color(0xFF0ABAB5)),
+                          style: const TextStyle(fontSize: 30, color: Color(0xFF0ABAB5)),
                         ),
                       ),
                     ),
-                    SizedBox(width: 16),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             userData['user_name'] ?? '不明',
-                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           // user_idをWrapで折り返しさせずに表示
                           Wrap(
                             children: [
                               Text(
                                 '@${userData['user_id']}',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 16,
                                   color: Color.fromARGB(179, 160, 160, 160),
                                 ),
                               ),
                             ],
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           if (_currentUserId != null)
                             if (userData['auth_uid'] == _currentUserId)
                               OutlinedButton(
@@ -446,13 +446,13 @@ Future<void> _loadUserData() async {
                                   }
                                 },
                                 style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: Colors.grey),
+                                  side: const BorderSide(color: Colors.grey),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(15),
                                   ),
-                                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
                                 ),
-                                child: Text(
+                                child: const Text(
                                   'プロフィール編集',
                                   style: TextStyle(color: Colors.black, fontSize: 16),
                                 ),
@@ -462,11 +462,11 @@ Future<void> _loadUserData() async {
                                 onPressed: _isFollowed ? _unfollowUser : _followUser,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor:
-                                      _isFollowed ? Colors.grey : Color(0xFF0ABAB5),
+                                      _isFollowed ? Colors.grey : const Color(0xFF0ABAB5),
                                 ),
                                 child: Text(
                                   _isFollowed ? 'フォロー解除' : 'フォローする',
-                                  style: TextStyle(color: Colors.white),
+                                  style: const TextStyle(color: Colors.white),
                                 ),
                               ),
                         ],
@@ -484,14 +484,14 @@ Future<void> _loadUserData() async {
                       if (userData['bio'] != null && userData['bio'].isNotEmpty) ...[
                         Text(
                           userData['bio'],
-                          style: TextStyle(fontSize: 16),
+                          style: const TextStyle(fontSize: 16),
                         ),
-                        SizedBox(height: 5),
+                        const SizedBox(height: 5),
                       ],
                       // フォロワーとフォロー中の情報を表示
                       Row(
                         children: [
-                          Text(
+                          const Text(
                             'フォロワー: ',
                             style: TextStyle(
                               fontSize: 16,
@@ -504,14 +504,14 @@ Future<void> _loadUserData() async {
                             },
                             child: Text(
                               '${userData['follower_count'] ?? 0}',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 16,
                                 decoration: TextDecoration.underline,
                               ),
                             ),
                           ),
-                          SizedBox(width: 20), // スペースを追加
-                          Text(
+                          const SizedBox(width: 20), // スペースを追加
+                          const Text(
                             'フォロー中: ',
                             style: TextStyle(
                               fontSize: 16,
@@ -524,7 +524,7 @@ Future<void> _loadUserData() async {
                             },
                             child: Text(
                               '${userData['follow_count'] ?? 0}',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 16,
                                 decoration: TextDecoration.underline,
                               ),
@@ -532,25 +532,25 @@ Future<void> _loadUserData() async {
                           ),
                         ],
                       ),
-                      SizedBox(height: 5), // スペース追加
+                      const SizedBox(height: 5), // スペース追加
                       // フォロー中の教科
                       if (userData['following_subjects'] != null &&
                           (userData['following_subjects'] as List).isNotEmpty) ...[
-                        Text(
+                        const Text(
                           'フォロー中の教科: ',
                           style: TextStyle(
                             fontSize: 16,
                             color: Color.fromARGB(179, 100, 100, 100),
                           ),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Wrap(
                           spacing: 8.0, // 教科間の横のスペース
                           runSpacing: 8.0, // 教科間の縦のスペース
                           children: (userData['following_subjects'] as List)
                               .map<Widget>((subject) => Text(
                                     subject,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       color: Colors.black, // テキストカラー
                                     ),
@@ -563,9 +563,9 @@ Future<void> _loadUserData() async {
                 ),
 
                 // 投稿リスト
-                Divider(thickness: 1),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
+                const Divider(thickness: 1),
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
                   child: Text(
                     '投稿',
                     style: TextStyle(
@@ -575,15 +575,15 @@ Future<void> _loadUserData() async {
                   ),
                 ),
                 userPosts.isEmpty
-                    ? Center(
+                    ? const Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(16.0),
+                          padding: EdgeInsets.all(16.0),
                           child: Text('まだ投稿がありません'),
                         ),
                       )
                     : ListView.separated(
                         shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
+                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: userPosts.length,
                         separatorBuilder: (context, index) => Divider(
                           color: Colors.grey[300], // 線の色
@@ -613,13 +613,13 @@ Future<void> _loadUserData() async {
                                             userData['user_name'] != null
                                                 ? userData['user_name'][0]
                                                 : '?',
-                                            style: TextStyle(
+                                            style: const TextStyle(
                                               fontSize: 25,
                                               color: Colors.black,
                                             ),
                                           ),
                                         ),
-                                        SizedBox(width: 10),
+                                        const SizedBox(width: 10),
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
@@ -627,14 +627,14 @@ Future<void> _loadUserData() async {
                                               children: [
                                                 Text(
                                                   userData['user_name'],
-                                                  style: TextStyle(
+                                                  style: const TextStyle(
                                                     fontSize: 18,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
                                                 Text(
                                                   '@${userData['user_id']}',
-                                                  style: TextStyle(
+                                                  style: const TextStyle(
                                                     fontSize: 13,
                                                     color: Colors.grey,
                                                   ),
@@ -649,23 +649,23 @@ Future<void> _loadUserData() async {
                                       post['createdAt'] != null
                                           ? _timeAgo(post['createdAt'])
                                           : '',
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey,
                                       ),
                                     ),
                                   ],
                                 ),
-                                SizedBox(height: 10),
+                                const SizedBox(height: 10),
                                 // 投稿の内容
                                 Padding(
                                   padding: const EdgeInsets.only(left: 64.0),
                                   child: Text(
                                     post['description'] ?? '内容なし',
-                                    style: TextStyle(fontSize: 16),
+                                    style: const TextStyle(fontSize: 16),
                                   ),
                                 ),
-                                SizedBox(height: 10),
+                                const SizedBox(height: 10),
                                 // いいねボタンといいね数
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,

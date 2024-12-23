@@ -5,7 +5,7 @@ class TOEICWordQuiz extends StatefulWidget {
   final String level; // TOEICレベル
   final String questionType; // 出題タイプ（random, unanswered, incorrect, recent_incorrect）
 
-  const TOEICWordQuiz({required this.level, required this.questionType, Key? key}) : super(key: key);
+  const TOEICWordQuiz({required this.level, required this.questionType, super.key});
 
   @override
   _TOEICWordQuizState createState() => _TOEICWordQuizState();
@@ -437,7 +437,7 @@ Future<void> _saveResult(
 
       await _updateTierProgress(wordData, wordData['Word'], isCorrect);
 
-      await wordDocRef.collection('Attempts')..doc(Nextname).set({
+      wordDocRef.collection('Attempts')..doc(Nextname).set({
         'attempt_number': attemptNumber,
         'timestamp': FieldValue.serverTimestamp(),
         'selected_answer': selectedAnswer,
@@ -528,8 +528,8 @@ Future<void> _saveResult(
             automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 Text(
                   'SuStudy, ',
                   style: TextStyle(
@@ -575,7 +575,7 @@ Future<void> _saveResult(
                       fontSize: 30,
                     ),
                   ),
-                  SizedBox(height: 8), 
+                  const SizedBox(height: 8), 
                   Text(
                     "【${wordData['Phonetic_Symbols']}】", 
                     style: const TextStyle(

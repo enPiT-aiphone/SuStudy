@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class EditProfileScreen extends StatefulWidget {
+  const EditProfileScreen({super.key});
+
   @override
   _EditProfileScreenState createState() => _EditProfileScreenState();
 }
@@ -154,7 +156,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       options = _jobIndustries;
     }
 
-    if (options.isEmpty) return SizedBox.shrink();
+    if (options.isEmpty) return const SizedBox.shrink();
 
     return Card(
       child: ExpansionTile(
@@ -206,13 +208,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('プロフィール編集'),
+        title: const Text('プロフィール編集'),
         actions: [_buildSaveButton()],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16.0),
               child: Form(
                 key: _formKey,
                 onChanged: _setButtonState,
@@ -225,10 +227,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         _nameController.text.isNotEmpty
                             ? _nameController.text[0]
                             : '?',
-                        style: TextStyle(fontSize: 40),
+                        style: const TextStyle(fontSize: 40),
                       ),
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     _buildTextField('名前', _nameController),
                     _buildTextField('ユーザーID', _userIdController),
                     _buildTextField('自己紹介', _bioController, maxLines: 3),
@@ -250,7 +252,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         maxLines: maxLines,
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(),
+          border: const OutlineInputBorder(),
         ),
       ),
     );

@@ -4,7 +4,7 @@ import 'registration_subjects.dart';
 class InformationRegistrationScreen extends StatefulWidget {
   final String userId; // サインイン時に自動生成されたユーザーIDを渡す
 
-  InformationRegistrationScreen({required this.userId});
+  const InformationRegistrationScreen({super.key, required this.userId});
 
   @override
   _InformationRegistrationScreenState createState() =>
@@ -21,8 +21,8 @@ class _InformationRegistrationScreenState
   String _occupation = '';
   String _subOccupation = '';
   int _userNumber = 0;
-  int _followcount = 0;
-  int _followercount = 0;
+  final int _followcount = 0;
+  final int _followercount = 0;
 
 
   // 職業選択肢のリスト
@@ -300,8 +300,8 @@ class _InformationRegistrationScreenState
             automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
             elevation: 0,
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 // アプリのタイトル「SuStudy,」を表示
                 Text(
                   'SuStudy, ',
@@ -321,21 +321,21 @@ class _InformationRegistrationScreenState
           key: _formKey,
           child: Column(
             children: [
-              SizedBox(height: 10),
-            Text('ユーザー情報の登録',
+              const SizedBox(height: 10),
+            const Text('ユーザー情報の登録',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: const Color.fromARGB(255, 50, 50, 50),
+                color: Color.fromARGB(255, 50, 50, 50),
                 ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
               Expanded(
                 child: ListView(
                   children: [
                     // ユーザーネームの入力フィールド
                     TextFormField(
-                      decoration: InputDecoration(labelText: 'ユーザーネーム'),
+                      decoration: const InputDecoration(labelText: 'ユーザーネーム'),
                       onSaved: (value) {
                         _userName = value ?? '';
                       },
@@ -348,7 +348,7 @@ class _InformationRegistrationScreenState
                     ),
                     // ユーザーIDの編集可能なフィールド
                     TextFormField(
-                      decoration: InputDecoration(labelText: 'ユーザーID'),
+                      decoration: const InputDecoration(labelText: 'ユーザーID'),
                       initialValue: _userId,
                       onSaved: (value) {
                         _ModifieduserId = value ?? '';
@@ -418,7 +418,7 @@ class _InformationRegistrationScreenState
                   ],
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               _buildAuthenticationButton(
                 context,
                 '保存',
@@ -426,7 +426,7 @@ class _InformationRegistrationScreenState
                   await _saveUserInfo(); // ユーザー情報を保存する関数
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
             ],
           ),
         ),

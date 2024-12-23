@@ -8,14 +8,14 @@ class TimelineScreen extends StatefulWidget {
   final Function(String userId) onUserProfileTap; // コールバック関数を追加
 
 
-  TimelineScreen({required this.selectedTab, required this.onUserProfileTap});
+  const TimelineScreen({super.key, required this.selectedTab, required this.onUserProfileTap});
 
   @override
   _TimelineScreenState createState() => _TimelineScreenState();
 }
 
 class _TimelineScreenState extends State<TimelineScreen> {
-  List<Map<String, dynamic>> _timelinePosts = []; // タイムラインの投稿リスト
+  final List<Map<String, dynamic>> _timelinePosts = []; // タイムラインの投稿リスト
   bool _isLoading = true;
   String? _currentUserId; // 現在のユーザーID
   List<String> _followingUserIds = []; // フォロー中のユーザーIDリスト
@@ -247,7 +247,7 @@ Future<void> _toggleLike(String postId, bool isLiked, int currentLikeCount) asyn
   Widget build(BuildContext context) {
     return Scaffold(
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : NotificationListener<ScrollNotification>(
               onNotification: (ScrollNotification scrollInfo) {
                 if (scrollInfo.metrics.pixels ==
@@ -259,7 +259,7 @@ Future<void> _toggleLike(String postId, bool isLiked, int currentLikeCount) asyn
                 return false;
               },
               child: _timelinePosts.isEmpty
-                  ? Center(child: Text('投稿がありません'))
+                  ? const Center(child: Text('投稿がありません'))
                   : ListView.separated(
                       itemCount: _timelinePosts.length,
                       separatorBuilder: (context, index) => Divider(
@@ -291,14 +291,14 @@ Future<void> _toggleLike(String postId, bool isLiked, int currentLikeCount) asyn
                                           backgroundColor: Colors.grey[200],
                                           child: Text(
                                             post['user_name'] != null ? post['user_name'][0] : '?',
-                                            style: TextStyle(
+                                            style: const TextStyle(
                                               fontSize: 25,
                                               color: Colors.black,
                                             ),
                                           ),
                                         ),
                                       ),
-                                      SizedBox(width: 10),
+                                      const SizedBox(width: 10),
                                       Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -306,14 +306,14 @@ Future<void> _toggleLike(String postId, bool isLiked, int currentLikeCount) asyn
                                             children: [
                                               Text(
                                                 post['user_name'],
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                   fontSize: 18,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
                                               Text(
                                                 '@${post['user_id']}',
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                   fontSize: 13,
                                                   color: Colors.grey,
                                                 ),
@@ -328,22 +328,22 @@ Future<void> _toggleLike(String postId, bool isLiked, int currentLikeCount) asyn
                                     post['createdAt'] != null
                                         ? _timeAgo(post['createdAt'])
                                         : '',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey,
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 10),
+                              const SizedBox(height: 10),
                               Padding(
                                 padding: const EdgeInsets.only(left: 64.0), // descriptionの位置を調整
                                 child: Text(
                                   post['description'],
-                                  style: TextStyle(fontSize: 16),
+                                  style: const TextStyle(fontSize: 16),
                                 ),
                               ),
-                              SizedBox(height: 10),
+                              const SizedBox(height: 10),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
