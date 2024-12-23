@@ -1,8 +1,6 @@
 import '/import.dart';
 
 class AuthenticationScreen extends StatelessWidget {
-  const AuthenticationScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,7 +23,7 @@ class AuthenticationScreen extends StatelessWidget {
                   top: screenHeight * 0.4 - 30, // 40%の位置に配置（-30は文字の高さ調整）
                   left: 0,
                   right: 0,
-                  child: const Center(
+                  child: Center(
                     child: Text(
                       'SuStudy,',
                       style: TextStyle(
@@ -61,6 +59,10 @@ class AuthenticationScreen extends StatelessWidget {
                   child: Center(
                     child: GestureDetector(
                       onTap: () {
+                        // フォーカスを解除
+                        FocusScope.of(context).unfocus();
+
+                        // ログイン画面に遷移
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => LogInScreen()),
