@@ -157,6 +157,7 @@ class _InformationRegistrationScreenState
                 final categoryDoc = subjectDoc.collection(level).doc(category);
                 await categoryDoc.set({
                   'category_name': category, // 必要に応じてフィールドを追加
+                  'tierProgress_all': 0,
                 });
 
                 // 「Words」カテゴリの場合、「Word」「Idioms」のサブコレクションを作成

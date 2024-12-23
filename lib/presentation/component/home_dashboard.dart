@@ -32,8 +32,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   int loginStreak = 0; // 連続ログイン日数
   int longestStreak = 0; // 最長連続ログイン日数
   int totalLogins = 0;       // 総ログイン回数
-  int tierProgress = 34; // 今日の達成度
-  int tierProgress_all = 62; // 目標全体に対する達成度
+  int tierProgress = 0; // 今日の達成度
+  double tierProgress_all = 0.0; // 目標全体に対する達成度
 
   late AnimationController _controller; // アニメーションコントローラ
   late Animation<double> _progressAnimation; // 今日の達成度のアニメーション
@@ -46,6 +46,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
      // 非同期処理を初期化時に実行し、結果を保持
     _userDataFuture = _fetchUserData();
+    fetchTierProgress();
 
     // アニメーションコントローラの初期化
     _controller = AnimationController(
@@ -100,6 +101,106 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       userName = 'Unknown'; // エラー発生時は"Unknown"をセット
     }
   }
+
+Future<void> fetchTierProgress() async {
+  try {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      print('ユーザーがログインしていません');
+      return;
+    }
+
+    final userId = currentUser.uid;
+
+    // ユーザードキュメントを取得
+    final userDoc = await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .get();
+
+    if (!userDoc.exists) {
+      print('ユーザードキュメントが見つかりません');
+      return;
+    }
+
+    final followingSubjects =
+        List<String>.from(userDoc.data()?['following_subjects'] ?? []);
+
+    // TOEICスコア部分を抽出
+    final toeicSubject = followingSubjects.firstWhere(
+      (subject) => subject.startsWith('TOEIC'),
+      orElse: () => '',
+    );
+
+    if (toeicSubject.isEmpty) {
+      print('TOEIC情報がありません');
+      return;
+    }
+
+    final scoreMatch = RegExp(r'\d+').firstMatch(toeicSubject);
+    if (scoreMatch == null) {
+      print('TOEICスコアの形式が不正です');
+      return;
+    }
+    final score = scoreMatch.group(0); // 抽出されたスコア（X部分）
+    // tierProgress_all を取得
+    final wordsDocRef = FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .collection('following_subjects')
+        .doc('TOEIC')
+        .collection('up_to_$score')
+        .doc('Words');
+
+    final wordsDocSnapshot = await wordsDocRef.get();
+    if (!wordsDocSnapshot.exists) {
+      print('Wordsドキュメントが見つかりません');
+      return;
+    }
+
+    final tierProgressAll = wordsDocSnapshot.data()?['tierProgress_all'] ?? 0;
+    print('tierProgressAll: $tierProgressAll'); // デバッグ用ログ
+
+    // Wordサブコレクションの単語数を取得
+    final wordCountSnapshot = await FirebaseFirestore.instance
+        .collection('English_Skills')
+        .doc('TOEIC')
+        .collection('up_to_$score')
+        .doc('Words')
+        .collection('Word')
+        .get();
+
+    final wordCount = wordCountSnapshot.size;
+    print('wordCount: $wordCount'); // デバッグ用ログ
+
+    if (wordCount == 0) {
+      print('Wordコレクションに単語がありません');
+      return;
+    }
+
+    // tierProgress_all を単語数で割って計算
+    final normalizedTierProgressAll = tierProgressAll / wordCount;
+
+    setState(() {
+
+      // アニメーションの更新
+      _progressAllAnimation = Tween<double>(
+        begin: 0,
+        end: normalizedTierProgressAll.toDouble(),
+      ).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+      );
+
+      _controller.forward(from: 0);
+    });
+
+    print('目標への達成度: $normalizedTierProgressAll'); // デバッグ用ログ
+  } catch (e) {
+    print('normalizedTierProgressAll 計算エラー: $e');
+  }
+}
+
 
 void _calculateLoginStats(List<dynamic> loginHistory) {
   if (loginHistory.isEmpty) {
