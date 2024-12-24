@@ -109,6 +109,7 @@ class _RankingScreenState extends State<RankingScreen> {
             rankingData.add({
             'userName': data['user_name'] ?? 'Unknown',
             'tSolvedCount': categoryData['t_solved_count_${widget.selectedCategory}'] ?? 0,
+            'auth_uid': data['auth_uid'], // auth_uid を追加
             });
           }
         }
@@ -122,17 +123,39 @@ class _RankingScreenState extends State<RankingScreen> {
           .doc(user.uid)
           .get();
 
+
+      //こっからはフォロー中の時自分のデータをランキングに追加するための処理
       if (userSnapshot.exists) {
         final userData = userSnapshot.data();
         if (userData != null) {
-          _userData = {
-            'userName': userData['user_name'] ?? 'Unknown',
-            'tSolvedCount': userData['t_solved_count'] ?? 0,
-            'auth_uid': userData['auth_uid'],
-          };
+          if (widget.selectedCategory == '全体') {
+            // 全体の場合、全体の tSolvedCount を使用
+            _userData = {
+              'userName': userData['user_name'] ?? 'Unknown',
+              'tSolvedCount': userData['t_solved_count'] ?? 0,
+              'auth_uid': userData['auth_uid'],
+            };
+          } else {
+            // カテゴリが選択されている場合、該当カテゴリの tSolvedCount を取得
+            final categorySnapshot = await FirebaseFirestore.instance
+                .collection('Users')
+                .doc(user.uid) // 現在のユーザー ID
+                .collection('following_subjects') // サブコレクション
+                .doc(getSubjectName(widget.selectedCategory)) // 選択されたカテゴリに対応するドキュメント
+                .get();
+
+            final categoryData = categorySnapshot.data();
+            _userData = {
+              'userName': userData['user_name'] ?? 'Unknown',
+              'tSolvedCount': categoryData?['t_solved_count_${widget.selectedCategory}'] ?? 0,
+              'auth_uid': userData['auth_uid'],
+            };
+          }
         }
       }
 
+
+      //フォロー中の時に自分のデータのランキングへの追加
       if (widget.selectedTab == 'フォロー中') {
         rankingData.add({
           'userName': _userData['userName'],
