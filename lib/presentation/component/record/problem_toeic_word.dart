@@ -85,107 +85,100 @@ Future<void> _fetchQuestions() async {
   }
 
   try {
-    // Usersドキュメントからユーザー情報を取得
-    final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
-    final userSnapshot = await userDoc.get();
+    final today = DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd').format(today);
+    final scoreMatch = RegExp(r'up_to_(\d+)').firstMatch(widget.level);
+    final extractedLevel = scoreMatch != null ? scoreMatch.group(1) : '0'; // スコアを抽出
 
-    if (!userSnapshot.exists) {
-      print('ユーザー情報が見つかりません');
+    if (extractedLevel == '0') {
+      print('レベル情報が不正です: ${widget.level}');
       return;
     }
 
-    // following_subjectsからTOEICのスコア（X点）を取得
-    final followingSubjects = List<String>.from(
-        userSnapshot.data()?['following_subjects'] ?? []);
-    final matchedScore = followingSubjects
-        .firstWhere((subject) => subject.startsWith('TOEIC'), orElse: () => '');
+    // Recordサブコレクションの参照
+    final recordRef = FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .collection('record')
+        .doc(formattedDate)
+        .collection('TOEIC${extractedLevel}点')
+        .doc('Word');
 
-    if (matchedScore.isEmpty) {
-      print('TOEICスコアが見つかりません');
-      return;
-    }
-
-    final score = matchedScore.replaceAll('TOEIC', ''); // スコア部分を抽出
-    final toeicDoc = userDoc
-        .collection('following_subjects')
-        .doc('TOEIC')
-        .collection('up_to_$score');
-
-    // 出題タイプに応じた問題を取得
     QuerySnapshot snapshot;
 
     if (widget.questionType == 'random') {
-
-
-
       // ランダムな問題を取得
       snapshot = await FirebaseFirestore.instance
-        .collection('English_Skills')
-        .doc('TOEIC')
-        .collection(widget.level)
-        .doc('Words')
-        .collection('Word')
-        .get();    
-      } 
+          .collection('English_Skills')
+          .doc('TOEIC')
+          .collection(widget.level)
+          .doc('Words')
+          .collection('Word')
+          .get();
+    } else if (widget.questionType == 'unanswered') {
+  // 未回答の問題を取得
+  List<String> answeredWordIds = [];
 
-
-      
-      // 未回答の問題を取得
-      else if (widget.questionType == 'unanswered') {
-      final answeredWordsSnapshot = await toeicDoc
-        .doc('Words')
-        .collection('Word')
+  try {
+    // `Word` ドキュメントの `answeredWordId` フィールドを取得
+    final wordDocSnapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .collection('record')
+        .doc(formattedDate)
+        .collection('TOEIC${extractedLevel}点')
+        .doc('Word')
         .get();
 
-      List<String> answeredWordIds = answeredWordsSnapshot.docs
-          .map((doc) => doc['word_id'] as String)
-          .toList();
-
-      if (answeredWordIds.isEmpty) {
-        snapshot = await FirebaseFirestore.instance
-            .collection('English_Skills')
-            .doc('TOEIC')
-            .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
-            .get();
-      } else {
-        snapshot = await FirebaseFirestore.instance
-            .collection('English_Skills')
-            .doc('TOEIC')
-            .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
-            .where(FieldPath.documentId, whereNotIn: answeredWordIds)
-            .get();
+    if (wordDocSnapshot.exists) {
+      // `answeredWordId` リストを取得
+      final wordData = wordDocSnapshot.data();
+      if (wordData != null && wordData['answeredWordId'] is List) {
+        answeredWordIds = List<String>.from(wordData['answeredWordId']);
       }
-    } 
-    
-    
-    // 間違えた問題を取得
-    else if (widget.questionType == 'incorrect') {
-      final quizRecords = await toeicDoc
-        .doc('Words')
-        .collection('word')
-        .get();
+    }
 
+    if (answeredWordIds.isEmpty) {
+      // 未回答の問題を全取得
+      snapshot = await FirebaseFirestore.instance
+          .collection('English_Skills')
+          .doc('TOEIC')
+          .collection(widget.level)
+          .doc('Words')
+          .collection('Word')
+          .get();
+    } else {
+      // 未回答の問題をフィルタリング
+      snapshot = await FirebaseFirestore.instance
+          .collection('English_Skills')
+          .doc('TOEIC')
+          .collection(widget.level)
+          .doc('Words')
+          .collection('Word')
+          .where(FieldPath.documentId, whereNotIn: answeredWordIds)
+          .get();
+    }
+  } catch (e) {
+    print('未回答の問題取得中にエラーが発生しました: $e');
+    return;
+  }
+} else if (widget.questionType == 'incorrect') {
+      // 間違えた問題を取得
       List<String> incorrectWordIds = [];
 
-      for (var record in quizRecords.docs) {
-        final wordDocRef = toeicDoc
-            .doc('Words')
-            .collection('Word')
-            .doc(record.id)
-            .collection('Attempts')
-            .orderBy('attempt_number', descending: true)
-            .limit(1);
+      // Word サブコレクションのデータを確認して間違えた単語を収集
+      final wordDocs = await recordRef.get();
+      for (var wordDoc in wordDocs.data()!.keys) {
+        final attemptsSnapshot = await recordRef
+            .collection(wordDoc)
+            .orderBy('timestamp', descending: true)
+            .limit(1)
+            .get();
 
-        final latestAttemptSnapshot = await wordDocRef.get();
-
-        if (latestAttemptSnapshot.docs.isNotEmpty) {
-          final latestAttempt = latestAttemptSnapshot.docs.first;
-          if (!latestAttempt['is_correct']) {
-            incorrectWordIds.add(record.id);
+        for (var attempt in attemptsSnapshot.docs) {
+          if (!(attempt.data()['is_correct'] as bool)) {
+            incorrectWordIds.add(wordDoc);
+            break;
           }
         }
       }
@@ -212,28 +205,26 @@ Future<void> _fetchQuestions() async {
       // 直近3問の間違えた問題を取得
       List<String> recentWordIds = [];
 
-      // Words コレクションから全ての単語ドキュメントを取得
-      final wordsSnapshot = await toeicDoc.doc('Words').collection('Word').get();
-
-      for (var wordDoc in wordsSnapshot.docs) {
-        // 各単語ドキュメントの Attempts サブコレクションを参照
-        final attemptsSnapshot = await wordDoc.reference
-            .collection('Attempts')
-            .where('is_correct', isEqualTo: false) // 間違えた試行を取得
-            .orderBy('timestamp', descending: true) // 最新順に取得
-            .limit(1) // 各単語の最新の間違えた試行を取得
+      // Word サブコレクションを確認して間違えた問題を収集
+      final wordDocs = await recordRef.get();
+      for (var wordDoc in wordDocs.data()!.keys) {
+        final attemptsSnapshot = await recordRef
+            .collection(wordDoc)
+            .orderBy('timestamp', descending: true)
+            .limit(1)
             .get();
 
         if (attemptsSnapshot.docs.isNotEmpty) {
-          final latestAttempt = attemptsSnapshot.docs.first;
-          recentWordIds.add(wordDoc.id); // 間違えた単語IDをリストに追加
+          final attemptData = attemptsSnapshot.docs.first.data();
+          if (!(attemptData['is_correct'] as bool)) {
+            recentWordIds.add(wordDoc);
+          }
         }
 
-        if (recentWordIds.length >= 3) break; // 最大3問取得したら終了
+        if (recentWordIds.length >= 3) break;
       }
 
       if (recentWordIds.isEmpty) {
-        // 間違えた問題がない場合、ランダムで全問題を取得
         snapshot = await FirebaseFirestore.instance
             .collection('English_Skills')
             .doc('TOEIC')
@@ -242,7 +233,6 @@ Future<void> _fetchQuestions() async {
             .collection('Word')
             .get();
       } else {
-        // recentWordIds に基づいてクエリ
         snapshot = await FirebaseFirestore.instance
             .collection('English_Skills')
             .doc('TOEIC')
@@ -283,6 +273,8 @@ Future<void> _fetchQuestions() async {
     print('エラーが発生しました: $e');
   }
 }
+
+
 
   void _startTimer() {
     _animationController.reset();
@@ -441,6 +433,14 @@ Future<void> _saveRecord(
       'is_correct': isCorrect,
       'word_id': wordData.id,
     },SetOptions(merge: true));
+
+    final currentWordList = (await wordDoc.get()).data()?['answeredWordId'] ?? [];
+    if (!currentWordList.contains(wordData.id)) {
+      currentWordList.add(wordData.id);
+      await wordDoc.set({
+        'answeredWordId': currentWordList,
+      }, SetOptions(merge: true));
+    }
 
     // todays_count を 1 増やす
       await wordDoc.set({
