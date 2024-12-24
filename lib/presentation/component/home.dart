@@ -6,6 +6,7 @@ import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
+import 'record/add_daily.dart';
 import 'record/problem_toeic_word.dart'; // 記録画面のコンポーネント
 import 'search/user_profile_screen.dart';
 import 'post/post.dart';
@@ -185,9 +186,8 @@ void _showWelcomeDialog(String userId, {required bool isFirstLogin}) {
         backgroundColor: Colors.transparent,
         child: Stack(
           children: [
-            // 背景をモザイク風にする
             BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
               child: Container(
               ),
             ),
@@ -220,9 +220,10 @@ void _showWelcomeDialog(String userId, {required bool isFirstLogin}) {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _navigateToQuiz(toeicLevel);
+                          onPressed: () async {
+                            Navigator.of(context).pop(); // ダイアログを閉じる
+                            await addDailyRecord(_selectedCategory); // ゴール値を設定
+                            _navigateToQuiz(toeicLevel); // クイズ画面に遷移
                           },
                           child: const Text('挑戦する'),
                         ),
@@ -238,6 +239,7 @@ void _showWelcomeDialog(String userId, {required bool isFirstLogin}) {
     },
   );
 }
+
 
 
   String _extractToeicLevel(List<String> subjects) {

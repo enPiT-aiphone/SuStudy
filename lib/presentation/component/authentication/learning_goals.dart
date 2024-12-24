@@ -1,4 +1,7 @@
 import '/import.dart';
+import 'package:intl/intl.dart';
+
+
 
 class LearningGoalsScreen extends StatefulWidget {
   final String userId; // ユーザーIDを受け取る
@@ -19,7 +22,6 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
     super.initState();
     _fetchFollowingSubjects();
   }
-
   Future<void> _fetchFollowingSubjects() async {
     try {
       final userDoc = await FirebaseFirestore.instance
@@ -42,60 +44,29 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
 
   Future<void> _saveGoals() async {
     try {
-      final userDoc = FirebaseFirestore.instance.collection('Users').doc(widget.userId);
-      final subCollection = userDoc.collection('following_subjects');
+      final today = DateTime.now();
+      final formattedDate = DateFormat('yyyy-MM-dd').format(today);
+      final recordRef = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId)
+          .collection('record')
+          .doc(formattedDate);
+
+      final dataToUpdate = {
+        'timestamp': FieldValue.serverTimestamp(),
+        't_solved_count': 0,
+      };
 
       for (final subject in followingSubjects) {
         final goal = selectedGoals[subject];
-
-          if (subject.contains('TOEIC')) {
-            // TOEICまたはTOEFLの場合
-            final docRef = subCollection.doc('TOEIC');
-
-            final docSnapshot = await docRef.get();
-            if (docSnapshot.exists) {
-              await docRef.update({'learning_goal': goal});
-            } else {
-              await docRef.set({'learning_goal': goal});
-            }
-          } else if (subject.contains('TOEFL')) {
-            // TOEICまたはTOEFLの場合
-            final docRef = subCollection.doc('TOEFL');
-
-            final docSnapshot = await docRef.get();
-            if (docSnapshot.exists) {
-              await docRef.update({'learning_goal': goal});
-            } else {
-              await docRef.set({'learning_goal': goal});
-            }
-          } else if (subject.contains('英検')) {
-            // TOEICまたはTOEFLの場合
-            final docRef = subCollection.doc('英検');
-
-            final docSnapshot = await docRef.get();
-            if (docSnapshot.exists) {
-              await docRef.update({'learning_goal': goal});
-            } else {
-              await docRef.set({'learning_goal': goal});
-            }
-          }else {
-            // その他の教科の場合、新しいドキュメントを作成
-            final docRef = subCollection.doc(subject);
-
-            final docSnapshot = await docRef.get();
-            if (docSnapshot.exists) {
-              if (goal != null){
-              await docRef.update({'learning_goal': goal});
-              }
-              await docRef.update({'t_solved_count_$subject': 0});
-            } else {
-              await docRef.set({'t_solved_count_$subject': 0});
-              if (goal != null){
-              await docRef.update({'learning_goal': goal});
-              }
-            }
-          }
+        if (goal != null) {
+          final key = "${subject}_goal";
+          final value = goal.replaceAll(RegExp(r'[^\d]'), ''); // 数字のみを抽出
+          dataToUpdate[key] = int.tryParse(value) ?? 0;
         }
+      }
+
+      await recordRef.set(dataToUpdate, SetOptions(merge: true));
 
       Navigator.pushReplacement(
         context,
