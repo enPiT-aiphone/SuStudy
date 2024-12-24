@@ -2,14 +2,16 @@ import '/import.dart'; // アプリ全体で使用するインポートファイ
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firestoreをインポート
 import 'package:flutter/material.dart'; // Flutterウィジェットをインポート
+import 'search/user_profile_screen.dart';
 
 class RankingScreen extends StatefulWidget {
   final String selectedTab;
-  final String selectedCategory; // 追加：カテゴリを受け取る
+  final String selectedCategory;
 
-  const RankingScreen({super.key, 
+  const RankingScreen({
+    super.key,
     required this.selectedTab,
-    required this.selectedCategory, // 追加
+    required this.selectedCategory,
   });
 
   @override
@@ -19,14 +21,15 @@ class RankingScreen extends StatefulWidget {
 class _RankingScreenState extends State<RankingScreen> {
   late Future<List<Map<String, dynamic>>> _rankingDataFuture;
 
-  late Map<String, dynamic> _userData; // 自分のデータを保持
-  int? _userRank = -1; // 自分の順位
+  late Map<String, dynamic> _userData;
+  int? _userRank = -1;
 
   @override
   void initState() {
     super.initState();
     _rankingDataFuture = _fetchRankingData();
   }
+
 
   @override
   void didUpdateWidget(covariant RankingScreen oldWidget) {
@@ -202,8 +205,7 @@ class _RankingScreenState extends State<RankingScreen> {
     }
   }
 
-  @override
-
+@override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -246,6 +248,20 @@ class _RankingScreenState extends State<RankingScreen> {
                         '${user['tSolvedCount']} 問',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
+                      onTap: () {
+                        // プロフィール画面に遷移
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => UserProfileScreen(
+                              userId: user['auth_uid'], // 選択したユーザーのauth_uidを渡す
+                              onBack: () {
+                                Navigator.pop(context); // ランキング画面に戻る
+                              },
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
