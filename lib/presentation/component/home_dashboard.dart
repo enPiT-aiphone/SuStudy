@@ -33,7 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   int longestStreak = 0; // 最長連続ログイン日数
   int totalLogins = 0;       // 総ログイン回数
   int tierProgress = 0; // 今日の達成度
-  int wordCount = 66;
+  int wordCount = 66; // 単語数
   double tierProgress_all = 0.0; // 目標全体に対する達成度
 
   late AnimationController _controller; // アニメーションコントローラ
@@ -84,6 +84,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           final userData = userSnapshot.docs.first.data();
           userName = userData['user_name'] ?? 'Unknown'; // ユーザー名がない場合、"Unknown"を代入
           // login_historyを取得して計算
+
+
         final loginHistory = userData['login_history'] ?? [];
         _calculateLoginStats(loginHistory); // ここでログイン情報の計算
           // ログイン記録をセットに保存
@@ -144,32 +146,40 @@ Future<void> fetchTierProgress() async {
       print('TOEICスコアの形式が不正です');
       return;
     }
+
     final score = scoreMatch.group(0); // 抽出されたスコア（X部分）
-    // tierProgress_all を取得
-    final wordsDocRef = FirebaseFirestore.instance
+
+    final today = DateTime.now();
+    final todayDate = DateFormat('yyyy-MM-dd').format(today); // フォーマットされた今日の日付
+    final todayWordsDocRef = FirebaseFirestore.instance
         .collection('Users')
         .doc(userId)
-        .collection('following_subjects')
-        .doc('TOEIC')
-        .collection('up_to_$score')
-        .doc('Words');
+        .collection('record')
+        .doc(todayDate)
+        .collection(widget.selectedCategory) // 文字列補間ではなく直接変数を使用
+        .doc('Word');
+        
+    final todayWordsDocSnapshot = await todayWordsDocRef.get();
+    final tierProgressToday = todayWordsDocSnapshot.data()?['tierProgress_today'] ?? 0;
+    final tierProgressAll = todayWordsDocSnapshot.data()?['tierProgress_all'] ?? 0;
 
-    final wordsDocSnapshot = await wordsDocRef.get();
-    if (!wordsDocSnapshot.exists) {
-      print('Wordsドキュメントが見つかりません');
-      return;
-    }
+    final todayWordsGoalDocRef = FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .collection('record')
+        .doc(todayDate);
 
-    final tierProgressAll = wordsDocSnapshot.data()?['tierProgress_all'] ?? 0;
-    print('tierProgressAll: $tierProgressAll'); // デバッグ用ログ
+    final todayWordsGoalDocSnapshot = await todayWordsGoalDocRef.get();
+    final tierProgressTodayGoal = todayWordsGoalDocSnapshot.data()?['${widget.selectedCategory}_goal'] ?? 0;
 
 
     // tierProgress_all を単語数で割って計算
     final normalizedTierProgressAll = tierProgressAll / wordCount;
-
+    final normalizedTierProgress = tierProgressToday / tierProgressTodayGoal;
+    
+    
     setState(() {
-
-      // アニメーションの更新
+      // 目標達成度のアニメーション更新
       _progressAllAnimation = Tween<double>(
         begin: 0,
         end: normalizedTierProgressAll.toDouble(),
@@ -177,8 +187,18 @@ Future<void> fetchTierProgress() async {
         CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
       );
 
-      _controller.forward(from: 0);
+      // 今日の達成度のアニメーション更新を追加
+      _progressAnimation = Tween<double>(
+        begin: 0,
+        end: normalizedTierProgress.toDouble(),
+      ).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+      );
+
     });
+    _controller.forward(from: 0);
+
+
 
     print('目標への達成度: $normalizedTierProgressAll'); // デバッグ用ログ
   } catch (e) {
@@ -196,6 +216,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
     });
     return;
   }
+
 
   final loginDates = loginHistory
       .map((timestamp) => (timestamp as Timestamp).toDate())
@@ -418,11 +439,27 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
             AnimatedBuilder(
               animation: _progressAllAnimation,
               builder: (context, child) {
+                final value = _progressAllAnimation.value;
+                final displayValue = (value * 100).toInt() % 100;
+                final cycles = (value * 100).toInt() ~/ 100;
+                final colors = [
+                  const Color(0xFF0ABAB5), // 1周目: 緑
+                  const Color(0xFFFF8C00), // 2周目: オレンジ
+                  const Color(0xFFFF0000), // 3周目: 赤
+                  const Color(0xFFFF69B4), // 4周目: ピンク
+                  const Color(0xFFFFD700), // 5周目: 黄色
+                ];
+                final color = cycles < 5 ? colors[cycles] : colors.last;
+                
                 return Positioned(
                   bottom: 0,
                   child: Text(
-                    "${(_progressAllAnimation.value * 100).toInt()}%",
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    "$displayValue%",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: color
+                    ),
                   ),
                 );
               },
@@ -431,15 +468,31 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
             AnimatedBuilder(
               animation: _progressAnimation,
               builder: (context, child) {
-                return SizedBox(
-                  width: 90,
-                  height: 90,
-                  child: CircularProgressIndicator(
-                    value: _progressAnimation.value,
-                    strokeWidth: 5,
-                    backgroundColor: Colors.grey[200],
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
-                  ),
+                final value = _progressAnimation.value;
+                final cycles = (value * 100).toInt() ~/ 100;
+                final colors = [
+                  const Color(0xFF0ABAB5), // 1周目: 緑
+                  const Color(0xFFFF8C00), // 2周目: オレンジ
+                  const Color(0xFFFF0000), // 3周目: 赤
+                  const Color(0xFFFF69B4), // 4周目: ピンク
+                  const Color(0xFFFFD700), // 5周目: 黄色
+                ];
+                
+                return Stack(
+                  children: [
+                    for (int i = 0; i <= cycles; i++)
+                      if (i < 5)
+                        SizedBox(
+                          width: 90,
+                          height: 90,
+                          child: CircularProgressIndicator(
+                            value: i < cycles ? 1.0 : value % 1.0,
+                            strokeWidth: 5,
+                            backgroundColor: Colors.transparent,
+                            valueColor: AlwaysStoppedAnimation<Color>(colors[i]),
+                          ),
+                        ),
+                  ],
                 );
               },
             ),
