@@ -51,7 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
     // アニメーションコントローラの初期化
     _controller = AnimationController(
-      duration: const Duration(seconds: 1), // 1秒間のアニメーション
+      duration: const Duration(seconds: 1), // 1秒間のア���メーション
       vsync: this, // アニメーションの更新を同期
     );
 
@@ -64,6 +64,16 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic));
 
     _controller.forward(); // アニメーションの再生開始
+  }
+
+  @override
+  void didUpdateWidget(DashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // カテゴリが変更された場合、データを再取得してアニメーションを更新
+    if (oldWidget.selectedCategory != widget.selectedCategory) {
+      _userDataFuture = _fetchUserData();
+      fetchTierProgress();
+    }
   }
 
   // Firestoreからユーザーデータを取得する非同期関数
@@ -156,7 +166,7 @@ Future<void> fetchTierProgress() async {
         .doc(userId)
         .collection('record')
         .doc(todayDate)
-        .collection(widget.selectedCategory) // 文字列補間ではなく直接変数を使用
+        .collection(widget.selectedCategory) // 選択されたカテゴリを使用
         .doc('Word');
         
     final todayWordsDocSnapshot = await todayWordsDocRef.get();
@@ -488,7 +498,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                           child: CircularProgressIndicator(
                             value: i < cycles ? 1.0 : value % 1.0,
                             strokeWidth: 5,
-                            backgroundColor: Colors.transparent,
+                            backgroundColor: Colors.grey[200],
                             valueColor: AlwaysStoppedAnimation<Color>(colors[i]),
                           ),
                         ),
