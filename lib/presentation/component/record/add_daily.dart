@@ -37,19 +37,24 @@ Future<void> addDailyRecord(String selectedCategory) async {
       previousGoal = yesterdaySnapshot.data()?[goalField] ?? 0;
     }
 
-    // 今日のデータを作成
-    await recordDocRef.set({
-      'timestamp': FieldValue.serverTimestamp(), // サーバータイムスタンプ
-      't_solved_count': 0, // 初期値として 0 を設定
-      goalField: previousGoal, // 前日のゴール値をコピー
-    });
+    // 今日のドキュメントが存在するか確認
+    final todaySnapshot = await recordDocRef.get();
 
-    // t_solved_count をリセット
-    await FirebaseFirestore.instance.collection('Users').doc(userId).update({
-      't_solved_count': 0, // 解いた問題数をリセット
-    });
+    if (todaySnapshot.exists) {
+      // 既存データがある場合は goalField を更新
+      await recordDocRef.update({
+        goalField: previousGoal, // 前日のゴール値で更新
+      });
+    } else {
+      // データが存在しない場合は新規作成
+      await recordDocRef.set({
+        'timestamp': FieldValue.serverTimestamp(), // サーバータイムスタンプ
+        't_solved_count': 0, // 初期値として 0 を設定
+        goalField: previousGoal, // 前日のゴール値をコピー
+      });
+      print('新しいデイリーレコードが作成されました: $formattedDate, $goalField: $previousGoal');
+    }
 
-    print('デイリーレコードが作成されました: $formattedDate, $goalField: $previousGoal');
   } catch (e) {
     print('デイリーレコードの作成中にエラーが発生しました: $e');
   }

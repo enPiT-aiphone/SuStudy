@@ -300,60 +300,40 @@ Future<void> _updateTierProgress(
   }
 
   try {
-    // ユーザードキュメントを取得
-    final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+    // 現在の日付をフォーマット
+    final recordDate = DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd').format(recordDate);
 
-    // following_subjects から TOEIC スコアを取得
-    final userSnapshot = await userDoc.get();
-    if (!userSnapshot.exists) {
-      print('ユーザー情報が見つかりません');
+    // `level` からスコアを抽出 (例: up_to_500 -> 500)
+    final scoreMatch = RegExp(r'up_to_(\d+)').firstMatch(widget.level);
+    final extractedLevel = scoreMatch != null ? scoreMatch.group(1) : '0'; // スコアを抽出
+
+    if (extractedLevel == '0') {
+      print('レベル情報が不正です: ${widget.level}');
       return;
     }
 
-    final followingSubjects = List<String>.from(
-        userSnapshot.data()?['following_subjects'] ?? []);
-    final matchedScore = followingSubjects
-        .firstWhere((subject) => subject.startsWith('TOEIC'), orElse: () => '');
-
-    if (matchedScore.isEmpty) {
-      print('TOEICスコアが見つかりません');
-      return;
-    }
-
-    // スコア部分を抽出 (例: 500)
-    final scoreMatch = RegExp(r'\d+').firstMatch(matchedScore);
-    if (scoreMatch == null) {
-      print('TOEICスコアが不正な形式です');
-      return;
-    }
-
-    final score = scoreMatch.group(0)!; // 抽出されたスコア部分
-    final wordDocRef = userDoc
-        .collection('following_subjects')
-        .doc('TOEIC')
-        .collection('up_to_$score')
-        .doc('Words')
-        .collection('Word')
-        .doc(wordName); // 解いた単語のドキュメント参照
-
-    // Wordsドキュメントの参照
-    final wordsDocRef = userDoc
-        .collection('following_subjects')
-        .doc('TOEIC')
-        .collection('up_to_$score')
-        .doc('Words');
+    // Firestore パス
+    final recordRef = FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .collection('record')
+        .doc(formattedDate)
+        .collection('TOEIC${extractedLevel}点')
+        .doc('Word');
 
     int tierProgress = 0;
+    int tierProgressAll = 0;
 
-    // Wordsドキュメントの進捗状況を取得
-    final wordsSnapshot = await wordsDocRef.get();
-    if (wordsSnapshot.exists) {
-      tierProgress = wordsSnapshot.data()?['tierProgress_all'] ?? 0;
+    // 現在の `tierProgress_all` を取得
+    final recordSnapshot = await recordRef.get();
+    if (recordSnapshot.exists) {
+      tierProgress = recordSnapshot.data()?['tierProgress_today'] ?? 0;
+      tierProgressAll = recordSnapshot.data()?['tierProgress_all'] ?? 0;
     }
 
     // Attempts サブコレクションから最新の試行データを取得
-    final attemptsSnapshot = await wordDocRef
-        .collection('Attempts')
+    final attemptsSnapshot = await recordRef.collection(wordData.id)
         .orderBy('attempt_number', descending: true)
         .limit(1)
         .get();
@@ -362,10 +342,13 @@ Future<void> _updateTierProgress(
     if (attemptsSnapshot.docs.isEmpty) {
       if (isCorrect) {
         tierProgress += 1;
-        await wordsDocRef.set({'tierProgress_all': tierProgress}, SetOptions(merge: true));
+        await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
+        tierProgressAll += 1;
+        await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
         print('初めての試行: 正解 +1');
       } else {
-        await wordsDocRef.set({'tierProgress_all': tierProgress}, SetOptions(merge: true));
+        await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
+        await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
         print('初めての試行: 不正解のためそのまま');
       }
       return;
@@ -385,10 +368,12 @@ Future<void> _updateTierProgress(
     if (!latestIsCorrect && isCorrect) {
       // 直近間違えていて、今回正解した場合
       tierProgress += 1;
+      tierProgressAll += 1;
       print('直近間違えていて、今回正解: +1');
     } else if (latestIsCorrect && !isCorrect) {
       // 直近正解していて、今回間違えた場合
       tierProgress -= 1;
+      tierProgressAll -= 1;
       print('直近正解していて、今回間違え: -1');
     } else if (latestIsCorrect && isCorrect) {
       print('直近正解していて、今回も正解: そのまま');
@@ -396,13 +381,17 @@ Future<void> _updateTierProgress(
       print('直近間違えていて、今回も間違え: そのまま');
     }
 
-    // Wordsドキュメントを更新
-    await wordsDocRef.update({'tierProgress_all': tierProgress});
-    print('Words ドキュメントの tierProgress_all が更新されました: $tierProgress');
+    // tierProgress_all を Firestore に保存
+    await recordRef.update({'tierProgress_today': tierProgress});
+    await recordRef.update({'tierProgress_all': tierProgressAll});
+    print('Words ドキュメントの tierProgress_today が更新されました: $tierProgress');
+    print('Words ドキュメントの tierProgress_all が更新されました: $tierProgressAll');
   } catch (e) {
+    print('tierProgress_today 更新に失敗しました: $e');
     print('tierProgress_all 更新に失敗しました: $e');
   }
 }
+
 
 
 // 保存メソッド
@@ -426,6 +415,8 @@ Future<void> _saveRecord(
       print('レベル情報が不正です: ${widget.level}');
       return;
     }
+
+    await _updateTierProgress(wordData, wordData['Word'], isCorrect);
 
     // Firestore パス
     final recordRef = FirebaseFirestore.instance
