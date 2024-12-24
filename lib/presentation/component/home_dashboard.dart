@@ -33,6 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   int longestStreak = 0; // 最長連続ログイン日数
   int totalLogins = 0;       // 総ログイン回数
   int tierProgress = 0; // 今日の達成度
+  int wordCount = 66;
   double tierProgress_all = 0.0; // 目標全体に対する達成度
 
   late AnimationController _controller; // アニメーションコントローラ
@@ -162,22 +163,6 @@ Future<void> fetchTierProgress() async {
     final tierProgressAll = wordsDocSnapshot.data()?['tierProgress_all'] ?? 0;
     print('tierProgressAll: $tierProgressAll'); // デバッグ用ログ
 
-    // Wordサブコレクションの単語数を取得
-    final wordCountSnapshot = await FirebaseFirestore.instance
-        .collection('English_Skills')
-        .doc('TOEIC')
-        .collection('up_to_$score')
-        .doc('Words')
-        .collection('Word')
-        .get();
-
-    final wordCount = wordCountSnapshot.size;
-    print('wordCount: $wordCount'); // デバッグ用ログ
-
-    if (wordCount == 0) {
-      print('Wordコレクションに単語がありません');
-      return;
-    }
 
     // tierProgress_all を単語数で割って計算
     final normalizedTierProgressAll = tierProgressAll / wordCount;

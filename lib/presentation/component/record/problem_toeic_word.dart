@@ -1,11 +1,11 @@
 import '/import.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+class TOEICWordQuiz extends StatefulWidget {
+  final String level; // TOEICレベル
+  final String questionType; // 出題タイプ（random, unanswered, incorrect, recent_incorrect）
 
-class NotificationTOEICWordQuiz extends StatefulWidget {
-  final String level; // LanguageTOEICScreen から渡される TOEIC レベル
-
-  const NotificationTOEICWordQuiz({required this.level, super.key});
+  const TOEICWordQuiz({required this.level, required this.questionType, super.key});
 
   @override
   _TOEICWordQuizState createState() => _TOEICWordQuizState();
@@ -29,7 +29,7 @@ class CrossPainter extends CustomPainter {
   }
 }
 
-class _TOEICWordQuizState extends State<NotificationTOEICWordQuiz> with SingleTickerProviderStateMixin {
+class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProviderStateMixin {
   int currentQuestionIndex = 0;
   List<QueryDocumentSnapshot> questions = [];
   List<List<String>> shuffledOptions = [];
@@ -74,15 +74,183 @@ class _TOEICWordQuizState extends State<NotificationTOEICWordQuiz> with SingleTi
     super.dispose();
   }
 
-  Future<void> _fetchQuestions() async {
-    // Firebase のコレクションを level に基づいて取得
-    QuerySnapshot snapshot = await FirebaseFirestore.instance
+Future<void> _fetchQuestions() async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+
+  if (userId == null) {
+    print('ユーザーがログインしていません');
+    return;
+  }
+
+  try {
+    // Usersドキュメントからユーザー情報を取得
+    final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+    final userSnapshot = await userDoc.get();
+
+    if (!userSnapshot.exists) {
+      print('ユーザー情報が見つかりません');
+      return;
+    }
+
+    // following_subjectsからTOEICのスコア（X点）を取得
+    final followingSubjects = List<String>.from(
+        userSnapshot.data()?['following_subjects'] ?? []);
+    final matchedScore = followingSubjects
+        .firstWhere((subject) => subject.startsWith('TOEIC'), orElse: () => '');
+
+    if (matchedScore.isEmpty) {
+      print('TOEICスコアが見つかりません');
+      return;
+    }
+
+    final score = matchedScore.replaceAll('TOEIC', ''); // スコア部分を抽出
+    final toeicDoc = userDoc
+        .collection('following_subjects')
+        .doc('TOEIC')
+        .collection('up_to_$score');
+
+    // 出題タイプに応じた問題を取得
+    QuerySnapshot snapshot;
+
+    if (widget.questionType == 'random') {
+
+
+
+      // ランダムな問題を取得
+      snapshot = await FirebaseFirestore.instance
         .collection('English_Skills')
         .doc('TOEIC')
-        .collection(widget.level) // widget.level を使用
+        .collection(widget.level)
+        .doc('Words')
+        .collection('Word')
+        .get();    
+      } 
+
+
+      
+      // 未回答の問題を取得
+      else if (widget.questionType == 'unanswered') {
+      final answeredWordsSnapshot = await toeicDoc
         .doc('Words')
         .collection('Word')
         .get();
+
+      List<String> answeredWordIds = answeredWordsSnapshot.docs
+          .map((doc) => doc['word_id'] as String)
+          .toList();
+
+      if (answeredWordIds.isEmpty) {
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEIC')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .get();
+      } else {
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEIC')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .where(FieldPath.documentId, whereNotIn: answeredWordIds)
+            .get();
+      }
+    } 
+    
+    
+    // 間違えた問題を取得
+    else if (widget.questionType == 'incorrect') {
+      final quizRecords = await toeicDoc
+        .doc('Words')
+        .collection('word')
+        .get();
+
+      List<String> incorrectWordIds = [];
+
+      for (var record in quizRecords.docs) {
+        final wordDocRef = toeicDoc
+            .doc('Words')
+            .collection('Word')
+            .doc(record.id)
+            .collection('Attempts')
+            .orderBy('attempt_number', descending: true)
+            .limit(1);
+
+        final latestAttemptSnapshot = await wordDocRef.get();
+
+        if (latestAttemptSnapshot.docs.isNotEmpty) {
+          final latestAttempt = latestAttemptSnapshot.docs.first;
+          if (!latestAttempt['is_correct']) {
+            incorrectWordIds.add(record.id);
+          }
+        }
+      }
+
+      if (incorrectWordIds.isEmpty) {
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEIC')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .get();
+      } else {
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEIC')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .where(FieldPath.documentId, whereIn: incorrectWordIds)
+            .get();
+      }
+    } else {
+      // 直近3問の間違えた問題を取得
+      List<String> recentWordIds = [];
+
+      // Words コレクションから全ての単語ドキュメントを取得
+      final wordsSnapshot = await toeicDoc.doc('Words').collection('Word').get();
+
+      for (var wordDoc in wordsSnapshot.docs) {
+        // 各単語ドキュメントの Attempts サブコレクションを参照
+        final attemptsSnapshot = await wordDoc.reference
+            .collection('Attempts')
+            .where('is_correct', isEqualTo: false) // 間違えた試行を取得
+            .orderBy('timestamp', descending: true) // 最新順に取得
+            .limit(1) // 各単語の最新の間違えた試行を取得
+            .get();
+
+        if (attemptsSnapshot.docs.isNotEmpty) {
+          final latestAttempt = attemptsSnapshot.docs.first;
+          recentWordIds.add(wordDoc.id); // 間違えた単語IDをリストに追加
+        }
+
+        if (recentWordIds.length >= 3) break; // 最大3問取得したら終了
+      }
+
+      if (recentWordIds.isEmpty) {
+        // 間違えた問題がない場合、ランダムで全問題を取得
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEIC')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .get();
+      } else {
+        // recentWordIds に基づいてクエリ
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEIC')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .where(FieldPath.documentId, whereIn: recentWordIds)
+            .get();
+      }
+    }
 
     List<QueryDocumentSnapshot> allQuestions = snapshot.docs;
     questions = allQuestions.where((doc) => !askedWordIds.contains(doc.id)).toList();
@@ -109,14 +277,135 @@ class _TOEICWordQuizState extends State<NotificationTOEICWordQuiz> with SingleTi
         _startTimer();
       });
     }
+  } catch (e) {
+    print('エラーが発生しました: $e');
   }
+}
 
   void _startTimer() {
     _animationController.reset();
     _animationController.forward();
   }
 
-Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
+
+Future<void> _updateTierProgress(
+    QueryDocumentSnapshot wordData, String wordName, bool isCorrect) async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+
+  if (userId == null) {
+    print('ユーザーがログインしていません');
+    return;
+  }
+
+  try {
+    // ユーザードキュメントを取得
+    final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+
+    // following_subjects から TOEIC スコアを取得
+    final userSnapshot = await userDoc.get();
+    if (!userSnapshot.exists) {
+      print('ユーザー情報が見つかりません');
+      return;
+    }
+
+    final followingSubjects = List<String>.from(
+        userSnapshot.data()?['following_subjects'] ?? []);
+    final matchedScore = followingSubjects
+        .firstWhere((subject) => subject.startsWith('TOEIC'), orElse: () => '');
+
+    if (matchedScore.isEmpty) {
+      print('TOEICスコアが見つかりません');
+      return;
+    }
+
+    // スコア部分を抽出 (例: 500)
+    final scoreMatch = RegExp(r'\d+').firstMatch(matchedScore);
+    if (scoreMatch == null) {
+      print('TOEICスコアが不正な形式です');
+      return;
+    }
+
+    final score = scoreMatch.group(0)!; // 抽出されたスコア部分
+    final wordDocRef = userDoc
+        .collection('following_subjects')
+        .doc('TOEIC')
+        .collection('up_to_$score')
+        .doc('Words')
+        .collection('Word')
+        .doc(wordName); // 解いた単語のドキュメント参照
+
+    // Wordsドキュメントの参照
+    final wordsDocRef = userDoc
+        .collection('following_subjects')
+        .doc('TOEIC')
+        .collection('up_to_$score')
+        .doc('Words');
+
+    int tierProgress = 0;
+
+    // Wordsドキュメントの進捗状況を取得
+    final wordsSnapshot = await wordsDocRef.get();
+    if (wordsSnapshot.exists) {
+      tierProgress = wordsSnapshot.data()?['tierProgress_all'] ?? 0;
+    }
+
+    // Attempts サブコレクションから最新の試行データを取得
+    final attemptsSnapshot = await wordDocRef
+        .collection('Attempts')
+        .orderBy('attempt_number', descending: true)
+        .limit(1)
+        .get();
+
+    // 最新試行データがない場合（初めての試行）
+    if (attemptsSnapshot.docs.isEmpty) {
+      if (isCorrect) {
+        tierProgress += 1;
+        await wordsDocRef.set({'tierProgress_all': tierProgress}, SetOptions(merge: true));
+        print('初めての試行: 正解 +1');
+      } else {
+        await wordsDocRef.set({'tierProgress_all': tierProgress}, SetOptions(merge: true));
+        print('初めての試行: 不正解のためそのまま');
+      }
+      return;
+    }
+
+    // 最新試行データを取得
+    final latestAttempt = attemptsSnapshot.docs.first;
+    final bool? latestIsCorrect = latestAttempt.data()['is_correct'];
+
+    // `is_correct` フィールドがない場合の初期化
+    if (latestIsCorrect == null) {
+      print('最新試行データに is_correct フィールドが存在しません');
+      return;
+    }
+
+    // tierProgress_all の更新ロジック
+    if (!latestIsCorrect && isCorrect) {
+      // 直近間違えていて、今回正解した場合
+      tierProgress += 1;
+      print('直近間違えていて、今回正解: +1');
+    } else if (latestIsCorrect && !isCorrect) {
+      // 直近正解していて、今回間違えた場合
+      tierProgress -= 1;
+      print('直近正解していて、今回間違え: -1');
+    } else if (latestIsCorrect && isCorrect) {
+      print('直近正解していて、今回も正解: そのまま');
+    } else if (!latestIsCorrect && !isCorrect) {
+      print('直近間違えていて、今回も間違え: そのまま');
+    }
+
+    // Wordsドキュメントを更新
+    await wordsDocRef.update({'tierProgress_all': tierProgress});
+    print('Words ドキュメントの tierProgress_all が更新されました: $tierProgress');
+  } catch (e) {
+    print('tierProgress_all 更新に失敗しました: $e');
+  }
+}
+
+
+// 保存メソッド
+Future<void> _saveResult(
+    String selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
   final userId = FirebaseAuth.instance.currentUser?.uid;
 
   if (userId == null) {
@@ -163,6 +452,9 @@ Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, 
     final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
     final attemptNumber = attemptsSnapshot.docs.length + 1;
     final Nextname = '$attemptNumber';
+
+      await _updateTierProgress(wordData, wordData['Word'], isCorrect);
+
       wordDocRef.collection('Attempts')..doc(Nextname).set({
         'attempt_number': attemptNumber,
         'timestamp': FieldValue.serverTimestamp(),
@@ -173,19 +465,23 @@ Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, 
       },SetOptions(merge: true));
 
       print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
+
+
       
-        // todays_count を 1 増やす
+    
+         
+         // todays_count を 1 増やす
       await userDoc.update({
           't_solved_count': FieldValue.increment(1),
       });
+
       final subjectDoc = userDoc.collection('following_subjects').doc('TOEIC');
-       await subjectDoc.update({
+      await subjectDoc.update({
           't_solved_count_TOEIC$score点': FieldValue.increment(1),
       });
-     
 
       print('todays_count を 1 増やしました');
-      
+    
     } catch (e) {
     print('クイズ結果の保存に失敗しました: $e');
   }
@@ -193,7 +489,7 @@ Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, 
 
   void _handleTimeout() {
     setState(() {
-      _saveResult('', questions[currentQuestionIndex], false); // タイムアウト時も記録
+      _saveResult('', questions[currentQuestionIndex], false);
       isCorrectAnswers[currentQuestionIndex] = false;
       isShowingAnswer = true;
 
@@ -300,12 +596,12 @@ Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, 
                       fontSize: 30,
                     ),
                   ),
-                  const SizedBox(height: 8), // スペースを追加
+                  const SizedBox(height: 8), 
                   Text(
-                    "【${wordData['Phonetic_Symbols']}】", // 発音記号を表示
+                    "【${wordData['Phonetic_Symbols']}】", 
                     style: const TextStyle(
                       fontSize: 16,
-                      color: Colors.grey, // 色を指定する場合
+                      color: Colors.grey, 
                     ),
                   ),
                 ],
@@ -364,7 +660,7 @@ Future<void> _saveResult(String selectedAnswer, QueryDocumentSnapshot wordData, 
           setState(() {
             selectedAnswers[currentQuestionIndex] = option;
             isCorrectAnswers[currentQuestionIndex] = isCorrect;
-            _saveResult(option, wordData, isCorrect); // クイズ結果を保存
+            _saveResult(option, wordData, isCorrect); 
             isShowingAnswer = true;
           });
 
