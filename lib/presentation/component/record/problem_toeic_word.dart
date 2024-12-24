@@ -1,5 +1,7 @@
 import '/import.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+
 
 class TOEICWordQuiz extends StatefulWidget {
   final String level; // TOEICレベル
@@ -404,83 +406,63 @@ Future<void> _updateTierProgress(
 
 
 // 保存メソッド
-Future<void> _saveResult(
+Future<void> _saveRecord(
     String selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
   final userId = FirebaseAuth.instance.currentUser?.uid;
 
   if (userId == null) {
-    print('ログイン中のユーザーがいません');
+    print('ユーザーがログインしていません');
     return;
   }
 
   try {
-    // Usersドキュメントからユーザー情報を取得
-    final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
-    final userSnapshot = await userDoc.get();
+    final recordDate = DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd').format(recordDate);
+    // `up_to_X` から `X` を抽出
+    final levelMatch = RegExp(r'up_to_(\d+)').firstMatch(widget.level);
+    final extractedLevel = levelMatch != null ? levelMatch.group(1) : '0'; // `X` を取得、なければ '0'
 
-    if (!userSnapshot.exists) {
-      print('ユーザー情報が見つかりません');
+    if (extractedLevel == '0') {
+      print('レベル情報が不正です: ${widget.level}');
       return;
     }
 
-    // following_subjectsからTOEICのスコア（X点）を取得
-    final followingSubjects = List<String>.from(
-        userSnapshot.data()?['following_subjects'] ?? []);
-    final matchedScore = followingSubjects
-        .firstWhere((subject) => subject.startsWith('TOEIC'), orElse: () => '');
+    // Firestore パス
+    final recordRef = FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .collection('record')
+        .doc(formattedDate);
 
-    if (matchedScore.isEmpty) {
-      print('TOEICスコアが見つかりません');
-      return;
-    }
+    final wordDoc = recordRef.collection('TOEIC${extractedLevel}点').doc('Word');
+    final wordRef = recordRef.collection('TOEIC${extractedLevel}点').doc('Word').collection(wordData.id);
 
-    // 正規表現で数字部分だけを抽出
-    final scoreMatch = RegExp(r'\d+').firstMatch(matchedScore);
-    if (scoreMatch == null) {
-      print('TOEICスコアの形式が不正です');
-      return;
-    }
-    final score = scoreMatch.group(0); // 抽出されたスコア（X部分）
-    final toeicDoc = userDoc
-        .collection('following_subjects')
-        .doc('TOEIC')
-        .collection('up_to_$score');
-
-    // Wordsサブコレクションに保存
-    final wordName = wordData['Word'];
-    final wordDocRef = toeicDoc.doc('Words').collection('Word').doc(wordName);
-    final attemptsSnapshot = await wordDocRef.collection('Attempts').get();
+    // Attempts サブコレクションの次のドキュメント名を決定
+    final attemptsSnapshot = await recordRef.collection('TOEIC${extractedLevel}点').doc('Word').collection(wordData.id).get();
     final attemptNumber = attemptsSnapshot.docs.length + 1;
-    final Nextname = '$attemptNumber';
 
-      await _updateTierProgress(wordData, wordData['Word'], isCorrect);
+    // データを保存
+    await wordRef..doc('$attemptNumber').set({
+      'attempt_number': attemptNumber,
+      'timestamp': FieldValue.serverTimestamp(),
+      'selected_answer': selectedAnswer,
+      'correct_answer': wordData['ENG_to_JPN_Answer'],
+      'is_correct': isCorrect,
+      'word_id': wordData.id,
+    },SetOptions(merge: true));
 
-      wordDocRef.collection('Attempts')..doc(Nextname).set({
-        'attempt_number': attemptNumber,
-        'timestamp': FieldValue.serverTimestamp(),
-        'selected_answer': selectedAnswer,
-        'correct_answer': wordData['ENG_to_JPN_Answer'],
-        'is_correct': isCorrect,
-        'word_id': wordData.id,
+    // todays_count を 1 増やす
+      await wordDoc.set({
+          't_solved_count': FieldValue.increment(1),
       },SetOptions(merge: true));
 
-      print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
-
-
-      
-    
-         
-         // todays_count を 1 増やす
-      await userDoc.update({
-          't_solved_count': FieldValue.increment(1),
+      await recordRef.update({
+          't_solved_count_TOEIC${extractedLevel}点': FieldValue.increment(1),
       });
 
-      final subjectDoc = userDoc.collection('following_subjects').doc('TOEIC');
-      await subjectDoc.update({
-          't_solved_count_TOEIC$score点': FieldValue.increment(1),
-      });
-
-      print('todays_count を 1 増やしました');
+    print('クイズ結果が保存されました: ${wordData.id}, Attempt: $attemptNumber');
+  } catch (e) {
+    print('レコードの保存中にエラーが発生しました: $e');
     
     } catch (e) {
     print('クイズ結果の保存に失敗しました: $e');
@@ -489,7 +471,7 @@ Future<void> _saveResult(
 
   void _handleTimeout() {
     setState(() {
-      _saveResult('', questions[currentQuestionIndex], false);
+      _saveRecord('', questions[currentQuestionIndex], false);
       isCorrectAnswers[currentQuestionIndex] = false;
       isShowingAnswer = true;
 
@@ -660,7 +642,7 @@ Future<void> _saveResult(
           setState(() {
             selectedAnswers[currentQuestionIndex] = option;
             isCorrectAnswers[currentQuestionIndex] = isCorrect;
-            _saveResult(option, wordData, isCorrect); 
+            _saveRecord(option, wordData, isCorrect);
             isShowingAnswer = true;
           });
 
