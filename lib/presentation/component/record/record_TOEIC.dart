@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '/import.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'record_problem_toeic_word.dart';
+import 'problem_toeic_word.dart';
 
 class LanguageTOEICScreen extends StatefulWidget {
   final String selectedCategory;
