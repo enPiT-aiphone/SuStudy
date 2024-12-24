@@ -1,11 +1,11 @@
 import '/import.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-
 class TOEFLWordQuiz extends StatefulWidget {
-  final String level;
+  final String level; // TOEFLレベル
+  final String questionType; // 出題タイプ（random, unanswered, incorrect, recent_incorrect）
 
-  const TOEFLWordQuiz({required this.level, super.key});
+  const TOEFLWordQuiz({required this.level, required this.questionType, super.key});
 
   @override
   _TOEFLWordQuizState createState() => _TOEFLWordQuizState();
@@ -75,38 +75,193 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
   }
 
   Future<void> _fetchQuestions() async {
-    QuerySnapshot snapshot = await FirebaseFirestore.instance
-        .collection('English_Skills')
-        .doc('TOEFL')
-        .collection(widget.level)
-        .doc('Words')
-        .collection('Word')
-        .get();
+    final userId = FirebaseAuth.instance.currentUser?.uid;
 
-    List<QueryDocumentSnapshot> allQuestions = snapshot.docs;
-    questions = allQuestions.where((doc) => !askedWordIds.contains(doc.id)).toList();
+    if (userId == null) {
+      print('ユーザーがログインしていません');
+      return;
+    }
 
-    if (questions.isNotEmpty) {
-      if (questions.length > 5) {
-        questions.shuffle();
-        questions = questions.take(5).toList();
+    try {
+      // Usersドキュメントからユーザー情報を取得
+      final userDoc = FirebaseFirestore.instance.collection('Users').doc(userId);
+      final userSnapshot = await userDoc.get();
+
+      if (!userSnapshot.exists) {
+        print('ユーザー情報が見つかりません');
+        return;
       }
 
-      for (var question in questions) {
-        List<String> options = [
-          question['ENG_to_JPN_Answer_A'],
-          question['ENG_to_JPN_Answer_B'],
-          question['ENG_to_JPN_Answer_C'],
-          question['ENG_to_JPN_Answer_D'],
-        ];
-        options.shuffle();
-        shuffledOptions.add(options);
+      // following_subjectsからTOEFLのスコアを取得
+      final followingSubjects = List<String>.from(
+          userSnapshot.data()?['following_subjects'] ?? []);
+      final matchedScore = followingSubjects
+          .firstWhere((subject) => subject.startsWith('TOEFL'), orElse: () => '');
+
+      if (matchedScore.isEmpty) {
+        print('TOEFLスコアが見つかりません');
+        return;
       }
 
-      setState(() {
-        isDataLoaded = true;
-        _startTimer();
-      });
+      final score = matchedScore.replaceAll('TOEFL', '');
+      final toeflDoc = userDoc
+          .collection('following_subjects')
+          .doc('TOEFL')
+          .collection('up_to_$score');
+
+      // 出題タイプに応じた問題を取得
+      QuerySnapshot snapshot;
+
+      if (widget.questionType == 'random') {
+        snapshot = await FirebaseFirestore.instance
+            .collection('English_Skills')
+            .doc('TOEFL')
+            .collection(widget.level)
+            .doc('Words')
+            .collection('Word')
+            .get();
+      } else if (widget.questionType == 'unanswered') {
+        final answeredWordsSnapshot = await toeflDoc
+            .doc('Words')
+            .collection('Word')
+            .get();
+
+        List<String> answeredWordIds = answeredWordsSnapshot.docs
+            .map((doc) => doc['word_id'] as String)
+            .toList();
+
+        if (answeredWordIds.isEmpty) {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .get();
+        } else {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .where(FieldPath.documentId, whereNotIn: answeredWordIds)
+              .get();
+        }
+      } else if (widget.questionType == 'incorrect') {
+        final quizRecords = await toeflDoc
+            .doc('Words')
+            .collection('Word')
+            .get();
+
+        List<String> incorrectWordIds = [];
+
+        for (var record in quizRecords.docs) {
+          final wordDocRef = toeflDoc
+              .doc('Words')
+              .collection('Word')
+              .doc(record.id)
+              .collection('Attempts')
+              .orderBy('attempt_number', descending: true)
+              .limit(1);
+
+          final latestAttemptSnapshot = await wordDocRef.get();
+
+          if (latestAttemptSnapshot.docs.isNotEmpty) {
+            final latestAttempt = latestAttemptSnapshot.docs.first;
+            if (!latestAttempt['is_correct']) {
+              incorrectWordIds.add(record.id);
+            }
+          }
+        }
+
+        if (incorrectWordIds.isEmpty) {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .get();
+        } else {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .where(FieldPath.documentId, whereIn: incorrectWordIds)
+              .get();
+        }
+      } else {
+        // 直近3問の間違えた問題を取得
+        List<String> recentWordIds = [];
+
+        // Words コレクションから全ての単語ドキュメントを取得
+        final wordsSnapshot = await toeflDoc.doc('Words').collection('Word').get();
+
+        for (var wordDoc in wordsSnapshot.docs) {
+          final attemptsSnapshot = await wordDoc.reference
+              .collection('Attempts')
+              .where('is_correct', isEqualTo: false)
+              .orderBy('timestamp', descending: true)
+              .limit(1)
+              .get();
+
+          if (attemptsSnapshot.docs.isNotEmpty) {
+            recentWordIds.add(wordDoc.id);
+          }
+
+          if (recentWordIds.length >= 3) break;
+        }
+
+        if (recentWordIds.isEmpty) {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .get();
+        } else {
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEFL')
+              .collection(widget.level)
+              .doc('Words')
+              .collection('Word')
+              .where(FieldPath.documentId, whereIn: recentWordIds)
+              .get();
+        }
+      }
+
+      List<QueryDocumentSnapshot> allQuestions = snapshot.docs;
+      questions = allQuestions.where((doc) => !askedWordIds.contains(doc.id)).toList();
+
+      if (questions.isNotEmpty) {
+        if (questions.length > 5) {
+          questions.shuffle();
+          questions = questions.take(5).toList();
+        }
+
+        for (var question in questions) {
+          List<String> options = [
+            question['ENG_to_JPN_Answer_A'],
+            question['ENG_to_JPN_Answer_B'],
+            question['ENG_to_JPN_Answer_C'],
+            question['ENG_to_JPN_Answer_D'],
+          ];
+          options.shuffle();
+          shuffledOptions.add(options);
+        }
+
+        setState(() {
+          isDataLoaded = true;
+          _startTimer();
+        });
+      }
+    } catch (e) {
+      print('エラーが発生しました: $e');
     }
   }
 
@@ -115,53 +270,8 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
     _animationController.forward();
   }
 
-  void _handleTimeout() {
-    _saveResult(null, questions[currentQuestionIndex], false);
-
-    setState(() {
-      isCorrectAnswers[currentQuestionIndex] = false;
-      isShowingAnswer = true;
-
-      showDialog(
-        context: context,
-        barrierColor: Colors.transparent,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          double circleSize = MediaQuery.of(context).size.width / 2;
-          return Center(
-            child: CustomPaint(
-              size: Size(circleSize * 0.8, circleSize * 0.8),
-              painter: CrossPainter(),
-            ),
-          );
-        },
-      );
-
-      Future.delayed(const Duration(milliseconds: 600), () {
-        Navigator.of(context).pop();
-        if (currentQuestionIndex < 4) {
-          setState(() {
-            currentQuestionIndex++;
-            isShowingAnswer = false;
-            _startTimer();
-          });
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ResultPage(
-                selectedAnswers: selectedAnswers,
-                isCorrectAnswers: isCorrectAnswers,
-                wordDetails: questions,
-              ),
-            ),
-          );
-        }
-      });
-    });
-  }
-
-  Future<void> _saveResult(String? selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
+  Future<void> _saveResult(
+      String selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
     if (userId == null) {
@@ -218,16 +328,54 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
       },SetOptions(merge: true));
 
       print('クイズ結果が保存されました: Word: $wordName, Attempt: $attemptNumber');
-
-        // todays_count を 1 増やす
-      await userDoc.update({
-          't_solved_count': FieldValue.increment(1),
-      });
-
-      print('todays_count を 1 増やしました');
     } catch (e) {
     print('クイズ結果の保存に失敗しました: $e');
   }
+  }
+
+  void _handleTimeout() {
+    setState(() {
+      _saveResult('', questions[currentQuestionIndex], false);
+      isCorrectAnswers[currentQuestionIndex] = false;
+      isShowingAnswer = true;
+
+      showDialog(
+        context: context,
+        barrierColor: Colors.transparent,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          double circleSize = MediaQuery.of(context).size.width / 2;
+          return Center(
+            child: CustomPaint(
+              size: Size(circleSize * 0.8, circleSize * 0.8),
+              painter: CrossPainter(),
+            ),
+          );
+        },
+      );
+
+      Future.delayed(const Duration(milliseconds: 600), () {
+        Navigator.of(context).pop();
+        if (currentQuestionIndex < 4) {
+          setState(() {
+            currentQuestionIndex++;
+            isShowingAnswer = false;
+            _startTimer();
+          });
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ResultPage(
+                selectedAnswers: selectedAnswers,
+                isCorrectAnswers: isCorrectAnswers,
+                wordDetails: questions,
+              ),
+            ),
+          );
+        }
+      });
+    });
   }
 
   @override
@@ -358,10 +506,9 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
           setState(() {
             selectedAnswers[currentQuestionIndex] = option;
             isCorrectAnswers[currentQuestionIndex] = isCorrect;
+            _saveResult(option, wordData, isCorrect);
             isShowingAnswer = true;
           });
-
-          _saveResult(option, wordData, isCorrect);
 
           showDialog(
             context: context,

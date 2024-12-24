@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '/import.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'record_problem_toefl_word.dart';
+import 'problem_toefl_word.dart';
 
 class LanguageTOEFLScreen extends StatefulWidget {
   final String selectedCategory;

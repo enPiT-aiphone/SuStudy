@@ -172,6 +172,7 @@ Future<void> fetchTierProgress() async {
     final todayWordsGoalDocSnapshot = await todayWordsGoalDocRef.get();
     final tierProgressTodayGoal = todayWordsGoalDocSnapshot.data()?['${widget.selectedCategory}_goal'] ?? 0;
 
+
     // tierProgress_all を単語数で割って計算
     final normalizedTierProgressAll = tierProgressAll / wordCount;
     final normalizedTierProgress = tierProgressToday / tierProgressTodayGoal;

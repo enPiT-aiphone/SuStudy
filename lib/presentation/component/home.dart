@@ -1,12 +1,14 @@
 // 必要なパッケージのインポート
+import 'dart:ui'; // ImageFilterを使用するためのインポート
 import 'package:sustudy_add/presentation/component/group_navigation.dart';
+import '../add_word.dart';
 import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
+import 'record/problem_toeic_word.dart'; // 記録画面のコンポーネント
 import 'search/user_profile_screen.dart';
 import 'post/post.dart';
-import '../add_word.dart';
 import 'search/search.dart';
 import 'ranking_dashboard.dart';
 import 'group_navigation.dart';
@@ -134,9 +136,13 @@ class _HomeScreenState extends State<HomeScreen>
             _selectedCategory = _followingSubjects[0]; // 最初の教科を選択
           }
         });
-        if (_loginHistory.isEmpty) {
-          _showWelcomeDialog(userId);
-        }
+      if (_loginHistory.isEmpty) {
+        // 初回ログイン
+        _showWelcomeDialog(userId, isFirstLogin: true);
+      } else if (!_hasLoggedInToday()) {
+        // 過去にログインしたことはあるが当日の履歴がない場合
+        _showWelcomeDialog(userId, isFirstLogin: false);
+      }
       } else {
         print('ユーザーデータが見つかりません');
       }
@@ -145,57 +151,93 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  void _showWelcomeDialog(String userId) {
-    final toeicLevel = _extractToeicLevel(_followingSubjects);
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.7,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(10),
+  // 当日の日付でログイン履歴をチェック
+  bool _hasLoggedInToday() {
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+
+    for (var timestamp in _loginHistory) {
+      final loginDate = (timestamp as Timestamp).toDate();
+      final normalizedDate = DateTime(loginDate.year, loginDate.month, loginDate.day);
+      if (normalizedDate == todayDate) {
+        return true; // 当日ログインが見つかった場合
+      }
+    }
+
+    return false; // 当日のログインが存在しない場合
+  }
+
+// ウェルカムダイアログを表示
+void _showWelcomeDialog(String userId, {required bool isFirstLogin}) {
+  final toeicLevel = _extractToeicLevel(_followingSubjects);
+  final titleMessage = isFirstLogin
+      ? '$_accountNameさん、初めまして！'
+      : '$_accountNameさん、おかえりなさい！';
+  final contentMessage = isFirstLogin
+      ? 'まず今日のログイン問題に取り組んでログインカウントを貯めていこう！🔥'
+      : '今日もログイン問題に取り組んでログインカウントを貯めていこう！🔥';
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          children: [
+            // 背景をモザイク風にする
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+              child: Container(
+              ),
             ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$_accountNameさん、初めまして！',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
+            Center(
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.7,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'まず今日のログイン問題に取り組んでログインカウントを貯めていこう！🔥',
-                  style: TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _navigateToQuiz(toeicLevel);
-                      },
-                      child: const Text('挑戦する'),
+                    Text(
+                      titleMessage,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      contentMessage,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _navigateToQuiz(toeicLevel);
+                          },
+                          child: const Text('挑戦する'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-        );
-      },
-    );
-  }
+          ],
+        ),
+      );
+    },
+  );
+}
 
 
   String _extractToeicLevel(List<String> subjects) {
@@ -209,7 +251,7 @@ class _HomeScreenState extends State<HomeScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => NotificationTOEICWordQuiz(level: level),
+        builder: (context) => TOEICWordQuiz(level: level, questionType:'random'),
       ),
     );
   }
@@ -351,7 +393,7 @@ OverlayEntry _createOverlayEntry() {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => NotificationTOEICWordQuiz(level: level),
+                                  builder: (context) => TOEICWordQuiz(level: level, questionType:'random'),
                                 ),
                               );
                             } else {
