@@ -126,6 +126,19 @@ Future<void> fetchTierProgress() async {
 
     final userId = currentUser.uid;
 
+
+
+
+
+
+    final category = widget.selectedCategory == '全体' ? 'TOEIC500点' : widget.selectedCategory;
+
+
+
+
+
+
+
     // ユーザードキュメントを取得
     final userDoc = await FirebaseFirestore.instance
         .collection('Users')
@@ -166,7 +179,17 @@ Future<void> fetchTierProgress() async {
         .doc(userId)
         .collection('record')
         .doc(todayDate)
-        .collection(widget.selectedCategory) // 選択されたカテゴリを使用
+
+
+
+        //.collection(widget.selectedCategory) // 選択されたカテゴリを使用
+        .collection(category) // 選択されたカテゴリを使用
+
+
+
+
+
+
         .doc('Word');
         
     final todayWordsDocSnapshot = await todayWordsDocRef.get();
@@ -180,12 +203,26 @@ Future<void> fetchTierProgress() async {
         .doc(todayDate);
 
     final todayWordsGoalDocSnapshot = await todayWordsGoalDocRef.get();
-    final tierProgressTodayGoal = todayWordsGoalDocSnapshot.data()?['${widget.selectedCategory}_goal'] ?? 0;
+
+
+
+
+
+
+
+    final tierProgressTodayGoal = todayWordsGoalDocSnapshot.data()?['${category}_goal'] ?? 0;
+
+    //final tierProgressTodayGoal = todayWordsGoalDocSnapshot.data()?['${widget.selectedCategory}_goal'] ?? 0;
+
+
+
+
+
 
 
     // tierProgress_all を単語数で割って計算
     final normalizedTierProgressAll = tierProgressAll / wordCount;
-    final normalizedTierProgress = tierProgressToday / tierProgressTodayGoal;
+    final normalizedTierProgress = tierProgressToday / (tierProgressTodayGoal * 2);
     
     
     setState(() {

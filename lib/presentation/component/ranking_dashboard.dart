@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポ�
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firestoreをインポート
 import 'package:flutter/material.dart'; // Flutterウィジェットをインポート
 import 'search/user_profile_screen.dart';
+import 'package:intl/intl.dart';
+
 
 class RankingScreen extends StatefulWidget {
   final String selectedTab;
@@ -92,28 +94,56 @@ class _RankingScreenState extends State<RankingScreen> {
             .toList();
 
         if (todayLogins.isNotEmpty) {
-          if (widget.selectedCategory == "全体"){
-          rankingData.add({
-            'userName': data['user_name'] ?? 'Unknown',
-            'tSolvedCount': data['t_solved_count'] ?? 0,
-            'auth_uid': data['auth_uid'],
-          });
-          }
-          else{
-            final followingSubjectsSnapshot = await FirebaseFirestore.instance
-            .collection('Users')
-            .doc(doc.id)  // ユーザーのIDを使ってそのユーザーのサブコレクションにアクセス
-            .collection('following_subjects')
-            .doc(getSubjectName(widget.selectedCategory))  // selectedCategoryに対応する教科ドキュメント
-            .get();
+          if (widget.selectedCategory == "全体") {
+              // Firestore パスを動的に取得
+              final today = DateTime.now();
+              final formattedDate = DateFormat('yyyy-MM-dd').format(today);
 
-            final categoryData = followingSubjectsSnapshot.data() as Map<String, dynamic>;
+              // 現在の日付のレコードからデータを取得
+              final recordDocSnapshot = await FirebaseFirestore.instance
+                  .collection('Users')
+                  .doc(doc.id) // ユーザーのIDを使ってそのユーザーのサブコレクションにアクセス
+                  .collection('record')
+                  .doc(formattedDate) // 今日の日付を使ったドキュメント
+                  .get();
 
-            rankingData.add({
-            'userName': data['user_name'] ?? 'Unknown',
-            'tSolvedCount': categoryData['t_solved_count_${widget.selectedCategory}'] ?? 0,
-            'auth_uid': data['auth_uid'], // auth_uid を追加
-            });
+              // tierProgress_today を取得
+              final formattedDateData = recordDocSnapshot.data();
+              final tSolvedCount = formattedDateData?['t_solved_count'] ?? 0;
+
+              rankingData.add({
+                'userName': data['user_name'] ?? 'Unknown',
+                'tSolvedCount': tSolvedCount, // tierProgress_today を設定
+                'auth_uid': data['auth_uid'], // auth_uid を追加
+              });
+          } else {
+            try {
+              // Firestore パスを動的に取得
+              final today = DateTime.now();
+              final formattedDate = DateFormat('yyyy-MM-dd').format(today);
+
+              // 現在の日付のレコードからデータを取得
+              final recordDocSnapshot = await FirebaseFirestore.instance
+                  .collection('Users')
+                  .doc(doc.id) // ユーザーのIDを使ってそのユーザーのサブコレクションにアクセス
+                  .collection('record')
+                  .doc(formattedDate) // 今日の日付を使ったドキュメント
+                  .collection(widget.selectedCategory) // カテゴリ名を使ったサブコレクション
+                  .doc('Word') // 'Word' ドキュメント
+                  .get();
+
+              // tierProgress_today を取得
+              final recordData = recordDocSnapshot.data();
+              final tierProgressToday = recordData?['tierProgress_today'] ?? 0;
+
+              rankingData.add({
+                'userName': data['user_name'] ?? 'Unknown',
+                'tSolvedCount': tierProgressToday, // tierProgress_today を設定
+                'auth_uid': data['auth_uid'], // auth_uid を追加
+              });
+            } catch (e) {
+              print('データ取得エラー: ${doc.id}, ${widget.selectedCategory}, $e');
+            }
           }
         }
       }
@@ -125,38 +155,63 @@ class _RankingScreenState extends State<RankingScreen> {
           .collection('Users')
           .doc(user.uid)
           .get();
-
-
-      //こっからはフォロー中の時自分のデータをランキングに追加するための処理
+      // ここからはフォロー中の時、自分のデータをランキングに追加する処理
       if (userSnapshot.exists) {
         final userData = userSnapshot.data();
         if (userData != null) {
-          if (widget.selectedCategory == '全体') {
-            // 全体の場合、全体の tSolvedCount を使用
-            _userData = {
-              'userName': userData['user_name'] ?? 'Unknown',
-              'tSolvedCount': userData['t_solved_count'] ?? 0,
-              'auth_uid': userData['auth_uid'],
-            };
-          } else {
-            // カテゴリが選択されている場合、該当カテゴリの tSolvedCount を取得
-            final categorySnapshot = await FirebaseFirestore.instance
-                .collection('Users')
-                .doc(user.uid) // 現在のユーザー ID
-                .collection('following_subjects') // サブコレクション
-                .doc(getSubjectName(widget.selectedCategory)) // 選択されたカテゴリに対応するドキュメント
-                .get();
+          final today = DateTime.now();
+          final formattedDate = DateFormat('yyyy-MM-dd').format(today);
 
-            final categoryData = categorySnapshot.data();
+          try {
+            if (widget.selectedCategory == '全体') {
+              // 全体の場合、現在の日付のレコードから t_solved_count を取得
+              final recordDocSnapshot = await FirebaseFirestore.instance
+                  .collection('Users')
+                  .doc(user.uid) // 現在のユーザー ID
+                  .collection('record') // レコードサブコレクション
+                  .doc(formattedDate) // 今日の日付を使ったドキュメント
+                  .get();
+
+              // t_solved_count を取得
+              final recordData = recordDocSnapshot.data();
+              final tSolvedCount = recordData?['t_solved_count'] ?? 0;
+
+              _userData = {
+                'userName': userData['user_name'] ?? 'Unknown',
+                'tSolvedCount': tSolvedCount, // 今日の t_solved_count を設定
+                'auth_uid': userData['auth_uid'],
+              };
+            } else {
+              // カテゴリが選択されている場合、カテゴリごとのデータを取得
+              final recordDocSnapshot = await FirebaseFirestore.instance
+                  .collection('Users')
+                  .doc(user.uid) // 現在のユーザー ID
+                  .collection('record') // レコードサブコレクション
+                  .doc(formattedDate) // 今日の日付を使ったドキュメント
+                  .collection(widget.selectedCategory) // カテゴリ名を使ったサブコレクション
+                  .doc('Word') // 'Word' ドキュメント
+                  .get();
+
+              // tierProgress_today を取得
+              final recordData = recordDocSnapshot.data();
+              final tierProgressToday = recordData?['tierProgress_today'] ?? 0;
+
+              _userData = {
+                'userName': userData['user_name'] ?? 'Unknown',
+                'tSolvedCount': tierProgressToday, // tierProgress_today を設定
+                'auth_uid': userData['auth_uid'],
+              };
+            }
+          } catch (e) {
+            print('自分のデータ取得エラー: $e');
             _userData = {
               'userName': userData['user_name'] ?? 'Unknown',
-              'tSolvedCount': categoryData?['t_solved_count_${widget.selectedCategory}'] ?? 0,
+              'tSolvedCount': 0, // データが取得できなかった場合 0 を設定
               'auth_uid': userData['auth_uid'],
             };
           }
         }
       }
-
 
       //フォロー中の時に自分のデータのランキングへの追加
       if (widget.selectedTab == 'フォロー中') {

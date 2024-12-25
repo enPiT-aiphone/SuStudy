@@ -314,6 +314,12 @@ Future<void> _updateTierProgress(
         .collection('TOEIC${extractedLevel}点')
         .doc('Word');
 
+     final dateRef = FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .collection('record')
+        .doc(formattedDate);
+
     int tierProgress = 0;
     int tierProgressAll = 0;
 
@@ -335,11 +341,13 @@ Future<void> _updateTierProgress(
       if (isCorrect) {
         tierProgress += 1;
         await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
+        await dateRef.set({'t_solved_count': tierProgress}, SetOptions(merge: true));
         tierProgressAll += 1;
         await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
         print('初めての試行: 正解 +1');
       } else {
         await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
+        await dateRef.set({'t_solved_count': tierProgress}, SetOptions(merge: true));
         await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
         print('初めての試行: 不正解のためそのまま');
       }
@@ -374,6 +382,7 @@ Future<void> _updateTierProgress(
     }
 
     // tierProgress_all を Firestore に保存
+    await dateRef.update({'t_solved_count': tierProgress});
     await recordRef.update({'tierProgress_today': tierProgress});
     await recordRef.update({'tierProgress_all': tierProgressAll});
     print('Words ドキュメントの tierProgress_today が更新されました: $tierProgress');
