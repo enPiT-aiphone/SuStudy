@@ -1,13 +1,8 @@
 [build]
+  base = "/"
+  command = "if [ ! -d flutter ]; then git clone https://github.com/flutter/flutter.git -b stable; fi && export PATH=\"$PATH:`pwd`/flutter/bin\" && flutter doctor && flutter config --enable-web && flutter build web --release"
   publish = "build/web"
-  command = """
-    if cd flutter; then git pull && cd ..; else git clone https://github.com/flutter/flutter.git; fi
-    export PATH="$PATH:`pwd`/flutter/bin"
-    flutter channel master
-    flutter version 3.28.0
-    flutter config --enable-web
-    flutter build web --release
-  """
 
 [build.environment]
-  PUB_CACHE = "/opt/build/cache/.pub-cache"
+  NODE_VERSION = "16"  # 必要に応じてNode.jsのバージョンを指定
+  REVIEW_ID = "12345"  # 必要に応じて環境変数を追加
