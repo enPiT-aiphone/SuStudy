@@ -1,5 +1,6 @@
 import '/import.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 class SubjectDetailsScreen extends StatefulWidget {
   final String subjectName;
@@ -81,17 +82,34 @@ Future<void> _followSubject() async {
       }
     });
 
-    // following_subjects サブコレクションに教科ドキュメントを作成
-    final subCollectionDoc =
-        userDoc.collection('following_subjects').doc(widget.subjectName);
+    // Recordサブコレクションの現在の日付のドキュメントにアクセス
+    final today = DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd').format(today);
+    final recordDocRef = userDoc.collection('record').doc(formattedDate);
 
-    final docSnapshot = await subCollectionDoc.get();
-    if (!docSnapshot.exists) {
-      await subCollectionDoc.set({
+    // 現在の日付のドキュメントが存在するか確認し、存在しない場合は作成
+    final recordDocSnapshot = await recordDocRef.get();
+    if (!recordDocSnapshot.exists) {
+      await recordDocRef.set({
         'timestamp': FieldValue.serverTimestamp(),
-        't_solved_count_${widget.subjectName}': 0, // 教科ごとのカウントを初期化
       });
     }
+
+    // 教科サブコレクションにドキュメントを作成
+    final subjectDocRef = recordDocRef.collection(widget.subjectName).doc('Word');
+
+    final subjectDocSnapshot = await subjectDocRef.get();
+    if (!subjectDocSnapshot.exists) {
+      await subjectDocRef.set({
+        'timestamp': FieldValue.serverTimestamp(),
+        'tierProgress_today': 0, // 初期化
+      });
+    }
+
+    // `t_solved_count_教科名` フィールドを作成または更新
+    await recordDocRef.set({
+      't_solved_count_${widget.subjectName}': 0, // 初期値として 0 を設定
+    }, SetOptions(merge: true));
 
     setState(() {
       _isFollowed = true; // フォロー状態を更新

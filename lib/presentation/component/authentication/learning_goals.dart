@@ -42,40 +42,52 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
     }
   }
 
-  Future<void> _saveGoals() async {
-    try {
-      final today = DateTime.now();
-      final formattedDate = DateFormat('yyyy-MM-dd').format(today);
-      final recordRef = FirebaseFirestore.instance
-          .collection('Users')
-          .doc(widget.userId)
-          .collection('record')
-          .doc(formattedDate);
+Future<void> _saveGoals() async {
+  try {
+    final today = DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd').format(today);
+    final recordRef = FirebaseFirestore.instance
+        .collection('Users')
+        .doc(widget.userId)
+        .collection('record')
+        .doc(formattedDate);
 
-      final dataToUpdate = {
-        'timestamp': FieldValue.serverTimestamp(),
-        't_solved_count': 0,
-      };
+    final dataToUpdate = {
+      'timestamp': FieldValue.serverTimestamp(),
+      't_solved_count': 0,
+    };
 
-      for (final subject in followingSubjects) {
-        final goal = selectedGoals[subject];
-        if (goal != null) {
-          final key = "${subject}_goal";
-          final value = goal.replaceAll(RegExp(r'[^\d]'), ''); // 数字のみを抽出
-          dataToUpdate[key] = int.tryParse(value) ?? 0;
-        }
-      }
+  for (final subject in followingSubjects) {
+  final goal = selectedGoals[subject];
+  if (goal != null && goal.isNotEmpty) { // null または空文字列をスキップ
+    final key = "${subject}_goal";
+    
+    // 数値を抽出して変換
+    final extractedValue = RegExp(r'\d+').stringMatch(goal); // 数字部分を抽出
+    final parsedValue = extractedValue != null ? int.parse(extractedValue) : null;
 
-      await recordRef.set(dataToUpdate, SetOptions(merge: true));
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
-      );
-    } catch (e) {
-      print('学習目標の保存中にエラーが発生しました: $e');
+    if (parsedValue != null) {
+      dataToUpdate[key] = parsedValue; // 数値を保存
+    } else {
+      print('学習目標のフォーマットが不正です: $goal');
     }
+  } else {
+    print('未選択の教科: $subject');
   }
+}
+
+
+    await recordRef.set(dataToUpdate, SetOptions(merge: true));
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => HomeScreen()),
+    );
+  } catch (e) {
+    print('学習目標の保存中にエラーが発生しました: $e');
+  }
+}
+
 
   Future<void> _selectGoal(String subject) async {
     await showModalBottomSheet(
