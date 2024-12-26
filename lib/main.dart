@@ -160,7 +160,7 @@ class AuthChecker extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(), // 認証状態を監視
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),));
         }
 
         if (snapshot.hasData) {

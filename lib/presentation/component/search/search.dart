@@ -2,7 +2,6 @@ import '/import.dart';
 import 'display_subjects.dart';
 import 'display_groups.dart';
 import 'user_profile_screen.dart';
-import 'package:collection/collection.dart';
 import 'dart:async';
 
 class SearchScreen extends StatefulWidget {
@@ -104,39 +103,13 @@ class _SearchScreenState extends State<SearchScreen>
       setState(() {
         _subjectList = subjectsSnapshot.docs.map((doc) => doc.id).toList();
         _cachedSubjectList = List.from(subjects);
-        
-        // 教科カテゴリが選択されている場合、_searchResultsに教科一覧をセット
-        if (_selectedCategory == '教科' && _searchQuery.isEmpty) {
-          _searchResults = List.from(_subjectList);
-        }
       });
     } catch (e) {
       print('教科一覧の取得エラー: $e');
     }
   }
 
-    void _onCategorySelected(String category) {
-    setState(() {
-      _selectedCategory = category;
-      _searchResults = [];
-    });
-
-    if (_searchQuery.isNotEmpty) {
-      _performSearch();
-    }
-  }
-
   Future<void> _performSearch() async {
-    if (_searchQuery.isEmpty) {
-      setState(() {
-        if (_selectedCategory == '教科') {
-          _searchResults = List.from(_subjectList); // 教科一覧をセット
-        } else {
-          _searchResults = []; // 他カテゴリは空にする
-        }
-      });
-      return;
-    }
 
     setState(() {
       _isLoading = true;
@@ -256,37 +229,6 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
-void _onSearchChanged(String value) {
-  setState(() {
-    _searchQuery = value;
-
-    // ユーザー検索中にプロフィール画面が表示されている場合は閉じる
-    if (_isUserProfileVisible) {
-      _hideUserProfile();
-    }
-
-    if (_selectedCategory == 'ユーザー') {
-      // ユーザー検索のみリアルタイム検索
-      if (_debounce?.isActive ?? false) _debounce!.cancel();
-      _debounce = Timer(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          _performSearch();
-        }
-      });
-    }
-  });
-}
-
-
-  void _onSearchSubmitted(String value) {
-  setState(() {
-    _searchQuery = value;
-    if (_selectedCategory == '投稿') {
-      _performSearch(); // エンターキーで検索を実行
-    }
-  });
-}
-
   String _normalizeString(String input) {
     return input
         .toLowerCase()
@@ -324,40 +266,9 @@ void _onSearchChanged(String value) {
     return score;
   }
 
-  Widget _buildSearchUI() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: '検索ワードを入力してください',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-            },
-            onSubmitted: (value) {
-              setState(() {
-                _searchQuery = value;
-                _performSearch();
-              });
-            },
-          ),
-        ),
-        Expanded(child: _buildSearchResultsOrSubjects()),
-      ],
-    );
-  }
-
 Widget _buildSearchResultsOrSubjects() {
   if (_isLoading) {
-    return const Center(child: CircularProgressIndicator());
+    return const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5))));
   }
 
   // 検索クエリが存在するが結果がない場合

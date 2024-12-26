@@ -28,7 +28,6 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
           ),
           child: AppBar(
-            automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
             elevation: 0,
             iconTheme: const IconThemeData(

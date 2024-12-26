@@ -411,7 +411,7 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
       ),
       body: isDataLoaded
           ? _buildQuestionUI(questions[currentQuestionIndex])
-          : const Center(child: CircularProgressIndicator()),
+          : const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)))),
     );
   }
 

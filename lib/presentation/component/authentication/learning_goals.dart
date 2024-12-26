@@ -1,8 +1,6 @@
 import '/import.dart';
 import 'package:intl/intl.dart';
 
-
-
 class LearningGoalsScreen extends StatefulWidget {
   final String userId; // ユーザーIDを受け取る
 
@@ -15,6 +13,7 @@ class LearningGoalsScreen extends StatefulWidget {
 class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
   final List<String> goals = ['5分/日', '10分/日', '15分/日', '30分/日'];
   Map<String, String?> selectedGoals = {}; // 教科ごとの学習目標を保存するマップ
+  Map<String, String?> _errors = {}; // エラーメッセージを保存するマップ
   List<String> followingSubjects = []; // Firebaseから取得した教科リスト
 
   @override
@@ -43,6 +42,22 @@ class _LearningGoalsScreenState extends State<LearningGoalsScreen> {
   }
 
 Future<void> _saveGoals() async {
+      // エラーチェック
+    bool hasError = false;
+    setState(() {
+      _errors.clear(); // 以前のエラーメッセージをクリア
+      for (final subject in followingSubjects) {
+        if (selectedGoals[subject] == null || selectedGoals[subject]!.isEmpty) {
+          _errors[subject] = '目標を設定してください';
+          hasError = true;
+        }
+      }
+    });
+
+    if (hasError) {
+      return; // エラーがある場合、保存処理を中断
+    }
+
   try {
     final today = DateTime.now();
     final formattedDate = DateFormat('yyyy-MM-dd').format(today);
@@ -198,6 +213,14 @@ Future<void> _saveGoals() async {
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Text(
                             '  ${selectedGoals[subject]}',
+                          ),
+                        ),
+                      if (_errors[subject] != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Text(
+                            _errors[subject]!,
+                            style: const TextStyle(color: Colors.red, fontSize: 14),
                           ),
                         ),
                     ],

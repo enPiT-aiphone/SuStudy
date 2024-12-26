@@ -23,7 +23,9 @@ class _InformationRegistrationScreenState
   int _userNumber = 0;
   final int _followcount = 0;
   final int _followercount = 0;
-
+  String? _userIdError;
+  Map<String, String?> _errors = {};
+  
 
   // 職業選択肢のリスト
   final List<String> _occupations = [
@@ -69,10 +71,85 @@ class _InformationRegistrationScreenState
     _userId = widget.userId; // 初期値として渡されたユーザーIDをセット
   }
 
+    // ユーザーIDが既に使用されているか確認する非同期関数
+  Future<bool> _isUserIdAvailable(String userId) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .where('user_id', isEqualTo: userId)
+        .get();
+    return snapshot.docs.isEmpty;
+  }
+
   // ユーザー情報をFirebaseに保存するメソッド
   Future<void> _saveUserInfo() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return const Center(
+          child: CircularProgressIndicator(
+            valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+          ),
+        );
+      },
+    );
+
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+
+      final isAvailable = await _isUserIdAvailable(_ModifieduserId);
+      if (!isAvailable) {
+        setState(() {
+          _userIdError = 'このユーザーIDはすでに使われています';
+        });
+        return;
+      }
+      
+      bool hasError = false;
+
+      setState(() {
+        _errors.clear(); // エラーメッセージをリセット
+
+        // 年齢バリデーション
+        if (_age == 0) {
+          _errors['age'] = '年齢を選択してください。';
+          hasError = true;
+        }
+
+        // 職業バリデーション
+        if (_occupation.isEmpty) {
+          _errors['occupation'] = '職業を選択してください。';
+          hasError = true;
+        }
+
+        // サブカテゴリーのバリデーション
+        if (_occupation == '中学生' || _occupation == '高校生') {
+          if (_subOccupation.isEmpty) {
+            _errors['subOccupation'] = '学年を選択してください。';
+            hasError = true;
+          }
+        } else if (_occupation == '大学生') {
+          if (_subOccupation.isEmpty) {
+            _errors['subOccupation'] = '学年を選択してください。';
+            hasError = true;
+          }
+        } else if (_occupation == '大学院生') {
+          if (_subOccupation.isEmpty) {
+            _errors['subOccupation'] = '課程を選択してください。';
+            hasError = true;
+          }
+        } else if (_occupation == '社会人') {
+          if (_subOccupation.isEmpty) {
+            _errors['subOccupation'] = '業界を選択してください。';
+            hasError = true;
+          }
+        }
+      });
+
+      if (hasError) {
+        Navigator.of(context).pop(); 
+        return; // エラーがある場合、保存処理を中断
+      }
 
       try {
         // Firebaseにユーザー情報を保存
@@ -257,7 +334,7 @@ class _InformationRegistrationScreenState
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Color.fromARGB(255, 50, 50, 50),
-                ),
+              ),
             ),
             const SizedBox(height: 20),
               Expanded(
@@ -278,7 +355,10 @@ class _InformationRegistrationScreenState
                     ),
                     // ユーザーIDの編集可能なフィールド
                     TextFormField(
-                      decoration: const InputDecoration(labelText: 'ユーザーID'),
+                      decoration: InputDecoration(
+                        labelText: 'ユーザーID',
+                        errorText: _userIdError,
+                        ),
                       initialValue: _userId,
                       onSaved: (value) {
                         _ModifieduserId = value ?? '';
@@ -287,76 +367,83 @@ class _InformationRegistrationScreenState
                         if (value == null || value.isEmpty) {
                           return 'ユーザーIDを入力してください';
                         }
+                        if (!RegExp(r'^[A-Za-z0-9_]+$').hasMatch(value)) {
+                          return 'ユーザーIDはローマ字(A, a)、アンダーバー(_)、数字(1, 2)のみを使用してください';
+                        }
                         return null;
                       },
                     ),
-              // 年齢の選択ボタン
-              ListTile(
-                title: Text(_age > 0 ? '年齢: $_age 歳' : '年齢を選択'),
-                trailing: const Icon(Icons.keyboard_arrow_down),
-                onTap: _selectAge,
-              ),
-              const Divider(
-                thickness: 1, // 下線の太さ
-                color: Colors.black, // 下線の色
-              ),
-              // 職業の選択ボタン
-              ListTile(
-                      title: Text(
-                          _occupation.isNotEmpty ? '職業: $_occupation' : '職業を選択'),
+                    // 年齢選択
+                    if (_errors['age'] != null)
+                      Text(
+                        _errors['age']!,
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
+                      ),
+                    ListTile(
+                      title: Text(_age > 0 ? '年齢: $_age 歳' : '年齢を選択'),
+                      trailing: const Icon(Icons.keyboard_arrow_down),
+                      onTap: _selectAge,
+                    ),
+                    const Divider(),
+
+                    // 職業選択
+                    if (_errors['occupation'] != null)
+                      Text(
+                        _errors['occupation']!,
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
+                      ),
+                    ListTile(
+                      title: Text(_occupation.isNotEmpty ? '職業: $_occupation' : '職業を選択'),
                       trailing: const Icon(Icons.keyboard_arrow_down),
                       onTap: _selectOccupation,
                     ),
-                    if (_occupation == '中学生' || _occupation == '高校生') ...[
-                      ListTile(
-                        title: Text(_subOccupation.isNotEmpty
-                            ? '学年: $_subOccupation'
-                            : '学年を選択'),
-                        trailing: const Icon(Icons.keyboard_arrow_down),
-                        onTap: () =>
-                            _selectSubOccupation(_juniorHighAndHighSchoolGrades),
+
+                    // サブカテゴリー選択
+                    if (_errors['subOccupation'] != null)
+                      Text(
+                        _errors['subOccupation']!,
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
                       ),
-                    ],
-                    if (_occupation == '大学生') ...[
+                    if (_occupation == '中学生' || _occupation == '高校生')
                       ListTile(
-                        title: Text(_subOccupation.isNotEmpty
-                            ? '学年: $_subOccupation'
-                            : '学年を選択'),
+                        title: Text(
+                            _subOccupation.isNotEmpty ? '学年: $_subOccupation' : '学年を選択'),
                         trailing: const Icon(Icons.keyboard_arrow_down),
-                        onTap: () =>
-                            _selectSubOccupation(_universityGrades),
+                        onTap: () => _selectSubOccupation(_juniorHighAndHighSchoolGrades),
                       ),
-                    ],
-                    if (_occupation == '大学院生') ...[
+                    if (_occupation == '大学生')
                       ListTile(
-                        title: Text(_subOccupation.isNotEmpty
-                            ? '課程: $_subOccupation'
-                            : '課程を選択'),
+                        title: Text(
+                            _subOccupation.isNotEmpty ? '学年: $_subOccupation' : '学年を選択'),
+                        trailing: const Icon(Icons.keyboard_arrow_down),
+                        onTap: () => _selectSubOccupation(_universityGrades),
+                      ),
+                    if (_occupation == '大学院生')
+                      ListTile(
+                        title: Text(
+                            _subOccupation.isNotEmpty ? '課程: $_subOccupation' : '課程を選択'),
                         trailing: const Icon(Icons.keyboard_arrow_down),
                         onTap: () => _selectSubOccupation(_graduateCourses),
                       ),
-                    ],
-                    if (_occupation == '社会人') ...[
+                    if (_occupation == '社会人')
                       ListTile(
-                        title: Text(_subOccupation.isNotEmpty
-                            ? '業界: $_subOccupation'
-                            : '業界を選択'),
+                        title: Text(
+                            _subOccupation.isNotEmpty ? '業界: $_subOccupation' : '業界を選択'),
                         trailing: const Icon(Icons.keyboard_arrow_down),
                         onTap: () => _selectSubOccupation(_jobIndustries),
                       ),
-                    ],
+                    const SizedBox(height: 20),
+                  _buildAuthenticationButton(
+                      context,
+                      '保存',
+                      () async {
+                        await _saveUserInfo(); // ユーザー情報を保存する関数
+                      },
+                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              _buildAuthenticationButton(
-                context,
-                '保存',
-                () async {
-                  await _saveUserInfo(); // ユーザー情報を保存する関数
-                },
-              ),
-              const SizedBox(height: 20),
             ],
           ),
         ),

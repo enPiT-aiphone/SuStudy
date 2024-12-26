@@ -130,7 +130,7 @@ Future<void> _followSubject() async {
         backgroundColor: const Color(0xFF0ABAB5),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),))
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
