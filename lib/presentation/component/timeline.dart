@@ -128,17 +128,21 @@ Future<void> _fetchTimelinePosts({bool isFetchingMore = false}) async {
         });
       }
 
-      setState(() {
-        _timelinePosts.addAll(newPosts);
-        _lastDocument = timelineSnapshot.docs.last; // 最後のドキュメントを更新
-        _isFetchingMore = false;
-        if (!isFetchingMore) _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _timelinePosts.addAll(newPosts);
+          _lastDocument = timelineSnapshot.docs.last;
+          _isFetchingMore = false;
+          if (!isFetchingMore) _isLoading = false;
+        });
+      }
     } else {
-      setState(() {
-        _isFetchingMore = false;
-        if (!isFetchingMore) _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isFetchingMore = false;
+          if (!isFetchingMore) _isLoading = false;
+        });
+      }
     }
   } catch (e) {
     print('タイムラインデータの取得中にエラーが発生しました: $e');

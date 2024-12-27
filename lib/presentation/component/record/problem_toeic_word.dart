@@ -577,6 +577,8 @@ Future<void> _saveRecord(
                     style: const TextStyle(
                       fontSize: 30,
                     ),
+                    softWrap: true,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8), 
                   Text(
@@ -585,6 +587,8 @@ Future<void> _saveRecord(
                       fontSize: 16,
                       color: Colors.grey, 
                     ),
+                    softWrap: true,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -599,6 +603,8 @@ Future<void> _saveRecord(
                 fontWeight: FontWeight.bold,
                 color: _colorAnimation.value,
               ),
+              softWrap: true,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(height: 20),
@@ -703,6 +709,8 @@ Future<void> _saveRecord(
           child: Text(
             option,
             style: TextStyle(fontSize: 18, color: finalBorderColor),
+            softWrap: true,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),
