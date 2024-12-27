@@ -370,7 +370,7 @@ Future<void> _loadUserData() async {
         ]),
         builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),));
           }
 
           final userData = snapshot.data![0] as Map<String, dynamic>;

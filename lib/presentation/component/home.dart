@@ -220,9 +220,9 @@ void _showWelcomeDialog(String userId, {required bool isFirstLogin}) {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton(
-                          onPressed: () async {
-                            Navigator.of(context).pop(); // ダイアログを閉じる
-                            await addDailyRecord(_selectedCategory); // ゴール値を設定
+                          onPressed: () async {// ダイアログを閉じる
+                            await addDailyRecord(_selectedCategory, context); // ゴール値を設定
+                            Navigator.of(context).pop();  
                             _navigateToQuiz(toeicLevel); // クイズ画面に遷移
                           },
                           child: const Text('挑戦する'),
@@ -634,7 +634,7 @@ Widget build(BuildContext context) {
                     backgroundColor: Colors.transparent,
                     elevation: 0,
                   ),
-                  if (!_isProfileVisible && !_isRecordPageVisible && !_isPostCreateVisible && _currentIndex == 0 || _currentIndex == 1)
+                  if (!_isProfileVisible && !_isRecordPageVisible && !_isPostCreateVisible && _currentIndex == 0 || !_isProfileVisible && !_isRecordPageVisible && !_isPostCreateVisible && _currentIndex == 1)
                     _buildCustomTabBar(), // タブバーを表示
                 ],
               ),

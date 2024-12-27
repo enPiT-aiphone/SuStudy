@@ -55,23 +55,36 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
   String? selectedMainCategory;
   String? selectedSubCategory;
   String? selectedScore;
+  Map<String, String?> _errors = {}; // エラーメッセージを管理
 
   Future<void> _saveSelectedSubject() async {
-    if (selectedMainCategory == null) {
-      _showErrorMessage('メインカテゴリーを選択してください');
-      return;
+    bool hasError = false;
+
+    setState(() {
+      _errors.clear(); // エラーをリセット
+
+      if (selectedMainCategory == null) {
+        _errors['mainCategory'] = 'メインカテゴリーを選択してください';
+        hasError = true;
+      }
+
+      if (selectedSubCategory == null &&
+          subCategories.containsKey(selectedMainCategory ?? '')) {
+        _errors['subCategory'] = 'サブカテゴリーを選択してください';
+        hasError = true;
+      }
+
+      if (selectedScore == null &&
+          scoreCategories.containsKey(selectedSubCategory ?? '')) {
+        _errors['scoreCategory'] = 'スコアカテゴリーを選択してください';
+        hasError = true;
+      }
+    });
+
+    if (hasError) {
+      return; // エラーがある場合、保存処理を中断
     }
 
-    if (selectedSubCategory == null && subCategories.containsKey(selectedMainCategory!)) {
-      _showErrorMessage('サブカテゴリーを選択してください');
-      return;
-    }
-
-    if (selectedScore == null &&
-        scoreCategories.containsKey(selectedSubCategory ?? '')) {
-      _showErrorMessage('スコアカテゴリーを選択してください');
-      return;
-    }
 
     try {
       final userDoc = FirebaseFirestore.instance.collection('Users').doc(widget.userId);
@@ -107,11 +120,6 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
     }
   }
 
-  void _showErrorMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
 
   Future<void> _selectScore(String subCategory) async {
     final scores = scoreCategories[subCategory] ?? [];
@@ -197,16 +205,14 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
               padding: const EdgeInsets.all(16.0),
               child: ListView(
                 children: [
-                  const Text(
-                    '勉強するカテゴリーを登録',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromARGB(255, 50, 50, 50),
+                  if (_errors['mainCategory'] != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        _errors['mainCategory']!,
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
+                      ),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
                   ListTile(
                     title: Text(
                       selectedMainCategory ?? 'メインカテゴリーを選択',
@@ -227,6 +233,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
                                     selectedMainCategory = mainCategories[index];
                                     selectedSubCategory = null;
                                     selectedScore = null;
+                                    _errors['mainCategory'] = null; // エラーをリセット
                                   });
                                   Navigator.pop(context);
                                 },
@@ -237,6 +244,14 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
                       );
                     },
                   ),
+                  if (_errors['subCategory'] != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        _errors['subCategory']!,
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
+                      ),
+                    ),
                   if (selectedMainCategory != null &&
                       subCategories.containsKey(selectedMainCategory))
                     ListTile(
@@ -260,6 +275,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
                                     setState(() {
                                       selectedSubCategory = subCategory;
                                       selectedScore = null;
+                                      _errors['subCategory'] = null; // エラーをリセット
                                     });
                                     Navigator.pop(context);
                                   },
@@ -270,6 +286,14 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
                         );
                       },
                     ),
+                  if (_errors['scoreCategory'] != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        _errors['scoreCategory']!,
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
+                      ),
+                    ),
                   if (selectedSubCategory != null &&
                       scoreCategories.containsKey(selectedSubCategory!))
                     ListTile(
@@ -278,7 +302,29 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
                         style: const TextStyle(fontSize: 18),
                       ),
                       trailing: const Icon(Icons.keyboard_arrow_down),
-                      onTap: () => _selectScore(selectedSubCategory!),
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return ListView.builder(
+                              itemCount: scoreCategories[selectedSubCategory]!.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                final score = scoreCategories[selectedSubCategory]![index];
+                                return ListTile(
+                                  title: Text(score),
+                                  onTap: () {
+                                    setState(() {
+                                      selectedScore = score;
+                                      _errors['scoreCategory'] = null; // エラーをリセット
+                                    });
+                                    Navigator.pop(context);
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
                     ),
                 ],
               ),

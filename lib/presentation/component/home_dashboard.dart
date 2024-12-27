@@ -329,7 +329,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
       future: _userDataFuture, // 初期化時に設定したFutureを使用
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator()); // データ取得中のインジケーター
+          return const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),)); // データ取得中のインジケーター
         } else if (snapshot.hasError) {
           return Center(child: Text('データ取得エラー: ${snapshot.error}')); // エラーが発生した場合の表示
         } else {
@@ -340,9 +340,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    // ユーザーの名前を表示
+                  children: [                    // ユーザーの名前を表示
                     Text(
                       "$userNameさん、ナイスログイン！",
                       style: const TextStyle(

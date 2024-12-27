@@ -1,38 +1,52 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 
-Future<void> addDailyRecord(String selectedCategory) async {
+Future<void> addDailyRecord(String selectedCategory, BuildContext context) async {
   try {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Center(
+          child: CircularProgressIndicator(
+            valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+          ),
+        );
+      },
+    );
+
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
       print('ユーザーがログインしていません');
       return;
     }
 
-    // Firestore ドキュメントパスの作成
     final today = DateTime.now();
-    final formattedDate = DateFormat('yyyy-MM-dd').format(today); // yyyy-MM-dd形式の日付
-    final recordCollectionRef = FirebaseFirestore.instance
-        .collection('Users')
-        .doc(userId)
-        .collection('record');
-
-    final recordDocRef = recordCollectionRef.doc(formattedDate); // 今日の日付のドキュメント
+    final formattedDate = DateFormat('yyyy-MM-dd').format(today);
+    final userDocRef = FirebaseFirestore.instance.collection('Users').doc(userId);
+    final recordCollectionRef = userDocRef.collection('record');
+    final recordDocRef = recordCollectionRef.doc(formattedDate);
 
     // 今日より前の直近のドキュメントを取得
     QuerySnapshot snapshot = await recordCollectionRef
-        .orderBy(FieldPath.documentId, descending: true) // 日付順で降順
-        .where(FieldPath.documentId, isLessThan: formattedDate) // 今日より前
-        .limit(1) // 直近の1件
+        .orderBy(FieldPath.documentId, descending: true)
+        .where(FieldPath.documentId, isLessThan: formattedDate)
+        .limit(1)
         .get();
 
     Map<String, dynamic> goalFieldsToCopy = {};
-    List<Map<String, dynamic>> subCollectionData = [];
+    Map<String, List<Map<String, dynamic>>> subCollectionData = {};
+
+    // `following_subjects` フィールドを取得
+    final userSnapshot = await userDocRef.get();
+    final followingSubjects = userSnapshot.data()?['following_subjects'] as List<dynamic>? ?? [];
 
     if (snapshot.docs.isNotEmpty) {
       final latestDoc = snapshot.docs.first;
-      final latestData = latestDoc.data() as Map<String, dynamic>?; // 型を明示的にキャスト
+      final latestData = latestDoc.data() as Map<String, dynamic>?;
+
       if (latestData != null) {
         // '_goal' で終わるキーを全て抽出
         latestData.forEach((key, value) {
@@ -42,16 +56,58 @@ Future<void> addDailyRecord(String selectedCategory) async {
         });
       }
 
-      // サブコレクションのデータを取得
-      final subCollectionSnapshot = await latestDoc.reference.collection(selectedCategory).get();
-      for (var subDoc in subCollectionSnapshot.docs) {
-        final subDocData = subDoc.data();
-        if (subDocData.containsKey('tierProgress_all')) {
-          subCollectionData.add({
-            'subCollectionName': selectedCategory,
-            'docName': subDoc.id,
-            'tierProgress_all': subDocData['tierProgress_all'],
-          });
+      // following_subjects のサブコレクションのみを取得
+      for (var subCollectionName in followingSubjects) {
+        final subCollectionSnapshot = await latestDoc.reference.collection(subCollectionName).get();
+
+        subCollectionData[subCollectionName] = [];
+
+        for (var doc in subCollectionSnapshot.docs) {
+          final data = {'docName': doc.id, ...doc.data()};
+
+          // デバッグ: サブコレクションが「TOEICX点」で Word ドキュメントが存在する場合
+          if (subCollectionName.startsWith('TOEIC') && doc.id == 'Word') {
+
+            final xMatch = RegExp(r'TOEIC(\d+)点').firstMatch(subCollectionName);
+            if (xMatch != null) {
+              final xValue = xMatch.group(1);
+
+              final englishSkillsRef = FirebaseFirestore.instance
+                  .collection('English_Skills')
+                  .doc('TOEIC')
+                  .collection('up_to_$xValue')
+                  .doc('Words')
+                  .collection('Word');
+
+              final englishSkillsDocs = await englishSkillsRef.get();
+
+              for (var englishDoc in englishSkillsDocs.docs) {
+                final collectionName = englishDoc.id;
+
+                // 「TOEICX点」サブコレクションの Word ドキュメント内に一致するコレクションが存在する場合
+                final toeicSubDocRef = latestDoc.reference.collection(subCollectionName).doc('Word');
+                final wordSubDocRef = toeicSubDocRef.collection(collectionName);
+
+                final wordSubCollectionDocs = await wordSubDocRef.get();
+
+                if (wordSubCollectionDocs.docs.isNotEmpty) {
+
+                  // サブコレクションを複製
+                  for (var wordSubDoc in wordSubCollectionDocs.docs) {
+                    final targetDocRef = recordDocRef
+                        .collection('TOEIC${xValue}点')
+                        .doc('Word')
+                        .collection(collectionName)
+                        .doc(wordSubDoc.id);
+
+                    await targetDocRef.set(wordSubDoc.data(), SetOptions(merge: true));
+                  }
+                }
+              }
+            }
+          }
+
+          subCollectionData[subCollectionName]?.add(data);
         }
       }
     }
@@ -60,42 +116,32 @@ Future<void> addDailyRecord(String selectedCategory) async {
     final todaySnapshot = await recordDocRef.get();
 
     if (todaySnapshot.exists) {
-      // 既存データがある場合、前日のゴールフィールドが存在する場合のみ更新
       if (goalFieldsToCopy.isNotEmpty) {
         await recordDocRef.update(goalFieldsToCopy);
       }
 
-      // サブコレクションにデータを追加
-      for (var subData in subCollectionData) {
-        final subDocRef = recordDocRef
-            .collection(subData['subCollectionName'])
-            .doc(subData['docName']);
-
-        await subDocRef.set({
-          'tierProgress_all': subData['tierProgress_all'],
-        }, SetOptions(merge: true));
+      for (var entry in subCollectionData.entries) {
+        for (var subData in entry.value) {
+          final subDocRef = recordDocRef.collection(entry.key).doc(subData['docName']);
+          await subDocRef.set(subData, SetOptions(merge: true));
+        }
       }
 
       print('今日のデイリーレコードが更新されました: $formattedDate');
     } else {
-      // データが存在しない場合、新規作成し、前日のゴールフィールドをコピー
       final dataToSet = {
-        'createdAt': FieldValue.serverTimestamp(), // サーバータイムスタンプ
-        't_solved_count': 0, // 初期値として 0 を設定
-        ...goalFieldsToCopy, // ゴールフィールドを追加
+        'createdAt': FieldValue.serverTimestamp(),
+        't_solved_count': 0,
+        ...goalFieldsToCopy,
       };
 
       await recordDocRef.set(dataToSet);
 
-      // サブコレクションにデータを追加
-      for (var subData in subCollectionData) {
-        final subDocRef = recordDocRef
-            .collection(subData['subCollectionName'])
-            .doc(subData['docName']);
-
-        await subDocRef.set({
-          'tierProgress_all': subData['tierProgress_all'],
-        }, SetOptions(merge: true));
+      for (var entry in subCollectionData.entries) {
+        for (var subData in entry.value) {
+          final subDocRef = recordDocRef.collection(entry.key).doc(subData['docName']);
+          await subDocRef.set(subData, SetOptions(merge: true));
+        }
       }
 
       print('新しいデイリーレコードが作成されました: $formattedDate');

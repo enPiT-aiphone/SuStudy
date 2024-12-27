@@ -22,6 +22,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   bool _isLoading = false;
   bool _isButtonEnabled = false;
+  String? _userIdError;
 
   // 職業とサブ職業の選択肢
   final List<String> _occupations = [
@@ -98,6 +99,50 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _bioController.text != _initialData['bio'] ||
           _occupation != _initialData['occupation'] ||
           _subOccupation != _initialData['sub_occupation'];
+    });
+  }
+
+  // ユーザーIDのバリデーション
+  Future<String?> _validateUserIdAsync(String? value) async {
+    if (value == null || value.isEmpty) {
+      return 'ユーザーIDを入力してください';
+    }
+
+    if (!RegExp(r'^[A-Za-z0-9_]+$').hasMatch(value)) {
+      return 'ユーザーIDはローマ字(A, a)、アンダーバー(_)、数字(1, 2)のみを使用してください';
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .where('user_id', isEqualTo: value)
+        .get();
+
+    if (snapshot.docs.isNotEmpty && snapshot.docs.first.id != user.uid) {
+      return 'このユーザーIDはすでに使われています';
+    }
+
+    return null;
+  }
+
+  String? _validateUserId(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'ユーザーIDを入力してください';
+    }
+
+    if (!RegExp(r'^[A-Za-z0-9_]+$').hasMatch(value)) {
+      return 'ユーザーIDはローマ字(A, a)、アンダーバー(_)、数字(1, 2)のみを使用してください';
+    }
+
+    return null;
+  }
+
+  Future<void> _checkUserIdAsync(String? value) async {
+    final userIdError = await _validateUserIdAsync(value);
+    setState(() {
+      _userIdError = userIdError;
     });
   }
 
@@ -212,7 +257,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         actions: [_buildSaveButton()],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Form(
@@ -231,8 +276,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    _buildTextField('名前', _nameController),
-                    _buildTextField('ユーザーID', _userIdController),
+                    _buildTextField(
+                      '名前',
+                      _nameController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'ユーザー名を入力してください';
+                        }
+                        return null;
+                      },
+                    ),
+                    _buildTextField(
+                      'ユーザーID',
+                      _userIdController,
+                      validator: (value) => _validateUserId(value),
+                      onChanged: (value) async => await _checkUserIdAsync(value),
+                    ),
                     _buildTextField('自己紹介', _bioController, maxLines: 3),
                     _buildOccupationSelection(),
                     _buildSubOccupationSelection(),
@@ -244,15 +303,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _buildTextField(String label, TextEditingController controller,
-      {int maxLines = 1}) {
+      {int maxLines = 1, String? Function(String?)? validator, void Function(String)? onChanged}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextFormField(
         controller: controller,
         maxLines: maxLines,
+        validator: validator,
+        onChanged: onChanged,
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
+          errorText: label == 'ユーザーID' ? _userIdError : null,
         ),
       ),
     );

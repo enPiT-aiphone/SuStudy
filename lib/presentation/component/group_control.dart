@@ -114,7 +114,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             ),
             const SizedBox(height: 16),
             _isCreating
-                ? const CircularProgressIndicator()
+                ? const CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),)
                 : ElevatedButton(
                     onPressed: _createGroup,
                     child: const Text('グループを作成'),

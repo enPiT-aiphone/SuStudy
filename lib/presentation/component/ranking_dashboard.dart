@@ -90,7 +90,7 @@ class _RankingScreenState extends State<RankingScreen> {
         final loginHistory = data['login_history'] ?? [];
         final todayLogins = loginHistory
             .where((timestamp) =>
-                (timestamp as Timestamp).toDate().isAfter(todayStart.subtract(const Duration(hours: 24))))
+                (timestamp as Timestamp).toDate().isAfter(todayStart))
             .toList();
 
         if (todayLogins.isNotEmpty) {
@@ -270,7 +270,7 @@ class _RankingScreenState extends State<RankingScreen> {
         future: _rankingDataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),));
           } else if (snapshot.hasError) {
             return Center(child: Text('データ取得エラー: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {

@@ -145,7 +145,7 @@ class _QuizReviewScreenState extends State<QuizReviewScreen> {
         title: const Text('間違えた問題の復習'),
       ),
       body: incorrectQuestions.isEmpty
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),))
           : ListView.builder(
               itemCount: incorrectQuestions.length,
               itemBuilder: (context, index) {
