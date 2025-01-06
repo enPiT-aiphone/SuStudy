@@ -63,95 +63,89 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   // Timelineコレクションから投稿を取得
-// Timelineコレクションから投稿を取得
-Future<void> _fetchTimelinePosts({bool isFetchingMore = false}) async {
-  if (_isFetchingMore) return;
+  Future<void> _fetchTimelinePosts({bool isFetchingMore = false}) async {
+    if (_isFetchingMore) return;
+    setState(() {
+      _isFetchingMore = true;
+      if (!isFetchingMore) _isLoading = true;
+    });
 
-  setState(() {
-    _isFetchingMore = true;
-    if (!isFetchingMore) _isLoading = true;
-  });
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('Timeline')
+          .orderBy('createdAt', descending: true);
 
-  try {
-    // クエリ作成
-    Query query = FirebaseFirestore.instance
-        .collection('Timeline')
-        .orderBy('createdAt', descending: true)
-        .limit(_fetchLimit);
-
-    if (_lastDocument != null && isFetchingMore) {
-      query = query.startAfterDocument(_lastDocument!);
-    }
-
-    // クエリを実行
-    final timelineSnapshot = await query.get();
-
-    if (timelineSnapshot.docs.isNotEmpty) {
-      final List<Map<String, dynamic>> newPosts = [];
-      final List<String> userIds = timelineSnapshot.docs
-          .map((doc) => (doc.data() as Map<String, dynamic>)['auth_uid'] as String)
-          .toList();
-
-      // ユーザー情報を一括で取得
-      final usersSnapshot = await FirebaseFirestore.instance
-          .collection('Users')
-          .where('auth_uid', whereIn: userIds)
-          .get();
-
-      final Map<String, Map<String, dynamic>> usersMap = {
-        for (var userDoc in usersSnapshot.docs)
-          userDoc.data()['auth_uid']: userDoc.data()
-      };
-
-      for (var postDoc in timelineSnapshot.docs) {
-        final postData = postDoc.data() as Map<String, dynamic>;
-
-        // フォロー中タブの場合、フォローしていないユーザーの投稿を除外
-        if (widget.selectedTab == 'フォロー中' &&
-            !_followingUserIds.contains(postData['auth_uid'])) {
-          continue;
-        }
-
-        // ユーザー情報を取得
-        final userData = usersMap[postData['auth_uid']];
-        if (userData == null) continue;
-
-        newPosts.add({
-          'post_id': postDoc.id,
-          'description': postData['description'],
-          'user_name': userData['user_name'],
-          'auth_uid': userData['auth_uid'],
-          'user_id': userData['user_id'],
-          'createdAt': postData['createdAt'],
-          'like_count': postData['like_count'],
-          'is_liked': await _checkIfLiked(postDoc.id),
-        });
+      if (widget.selectedTab == 'フォロー中' && _followingUserIds.isNotEmpty) {
+        query = query.where('auth_uid', whereIn: _followingUserIds);
       }
 
-      if (mounted) {
+      query = query.limit(_fetchLimit);
+
+      if (_lastDocument != null && isFetchingMore) {
+        query = query.startAfterDocument(_lastDocument!);
+      }
+
+      final timelineSnapshot = await query.get();
+
+      if (timelineSnapshot.docs.isNotEmpty) {
+        final List<Map<String, dynamic>> newPosts = [];
+        final List<String> userIds = timelineSnapshot.docs
+            .map((doc) => (doc.data() as Map<String, dynamic>)['auth_uid'] as String)
+            .toList();
+
+        final usersSnapshot = await FirebaseFirestore.instance
+            .collection('Users')
+            .where('auth_uid', whereIn: userIds)
+            .get();
+
+        final Map<String, Map<String, dynamic>> usersMap = {
+          for (var userDoc in usersSnapshot.docs)
+            userDoc.data()['auth_uid']: userDoc.data()
+        };
+
+        for (var postDoc in timelineSnapshot.docs) {
+          final postData = postDoc.data() as Map<String, dynamic>;
+
+          if (widget.selectedTab == 'フォロー中' &&
+              !_followingUserIds.contains(postData['auth_uid'])) {
+            continue;
+          }
+
+          final userData = usersMap[postData['auth_uid']];
+          if (userData == null) continue;
+
+          newPosts.add({
+            'post_id': postDoc.id,
+            'description': postData['description'],
+            'user_name': userData['user_name'],
+            'auth_uid': userData['auth_uid'],
+            'user_id': userData['user_id'],
+            'createdAt': postData['createdAt'],
+            'like_count': postData['like_count'],
+            'is_liked': await _checkIfLiked(postDoc.id),
+          });
+        }
+
         setState(() {
           _timelinePosts.addAll(newPosts);
           _lastDocument = timelineSnapshot.docs.last;
           _isFetchingMore = false;
           if (!isFetchingMore) _isLoading = false;
         });
-      }
-    } else {
-      if (mounted) {
+      } else {
         setState(() {
           _isFetchingMore = false;
           if (!isFetchingMore) _isLoading = false;
         });
       }
+    } catch (e) {
+      print('タイムラインデータの取得中にエラーが発生しました: $e');
+      setState(() {
+        _isFetchingMore = false;
+        _isLoading = false;
+      });
     }
-  } catch (e) {
-    print('タイムラインデータの取得中にエラーが発生しました: $e');
-    setState(() {
-      _isFetchingMore = false;
-      _isLoading = false;
-    });
   }
-}
 
   // 投稿がいいねされているか確認
   Future<bool> _checkIfLiked(String postId) async {
