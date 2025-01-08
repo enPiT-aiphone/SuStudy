@@ -64,54 +64,36 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   // Timelineコレクションから投稿を取得
-// Timelineコレクションから投稿を取得
   Future<void> _fetchTimelinePosts({bool isFetchingMore = false}) async {
     if (_isFetchingMore) return;
-
     setState(() {
       _isFetchingMore = true;
       if (!isFetchingMore) _isLoading = true;
     });
 
     try {
-        // グループのユーザーIDを取得
-        // Groups コレクションをクエリ
-      final groupQuery = await FirebaseFirestore.instance
-          .collection('Groups')
-          .where('groupName', isEqualTo: _myGroup) // groupName が一致するものを取得
-          .get();
-
-      for (final groupDoc in groupQuery.docs) {
-        // 各グループの members_id サブコレクションを取得
-        final membersSnapshot = await groupDoc.reference.collection('members_id').get();
-
-        // メンバーIDをリストに追加
-        _groupMemberIds.addAll(membersSnapshot.docs
-            .map((doc) => doc.id)
-            .toList());
-      }
-
-      // クエリ作成
       Query query = FirebaseFirestore.instance
           .collection('Timeline')
-          .orderBy('createdAt', descending: true)
-          .limit(_fetchLimit);
+          .orderBy('createdAt', descending: true);
+
+      if (widget.selectedTab == 'フォロー中' && _followingUserIds.isNotEmpty) {
+        query = query.where('auth_uid', whereIn: _followingUserIds);
+      }
+
+      query = query.limit(_fetchLimit);
 
       if (_lastDocument != null && isFetchingMore) {
         query = query.startAfterDocument(_lastDocument!);
       }
 
-      // クエリを実行
       final timelineSnapshot = await query.get();
 
       if (timelineSnapshot.docs.isNotEmpty) {
         final List<Map<String, dynamic>> newPosts = [];
         final List<String> userIds = timelineSnapshot.docs
-            .map((doc) =>
-                (doc.data() as Map<String, dynamic>)['auth_uid'] as String)
+            .map((doc) => (doc.data() as Map<String, dynamic>)['auth_uid'] as String)
             .toList();
 
-        // ユーザー情報を一括で取得
         final usersSnapshot = await FirebaseFirestore.instance
             .collection('Users')
             .where('auth_uid', whereIn: userIds)
@@ -125,16 +107,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
         for (var postDoc in timelineSnapshot.docs) {
           final postData = postDoc.data() as Map<String, dynamic>;
 
-          // フォロー中タブの場合、フォローしていないユーザーの投稿を除外
           if (widget.selectedTab == 'フォロー中' &&
               !_followingUserIds.contains(postData['auth_uid'])) {
             continue;
-          } else if (widget.selectedTab == 'グループ' &&
-              !_groupMemberIds.contains(postData['auth_uid'])) {
-            continue;
           }
 
-          // ユーザー情報を取得
           final userData = usersMap[postData['auth_uid']];
           if (userData == null) continue;
 
@@ -150,21 +127,17 @@ class _TimelineScreenState extends State<TimelineScreen> {
           });
         }
 
-        if (mounted) {
-          setState(() {
-            _timelinePosts.addAll(newPosts);
-            _lastDocument = timelineSnapshot.docs.last;
-            _isFetchingMore = false;
-            if (!isFetchingMore) _isLoading = false;
-          });
-        }
+        setState(() {
+          _timelinePosts.addAll(newPosts);
+          _lastDocument = timelineSnapshot.docs.last;
+          _isFetchingMore = false;
+          if (!isFetchingMore) _isLoading = false;
+        });
       } else {
-        if (mounted) {
-          setState(() {
-            _isFetchingMore = false;
-            if (!isFetchingMore) _isLoading = false;
-          });
-        }
+        setState(() {
+          _isFetchingMore = false;
+          if (!isFetchingMore) _isLoading = false;
+        });
       }
     } catch (e) {
       print('タイムラインデータの取得中にエラーが発生しました: $e');
