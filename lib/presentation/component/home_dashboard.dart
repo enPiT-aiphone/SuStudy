@@ -125,19 +125,7 @@ Future<void> fetchTierProgress() async {
     }
 
     final userId = currentUser.uid;
-
-
-
-
-
-
     final category = widget.selectedCategory == '全体' ? 'TOEIC500点' : widget.selectedCategory;
-
-
-
-
-
-
 
     // ユーザードキュメントを取得
     final userDoc = await FirebaseFirestore.instance
@@ -179,17 +167,7 @@ Future<void> fetchTierProgress() async {
         .doc(userId)
         .collection('record')
         .doc(todayDate)
-
-
-
-        //.collection(widget.selectedCategory) // 選択されたカテゴリを使用
         .collection(category) // 選択されたカテゴリを使用
-
-
-
-
-
-
         .doc('Word');
         
     final todayWordsDocSnapshot = await todayWordsDocRef.get();
@@ -203,21 +181,7 @@ Future<void> fetchTierProgress() async {
         .doc(todayDate);
 
     final todayWordsGoalDocSnapshot = await todayWordsGoalDocRef.get();
-
-
-
-
-
-
-
     final tierProgressTodayGoal = todayWordsGoalDocSnapshot.data()?['${category}_goal'] ?? 0;
-
-    //final tierProgressTodayGoal = todayWordsGoalDocSnapshot.data()?['${widget.selectedCategory}_goal'] ?? 0;
-
-
-
-
-
 
 
     // tierProgress_all を単語数で割って計算
@@ -617,6 +581,9 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
               setState(() {
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
+
+                // 選択された日付の進捗を計算
+                _calculateProgressForSelectedDay(); // 進捗を計算するメソッドを呼び出す
               });
             },
             calendarBuilders: CalendarBuilders(
@@ -694,5 +661,110 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
         ),
       ],
     );
+  }
+
+
+
+  // 選択された日付に基づいて達成度を計算するメソッドを実装
+  void _calculateProgressForSelectedDay() async {
+    if (_selectedDay == null) return;
+
+    final todayDate = DateFormat('yyyy-MM-dd').format(_selectedDay!);
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      print('ユーザーがログインしていません');
+      return;
+    }
+
+    final userId = currentUser.uid;
+    final category = widget.selectedCategory == '全体' ? 'TOEIC500点' : widget.selectedCategory;
+
+    try {
+      final todayWordsDocRef = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(userId)
+          .collection('record')
+          .doc(todayDate)
+          .collection(category) // 選択されたカテゴリを使用
+          .doc('Word');
+
+      final todayWordsDocSnapshot = await todayWordsDocRef.get();
+
+      final todayWordsGoalDocRef = FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .collection('record')
+        .doc(todayDate);
+
+      double normalizedTierProgressAll;
+      double normalizedTierProgress;
+
+      if (todayWordsDocSnapshot.exists) {
+        final tierProgressToday = todayWordsDocSnapshot.data()?['tierProgress_today'] ?? 0;
+        final tierProgressAll = todayWordsDocSnapshot.data()?['tierProgress_all'] ?? 0;
+        final todayWordsGoalDocSnapshot = await todayWordsGoalDocRef.get();
+        final tierProgressTodayGoal = todayWordsGoalDocSnapshot.data()?['${category}_goal'] ?? 0;
+        // tierProgress_all を単語数で割って計算
+        normalizedTierProgressAll = tierProgressAll / wordCount;
+        normalizedTierProgress = tierProgressToday / (tierProgressTodayGoal* 2); // 目標を考慮
+      } else {
+        // 今日のデータが存在しない場合、直近のデータを取得
+        print("選択されていない場合");
+         final previousDocSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(userId)
+          .collection('record')
+          .where(FieldPath.documentId, isLessThan: todayDate) // 今日より前の日付を取得
+          .orderBy(FieldPath.documentId, descending: true) // 降順でソート
+          .limit(1) // 直近の1件を取得
+          .get();
+
+          
+      if (previousDocSnapshot.docs.isNotEmpty) {
+        final previousDocId = previousDocSnapshot.docs.first.id; // 直近のドキュメントIDを取得
+
+        // 直近の日付のコレクションを取得
+        final previousWordsDocRef = FirebaseFirestore.instance
+            .collection('Users')
+            .doc(userId)
+            .collection('record')
+            .doc(previousDocId) // 直近の日付のドキュメントを指定
+            .collection(category) // 選択されたカテゴリを使用
+            .doc('Word');
+          
+        final previousWordsDocSnapshot = await previousWordsDocRef.get();
+
+        normalizedTierProgressAll = previousWordsDocSnapshot.data()?['tierProgress_all'] / wordCount;
+
+      } else {
+        normalizedTierProgressAll = 0; // 直近のデータもない場合は0
+      }
+      normalizedTierProgress = 0; // 今日の進捗は0
+      }
+
+      setState(() {
+        // 目標達成度のアニメーション更新
+        _progressAllAnimation = Tween<double>(
+          begin: 0,
+          end: normalizedTierProgressAll.toDouble(),
+        ).animate(
+          CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+        );
+
+        // 今日の達成度のアニメーション更新
+        _progressAnimation = Tween<double>(
+          begin: 0,
+          end: normalizedTierProgress.toDouble(),
+        ).animate(
+          CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+        );
+      });
+      _controller.forward(from: 0); // アニメーションを再生
+
+      print('選択された日の目標への達成度: $normalizedTierProgressAll'); // デバッグ用ログ
+    } catch (e) {
+      print('選択された日のデータ取得エラー: $e');
+    }
   }
 }
