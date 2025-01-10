@@ -11,7 +11,7 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
       builder: (context) {
         return Center(
           child: CircularProgressIndicator(
-            valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
           ),
         );
       },
@@ -54,6 +54,12 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
             goalFieldsToCopy[key] = value;
           }
         });
+        // 't_solved_count_' で始まるキーを全て抽出
+        latestData.forEach((key, value) {
+          if (key.startsWith('t_solved_count_')) {
+            goalFieldsToCopy[key] = value;
+          }
+        });
       }
 
       // following_subjects のサブコレクションのみを取得
@@ -65,9 +71,11 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
         for (var doc in subCollectionSnapshot.docs) {
           final data = {'docName': doc.id, ...doc.data()};
 
+          // tierProgress_today を強制的に 0 に初期化
+          data['tierProgress_today'] = 0;
+
           // デバッグ: サブコレクションが「TOEICX点」で Word ドキュメントが存在する場合
           if (subCollectionName.startsWith('TOEIC') && doc.id == 'Word') {
-
             final xMatch = RegExp(r'TOEIC(\d+)点').firstMatch(subCollectionName);
             if (xMatch != null) {
               final xValue = xMatch.group(1);
@@ -91,7 +99,6 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
                 final wordSubCollectionDocs = await wordSubDocRef.get();
 
                 if (wordSubCollectionDocs.docs.isNotEmpty) {
-
                   // サブコレクションを複製
                   for (var wordSubDoc in wordSubCollectionDocs.docs) {
                     final targetDocRef = recordDocRef
@@ -132,6 +139,7 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
       final dataToSet = {
         'createdAt': FieldValue.serverTimestamp(),
         't_solved_count': 0,
+        't_solved_count_all': 0,
         ...goalFieldsToCopy,
       };
 
