@@ -366,7 +366,7 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ResultPage(
+              builder: (context) => ResultPage_Word(
                 selectedAnswers: selectedAnswers,
                 isCorrectAnswers: isCorrectAnswers,
                 wordDetails: questions,
@@ -546,7 +546,7 @@ class _TOEFLWordQuizState extends State<TOEFLWordQuiz> with SingleTickerProvider
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ResultPage(
+                  builder: (context) => ResultPage_Word(
                     selectedAnswers: selectedAnswers,
                     isCorrectAnswers: isCorrectAnswers,
                     wordDetails: questions,

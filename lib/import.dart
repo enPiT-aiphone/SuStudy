@@ -28,5 +28,6 @@ export 'presentation/component/authentication/sign_in.dart';
 export 'presentation/component/authentication/login_history.dart';
 export 'presentation/component/authentication/information_registration.dart';
 export 'presentation/component/record/record.dart';
-export 'presentation/component/record/result_toeic_toefl.dart';
+export 'presentation/component/record/result_word_toeic_toefl.dart';
+export 'presentation/component/record/result_short_sentence_toeic_toefl.dart';
 
