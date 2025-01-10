@@ -322,12 +322,15 @@ Future<void> _updateTierProgress(
 
     int tierProgress = 0;
     int tierProgressAll = 0;
+    int tSolvedCount = 0;
 
     // 現在の `tierProgress_all` を取得
     final recordSnapshot = await recordRef.get();
+    final dateSnapshot = await dateRef.get();
     if (recordSnapshot.exists) {
       tierProgress = recordSnapshot.data()?['tierProgress_today'] ?? 0;
       tierProgressAll = recordSnapshot.data()?['tierProgress_all'] ?? 0;
+      tSolvedCount = dateSnapshot.data()?['t_solved_count'] ?? 0;
     }
 
     // Attempts サブコレクションから最新の試行データを取得
@@ -340,14 +343,15 @@ Future<void> _updateTierProgress(
     if (attemptsSnapshot.docs.isEmpty) {
       if (isCorrect) {
         tierProgress += 1;
+        tSolvedCount += 1;;
         await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
-        await dateRef.set({'t_solved_count': tierProgress}, SetOptions(merge: true));
+        await dateRef.set({'t_solved_count': tSolvedCount}, SetOptions(merge: true));
         tierProgressAll += 1;
         await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
         print('初めての試行: 正解 +1');
       } else {
         await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
-        await dateRef.set({'t_solved_count': tierProgress}, SetOptions(merge: true));
+        await dateRef.set({'t_solved_count': tSolvedCount}, SetOptions(merge: true));
         await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
         print('初めての試行: 不正解のためそのまま');
       }
@@ -369,11 +373,15 @@ Future<void> _updateTierProgress(
       // 直近間違えていて、今回正解した場合
       tierProgress += 1;
       tierProgressAll += 1;
+      tSolvedCount += 1;
       print('直近間違えていて、今回正解: +1');
     } else if (latestIsCorrect && !isCorrect) {
       // 直近正解していて、今回間違えた場合
       tierProgress -= 1;
       tierProgressAll -= 1;
+      tSolvedCount -= 1;
+      if (tierProgress < 0) tierProgress = 0;
+      if (tSolvedCount < 0) tSolvedCount = 0;
       print('直近正解していて、今回間違え: -1');
     } else if (latestIsCorrect && isCorrect) {
       print('直近正解していて、今回も正解: そのまま');
@@ -382,12 +390,14 @@ Future<void> _updateTierProgress(
     }
 
     // tierProgress_all を Firestore に保存
-    await dateRef.update({'t_solved_count': tierProgress});
+    await dateRef.update({'t_solved_count': tSolvedCount});
     await recordRef.update({'tierProgress_today': tierProgress});
     await recordRef.update({'tierProgress_all': tierProgressAll});
+    print('date ドキュメントの t_solved_count が更新されました: $tSolvedCount');
     print('Words ドキュメントの tierProgress_today が更新されました: $tierProgress');
     print('Words ドキュメントの tierProgress_all が更新されました: $tierProgressAll');
   } catch (e) {
+    print('t_solved_count 更新に失敗しました: $e');
     print('tierProgress_today 更新に失敗しました: $e');
     print('tierProgress_all 更新に失敗しました: $e');
   }

@@ -54,6 +54,12 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
             goalFieldsToCopy[key] = value;
           }
         });
+        // 't_solved_count_' で始まるキーを全て抽出
+        latestData.forEach((key, value) {
+          if (key.startsWith('t_solved_count_')) {
+            goalFieldsToCopy[key] = value;
+          }
+        });
       }
 
       // following_subjects のサブコレクションのみを取得
@@ -107,6 +113,9 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
             }
           }
 
+          // tierProgress_today を 0 に初期化
+          final targetWordDocRef = recordDocRef.collection(subCollectionName).doc('Word');
+          await targetWordDocRef.set({'tierProgress_today': 0}, SetOptions(merge: true));
           subCollectionData[subCollectionName]?.add(data);
         }
       }
@@ -132,6 +141,7 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
       final dataToSet = {
         'createdAt': FieldValue.serverTimestamp(),
         't_solved_count': 0,
+        't_solved_count_all': 0,
         ...goalFieldsToCopy,
       };
 

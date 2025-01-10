@@ -374,13 +374,16 @@ class _SubjectDetailsScreenState extends State<SubjectDetailsScreen> {
         await subCollectionRef.set({
           'timestamp': FieldValue.serverTimestamp(),
           'tierProgress_today': 0,
+          'tierProgress_all': 0,
         });
       }
 
       // t_solved_count_教科名 だったのを t_solved_count_レベル名 にする場合は下記変更
       // ここでは t_solved_count_${levelName} に書きます
-      await recordDocRef.set(
-        {'t_solved_count_${levelName}': 0},
+      await recordDocRef.set({
+        't_solved_count_${levelName}': 0,
+        
+        },
         SetOptions(merge: true),
       );
 
@@ -468,7 +471,7 @@ class _SubjectDetailsScreenState extends State<SubjectDetailsScreen> {
   // ======== 通常教科用のフォローボタン（教科名ボタンの「すぐ右下」に配置） ========
   Widget _buildNormalSubjectFollowButton() {
     final isFollowed = _isFollowedForNormal;
-    final label = isFollowed ? 'フォロー解除' : 'フォロー';
+    final label = isFollowed ? 'フォロー中' : 'フォロー';
     final color = isFollowed ? Colors.grey : const Color(0xFF0ABAB5);
 
     return InkWell(
