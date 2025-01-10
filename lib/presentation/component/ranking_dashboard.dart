@@ -1,10 +1,11 @@
-import '/import.dart'; // アプリ全体で使用するインポートファイル
-import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
-import 'package:cloud_firestore/cloud_firestore.dart'; // Firestoreをインポート
-import 'package:flutter/material.dart'; // Flutterウィジェットをインポート
-import 'search/user_profile_screen.dart';
+import '/import.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart'; // カスタムフォント
 import 'package:intl/intl.dart';
-
+import 'package:shimmer/shimmer.dart'; // ローディングアニメーション
+import 'search/user_profile_screen.dart';
 
 class RankingScreen extends StatefulWidget {
   final String selectedTab;
@@ -262,19 +263,43 @@ class _RankingScreenState extends State<RankingScreen> {
 
 @override
   Widget build(BuildContext context) {
+    final themeColor = const Color(0xFF0ABAB5);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ランキング'),
-      ),
+      backgroundColor: Colors.white,
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _rankingDataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),));
+            return Center(
+              child: Shimmer.fromColors(
+                baseColor: Colors.grey[700]!,
+                highlightColor: Colors.grey[500]!,
+                child: Column(
+                  children: List.generate(5, (index) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Container(
+                        height: 80,
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[800],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            );
           } else if (snapshot.hasError) {
             return Center(child: Text('データ取得エラー: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('ランキングデータがありません'));
+            return const Center(
+              child: Text(
+                'ランキングデータがありません',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
           }
 
           final rankingData = snapshot.data!;
@@ -283,43 +308,63 @@ class _RankingScreenState extends State<RankingScreen> {
             children: [
               if (_userRank != -1)
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    'あなたの順位: $_userRank 位',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Card(
+                    color: themeColor.withOpacity(0.8),
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(Icons.star, color: Colors.white),
+                      title: Text(
+                        'あなたの順位: $_userRank 位',
+                        style: GoogleFonts.roboto(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               Expanded(
                 child: ListView.builder(
-                  itemCount: rankingData.length,
-                  itemBuilder: (context, index) {
-                    final user = rankingData[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        child: Text('${user['rank']}'),
-                      ),
-                      title: Text(user['userName']),
-                      trailing: Text(
-                        '${user['tSolvedCount']} 問',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      onTap: () {
-                        // プロフィール画面に遷移
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => UserProfileScreen(
-                              userId: user['auth_uid'], // 選択したユーザーのauth_uidを渡す
-                              onBack: () {
-                                Navigator.pop(context); // ランキング画面に戻る
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+  itemCount: rankingData.length,
+  itemBuilder: (context, index) {
+    final user = rankingData[index];
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: _getRankColor(user['rank']),
+        child: Text(
+          '${user['rank']}',
+          style: TextStyle(
+            color:  Colors.white, // 視認性のために色変更
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      title: Text(user['userName']),
+      trailing: Text(
+        '${user['tSolvedCount']} 問',
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => UserProfileScreen(
+              userId: user['auth_uid'],
+              onBack: () {
+                Navigator.pop(context);
+              },
+            ),
+          ),
+        );
+      },
+    );
+  },
+)
               ),
             ],
           );
@@ -329,3 +374,15 @@ class _RankingScreenState extends State<RankingScreen> {
   }
 }
 
+Color _getRankColor(int rank) {
+  switch (rank) {
+    case 1:
+      return Colors.amber; // 金
+    case 2:
+      return Colors.grey; // 銀
+    case 3:
+      return Colors.brown; // 銅
+    default:
+      return Color.fromARGB(255, 157, 248, 243); // その他は透明
+  }
+}
