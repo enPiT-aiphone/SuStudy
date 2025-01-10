@@ -2,6 +2,7 @@
 import 'dart:ui'; // ImageFilterを使用するためのインポート
 import 'package:sustudy_add/presentation/component/group_navigation.dart';
 import '../add_word.dart';
+import '../add_grammar.dart';
 import '/import.dart'; // 他ファイルの内容を含む
 import 'notification.dart'; // NotificationPageクラスが定義されているファイル
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
@@ -1003,6 +1004,24 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                   }
                 },
               ),
+          if (_userNumber == 21)
+              ListTile(
+                leading: const Icon(Icons.add),
+                title: const Text('文法を追加'),
+                onTap: () async {
+                  try {
+                    await uploadGrammarToFirestore(); // add_grammar.dartの関数を呼び出し
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('文法の追加が完了しました！')),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('文法の追加中にエラーが発生しました: $e')),
+                    );
+                  }
+                },
+              ),
+
             ],
           ),
         ),
