@@ -17,6 +17,7 @@ import 'group_navigation.dart';
 import 'group_control.dart';
 import 'timeline.dart';
 import 'group_list.dart';
+import '../add_idiom.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
