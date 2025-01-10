@@ -284,6 +284,16 @@ class _SubjectDetailsScreenState extends State<SubjectDetailsScreen> {
           'tierProgress_today': 0,
         });
       }
+      // 新たに Grammar サブコレクションを作成
+      final subCollectionRefGrammar = 
+          recordDocRef.collection(widget.subjectName).doc('Short_Sentence');
+      final scSnapshotGrammar = await subCollectionRefGrammar.get();
+      if (!scSnapshotGrammar.exists) {
+        await subCollectionRefGrammar.set({
+          'timestamp': FieldValue.serverTimestamp(),
+          'tierProgress_today': 0,
+        });
+      }
       // t_solved_count_教科名
       await recordDocRef.set(
         {'t_solved_count_${widget.subjectName}': 0},
@@ -375,6 +385,15 @@ class _SubjectDetailsScreenState extends State<SubjectDetailsScreen> {
           'timestamp': FieldValue.serverTimestamp(),
           'tierProgress_today': 0,
           'tierProgress_all': 0,
+        });
+      }
+      // 新たに Grammar サブコレクションを作成
+      final subCollectionRefGrammar = recordDocRef.collection(levelName).doc('Short_Sentence');
+      final scSnapshotGrammar = await subCollectionRefGrammar.get();
+      if (!scSnapshotGrammar.exists) {
+        await subCollectionRefGrammar.set({
+          'timestamp': FieldValue.serverTimestamp(),
+          'tierProgress_today': 0,
         });
       }
 

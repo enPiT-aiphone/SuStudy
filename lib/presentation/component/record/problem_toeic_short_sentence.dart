@@ -3,14 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
 
-class TOEICWordQuiz extends StatefulWidget {
+class TOEICShort_SentenceQuiz extends StatefulWidget {
   final String level; // TOEICレベル
   final String questionType; // 出題タイプ（random, unanswered, incorrect, recent_incorrect）
 
-  const TOEICWordQuiz({required this.level, required this.questionType, super.key});
+  const TOEICShort_SentenceQuiz({required this.level, required this.questionType, super.key});
 
   @override
-  _TOEICWordQuizState createState() => _TOEICWordQuizState();
+  _TOEICShort_SentenceQuizState createState() => _TOEICShort_SentenceQuizState();
 }
 
 // バツ（×）印を描画するカスタムペインター
@@ -31,12 +31,12 @@ class CrossPainter extends CustomPainter {
   }
 }
 
-class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProviderStateMixin {
+class _TOEICShort_SentenceQuizState extends State<TOEICShort_SentenceQuiz> with SingleTickerProviderStateMixin {
   int currentQuestionIndex = 0;
   List<QueryDocumentSnapshot> questions = [];
   List<List<String>> shuffledOptions = [];
-  List<String?> selectedAnswers = List.filled(5, null);
-  List<bool?> isCorrectAnswers = List.filled(5, null);
+  List<String?> selectedAnswers = List.filled(3, null);
+  List<bool?> isCorrectAnswers = List.filled(3, null);
   bool isDataLoaded = false;
   bool isShowingAnswer = false;
   List<String> askedWordIds = [];
@@ -50,7 +50,7 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
     _fetchQuestions();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: const Duration(seconds: 20),
     );
 
     _animation = Tween<double>(begin: 1.0, end: 0.0).animate(_animationController)
@@ -102,7 +102,7 @@ Future<void> _fetchQuestions() async {
         .collection('record')
         .doc(formattedDate)
         .collection('TOEIC${extractedLevel}点')
-        .doc('Word');
+        .doc('Short_Sentence');
 
     QuerySnapshot snapshot;
 
@@ -112,8 +112,8 @@ Future<void> _fetchQuestions() async {
           .collection('English_Skills')
           .doc('TOEIC')
           .collection(widget.level)
-          .doc('Words')
-          .collection('Word')
+          .doc('Grammar')
+          .collection('Short_Sentence')
           .get();
     } else if (widget.questionType == 'unanswered') {
   // 未回答の問題を取得
@@ -127,7 +127,7 @@ Future<void> _fetchQuestions() async {
         .collection('record')
         .doc(formattedDate)
         .collection('TOEIC${extractedLevel}点')
-        .doc('Word')
+        .doc('Short_Sentence')
         .get();
 
     if (wordDocSnapshot.exists) {
@@ -144,8 +144,8 @@ Future<void> _fetchQuestions() async {
           .collection('English_Skills')
           .doc('TOEIC')
           .collection(widget.level)
-          .doc('Words')
-          .collection('Word')
+          .doc('Grammar')
+          .collection('Short_Sentence')
           .get();
     } else {
       // 未回答の問題をフィルタリング
@@ -153,8 +153,8 @@ Future<void> _fetchQuestions() async {
           .collection('English_Skills')
           .doc('TOEIC')
           .collection(widget.level)
-          .doc('Words')
-          .collection('Word')
+          .doc('Grammar')
+          .collection('Short_Sentence')
           .where(FieldPath.documentId, whereNotIn: answeredWordIds)
           .get();
     }
@@ -188,16 +188,16 @@ Future<void> _fetchQuestions() async {
             .collection('English_Skills')
             .doc('TOEIC')
             .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
+            .doc('Grammar')
+            .collection('Short_Sentence')
             .get();
       } else {
         snapshot = await FirebaseFirestore.instance
             .collection('English_Skills')
             .doc('TOEIC')
             .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
+            .doc('Grammar')
+            .collection('Short_Sentence')
             .where(FieldPath.documentId, whereIn: incorrectWordIds)
             .get();
       }
@@ -229,16 +229,16 @@ Future<void> _fetchQuestions() async {
             .collection('English_Skills')
             .doc('TOEIC')
             .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
+            .doc('Grammar')
+            .collection('Short_Sentence')
             .get();
       } else {
         snapshot = await FirebaseFirestore.instance
             .collection('English_Skills')
             .doc('TOEIC')
             .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
+            .doc('Grammar')
+            .collection('Short_Sentence')
             .where(FieldPath.documentId, whereIn: recentWordIds)
             .get();
       }
@@ -248,17 +248,17 @@ Future<void> _fetchQuestions() async {
     questions = allQuestions.where((doc) => !askedWordIds.contains(doc.id)).toList();
 
     if (questions.isNotEmpty) {
-      if (questions.length > 5) {
+      if (questions.length > 3) {
         questions.shuffle();
-        questions = questions.take(5).toList();
+        questions = questions.take(3).toList();
       }
 
       for (var question in questions) {
         List<String> options = [
-          question['ENG_to_JPN_Answer_A'],
-          question['ENG_to_JPN_Answer_B'],
-          question['ENG_to_JPN_Answer_C'],
-          question['ENG_to_JPN_Answer_D'],
+          question['Answer_A'],
+          question['Answer_B'],
+          question['Answer_C'],
+          question['Answer_D'],
         ];
         options.shuffle();
         shuffledOptions.add(options);
@@ -312,7 +312,7 @@ Future<void> _updateTierProgress(
         .collection('record')
         .doc(formattedDate)
         .collection('TOEIC${extractedLevel}点')
-        .doc('Word');
+        .doc('Short_Sentence');
 
      final dateRef = FirebaseFirestore.instance
         .collection('Users')
@@ -322,15 +322,12 @@ Future<void> _updateTierProgress(
 
     int tierProgress = 0;
     int tierProgressAll = 0;
-    int tSolvedCount = 0;
 
     // 現在の `tierProgress_all` を取得
     final recordSnapshot = await recordRef.get();
-    final dateSnapshot = await dateRef.get();
     if (recordSnapshot.exists) {
       tierProgress = recordSnapshot.data()?['tierProgress_today'] ?? 0;
       tierProgressAll = recordSnapshot.data()?['tierProgress_all'] ?? 0;
-      tSolvedCount = dateSnapshot.data()?['t_solved_count'] ?? 0;
     }
 
     // Attempts サブコレクションから最新の試行データを取得
@@ -343,15 +340,14 @@ Future<void> _updateTierProgress(
     if (attemptsSnapshot.docs.isEmpty) {
       if (isCorrect) {
         tierProgress += 1;
-        tSolvedCount += 1;;
         await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
-        await dateRef.set({'t_solved_count': tSolvedCount}, SetOptions(merge: true));
+        await dateRef.set({'t_solved_count': tierProgress}, SetOptions(merge: true));
         tierProgressAll += 1;
         await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
         print('初めての試行: 正解 +1');
       } else {
         await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
-        await dateRef.set({'t_solved_count': tSolvedCount}, SetOptions(merge: true));
+        await dateRef.set({'t_solved_count': tierProgress}, SetOptions(merge: true));
         await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
         print('初めての試行: 不正解のためそのまま');
       }
@@ -373,15 +369,11 @@ Future<void> _updateTierProgress(
       // 直近間違えていて、今回正解した場合
       tierProgress += 1;
       tierProgressAll += 1;
-      tSolvedCount += 1;
       print('直近間違えていて、今回正解: +1');
     } else if (latestIsCorrect && !isCorrect) {
       // 直近正解していて、今回間違えた場合
       tierProgress -= 1;
       tierProgressAll -= 1;
-      tSolvedCount -= 1;
-      if (tierProgress < 0) tierProgress = 0;
-      if (tSolvedCount < 0) tSolvedCount = 0;
       print('直近正解していて、今回間違え: -1');
     } else if (latestIsCorrect && isCorrect) {
       print('直近正解していて、今回も正解: そのまま');
@@ -390,14 +382,12 @@ Future<void> _updateTierProgress(
     }
 
     // tierProgress_all を Firestore に保存
-    await dateRef.update({'t_solved_count': tSolvedCount});
+    await dateRef.update({'t_solved_count': tierProgress});
     await recordRef.update({'tierProgress_today': tierProgress});
     await recordRef.update({'tierProgress_all': tierProgressAll});
-    print('date ドキュメントの t_solved_count が更新されました: $tSolvedCount');
     print('Words ドキュメントの tierProgress_today が更新されました: $tierProgress');
     print('Words ドキュメントの tierProgress_all が更新されました: $tierProgressAll');
   } catch (e) {
-    print('t_solved_count 更新に失敗しました: $e');
     print('tierProgress_today 更新に失敗しました: $e');
     print('tierProgress_all 更新に失敗しました: $e');
   }
@@ -427,7 +417,7 @@ Future<void> _saveRecord(
       return;
     }
 
-    await _updateTierProgress(wordData, wordData['Word'], isCorrect);
+    await _updateTierProgress(wordData, wordData['Grammar'], isCorrect);
 
     // Firestore パス
     final recordRef = FirebaseFirestore.instance
@@ -436,11 +426,11 @@ Future<void> _saveRecord(
         .collection('record')
         .doc(formattedDate);
 
-    final wordDoc = recordRef.collection('TOEIC${extractedLevel}点').doc('Word');
-    final wordRef = recordRef.collection('TOEIC${extractedLevel}点').doc('Word').collection(wordData.id);
+    final wordDoc = recordRef.collection('TOEIC${extractedLevel}点').doc('Short_Sentence');
+    final wordRef = recordRef.collection('TOEIC${extractedLevel}点').doc('Short_Sentence').collection(wordData.id);
 
     // Attempts サブコレクションの次のドキュメント名を決定
-    final attemptsSnapshot = await recordRef.collection('TOEIC${extractedLevel}点').doc('Word').collection(wordData.id).get();
+    final attemptsSnapshot = await recordRef.collection('TOEIC${extractedLevel}点').doc('Short_Sentence').collection(wordData.id).get();
     final attemptNumber = attemptsSnapshot.docs.length + 1;
 
     // データを保存
@@ -448,7 +438,7 @@ Future<void> _saveRecord(
       'attempt_number': attemptNumber,
       'timestamp': FieldValue.serverTimestamp(),
       'selected_answer': selectedAnswer,
-      'correct_answer': wordData['ENG_to_JPN_Answer'],
+      'correct_answer': wordData['Answer'],
       'is_correct': isCorrect,
       'word_id': wordData.id,
     },SetOptions(merge: true));
@@ -502,7 +492,7 @@ Future<void> _saveRecord(
 
       Future.delayed(const Duration(milliseconds: 600), () {
         Navigator.of(context).pop();
-        if (currentQuestionIndex < 4) {
+        if (currentQuestionIndex < 2) {
           setState(() {
             currentQuestionIndex++;
             isShowingAnswer = false;
@@ -512,7 +502,7 @@ Future<void> _saveRecord(
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ResultPage_Word(
+              builder: (context) => ResultPage_Short_Sentence(
                 selectedAnswers: selectedAnswers,
                 isCorrectAnswers: isCorrectAnswers,
                 wordDetails: questions,
@@ -563,6 +553,7 @@ Future<void> _saveRecord(
 
   Widget _buildQuestionUI(QueryDocumentSnapshot wordData) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width; // 画面の横幅を取得
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -582,23 +573,16 @@ Future<void> _saveRecord(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    wordData['Word'],
-                    style: const TextStyle(
-                      fontSize: 30,
+                  Container(
+                    width: screenWidth * 0.9, // 横幅を画面幅の90%に制限
+                    child: Text(
+                      wordData['Question'], // Firestoreから取得した質問文
+                      style: const TextStyle(
+                        fontSize: 20,
+                      ),
+                      softWrap: true, // 自動改行を有効化
+                      overflow: TextOverflow.visible, // テキストを切らない
                     ),
-                    softWrap: true,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8), 
-                  Text(
-                    "【${wordData['Phonetic_Symbols']}】", 
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey, 
-                    ),
-                    softWrap: true,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -607,7 +591,7 @@ Future<void> _saveRecord(
           Align(
             alignment: Alignment.topLeft,
             child: Text(
-              '${currentQuestionIndex + 1}/5',
+              '${currentQuestionIndex + 1}/3',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -632,12 +616,13 @@ Future<void> _saveRecord(
     );
   }
 
+
   Widget _buildAnswerButton(String option, QueryDocumentSnapshot wordData, double screenHeight) {
     Color? backgroundColor;
     Color finalBorderColor = _colorAnimation.value ?? const Color(0xFF0ABAB5);
 
     if (isShowingAnswer) {
-      if (option == wordData['ENG_to_JPN_Answer']) {
+      if (option == wordData['Answer']) {
         backgroundColor = const Color(0xFFE0F7FA);
         finalBorderColor = const Color(0xFF0ABAB5);
       } else if (selectedAnswers[currentQuestionIndex] == option) {
@@ -653,7 +638,7 @@ Future<void> _saveRecord(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: GestureDetector(
         onTap: () {
-          bool isCorrect = option == wordData['ENG_to_JPN_Answer'];
+          bool isCorrect = option == wordData['Answer'];
           _animationController.stop();
           setState(() {
             selectedAnswers[currentQuestionIndex] = option;
@@ -698,7 +683,7 @@ Future<void> _saveRecord(
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ResultPage_Word(
+                  builder: (context) => ResultPage_Short_Sentence(
                     selectedAnswers: selectedAnswers,
                     isCorrectAnswers: isCorrectAnswers,
                     wordDetails: questions,

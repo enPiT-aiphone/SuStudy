@@ -2,22 +2,22 @@ import '/import.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../authentication/login_history.dart';
 
-class ResultPage extends StatefulWidget {
+class ResultPage_Short_Sentence extends StatefulWidget {
   final List<String?> selectedAnswers;
   final List<bool?> isCorrectAnswers;
   final List<QueryDocumentSnapshot> wordDetails;
 
-  const ResultPage({super.key, 
+  const ResultPage_Short_Sentence({super.key, 
     required this.selectedAnswers,
     required this.isCorrectAnswers,
     required this.wordDetails,
   });
 
   @override
-  _ResultPageState createState() => _ResultPageState();
+  _ResultPage_Short_SentenceState createState() => _ResultPage_Short_SentenceState();
 }
 
-class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateMixin {
+class _ResultPage_Short_SentenceState extends State<ResultPage_Short_Sentence> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _progressAnimation;
 
@@ -30,7 +30,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
     );
 
     int correctCount = widget.isCorrectAnswers.where((answer) => answer == true).length;
-    _progressAnimation = Tween<double>(begin: 0.0, end: correctCount / 5).animate(
+    _progressAnimation = Tween<double>(begin: 0.0, end: correctCount / 3).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
@@ -128,7 +128,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                           style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
                         ),
                         const Text(
-                          '/5',
+                          '/3',
                           style: TextStyle(fontSize: 24),
                         ),
                       ],
@@ -174,10 +174,12 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
             const SizedBox(height: 20),
             Expanded(
               child: ListView.builder(
-                itemCount: widget.wordDetails.length,
+                // itemCountをisCorrectAnswersの長さに合わせる
+                itemCount: widget.isCorrectAnswers.length, 
                 itemBuilder: (context, index) {
-                  if (index >= widget.selectedAnswers.length || index >= widget.isCorrectAnswers.length) {
-                    return Container();
+                  // インデックスが範囲外でないか確認
+                  if (index >= widget.wordDetails.length || index >= widget.selectedAnswers.length) {
+                    return Container(); // 範囲外の場合、空のコンテナを返す
                   }
 
                   var wordData = widget.wordDetails[index];
@@ -207,7 +209,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${index + 1}. ${wordData['Word']}',
+                                  '${index + 1}. ${wordData['Answer']}',
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
@@ -229,8 +231,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                                 ),
                               ],
                             ),
-                            const Icon(Icons.arrow_forward_ios, color: Color(0xFF818181)
-),
+                            const Icon(Icons.arrow_forward_ios, color: Color(0xFF818181)),
                           ],
                         ),
                       ),
@@ -238,7 +239,8 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                   );
                 },
               ),
-            ),
+            )
+
           ],
         ),
       ),
@@ -256,7 +258,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
               Row(
                 children: [
                   Text(
-                    '${wordData['Word']} ',
+                    '${wordData['Answer']} ',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 30,
@@ -291,7 +293,7 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                         child: FractionallySizedBox(
                           widthFactor: 0.85,
                           child: Text(
-                            '　${wordData['Explanation']}',
+                            '　${wordData['Explanation_1']}',
                             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -299,27 +301,6 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
                     ),
                   ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: _buildMeaningRow(
-                    '意味',
-                    {
-                      '名': wordData['Meaning_Noun'],
-                      '動': wordData['Meaning_Verb'],
-                      '形': wordData['Meaning_Adjective'],
-                      '副': wordData['Meaning_Adverb'],
-                      '前': wordData['Meaning_Preposition'],
-                    },
-                  ),
-                ),
-                _buildDetailRow('名詞形', wordData['Word_Noun']),
-                _buildDetailRow('動詞形', wordData['Word_Verb']),
-                _buildDetailRow('形容詞形', wordData['Word_Adjective']),
-                _buildDetailRow('副詞形', wordData['Word_Adverb']),
-                _buildDetailRow('前置詞形', wordData['Word_Preposition']),
-                _buildDetailRow('類義語', wordData['Word_Synonyms']),
-                _buildDetailRow('対義語', wordData['Word_Antonym']),
-                _buildDetailRow('関連語', wordData['Word_Related']),
               ],
             ),
           ),
@@ -333,66 +314,6 @@ class _ResultPageState extends State<ResultPage> with SingleTickerProviderStateM
           ],
         );
       },
-    );
-  }
-
-  Widget _buildDetailRow(String label, String? value) {
-    if (value == null || value.isEmpty) return Container();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(value),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMeaningRow(String label, Map<String, String?> meanings) {
-    List<String> meaningParts = [];
-
-    meanings.forEach((partOfSpeech, meaning) {
-      if (meaning != null && meaning.isNotEmpty) {
-        meaningParts.add('$partOfSpeech: $meaning');
-      }
-    });
-
-    if (meaningParts.isEmpty) return Container();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: meaningParts
-                  .map((part) => Text(part))
-                  .toList(),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

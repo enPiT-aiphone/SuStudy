@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '/import.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'problem_toeic_word.dart';
+import 'problem_toeic_short_sentence.dart';
 
 class LanguageTOEICScreen extends StatefulWidget {
   final String selectedCategory;
@@ -82,9 +83,12 @@ class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
                               title: Text(subCategory),
                               onTap: () {
                                 if (category == '単語' && subCategory == '      単語') {
-                                  _showOverlay(context, problemLevel);
+                                  _showOverlay(context, problemLevel,category,subCategory);
                                 }
-                              },
+                                else if (category == '文法' && subCategory == '      短文'){
+                                  _showOverlay(context, problemLevel,category,subCategory);
+                                }
+                              }
                             );
                           })
                           .toList(),
@@ -123,7 +127,7 @@ class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
   }
 
   // オーバーレイを表示する
-  void _showOverlay(BuildContext context, String problemLevel) {
+  void _showOverlay(BuildContext context, String problemLevel,String category, String subCategory) {
     // 初期値として「ランダム」を選択
     String? selectedOption = 'random';
 
@@ -201,15 +205,27 @@ class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
                       selectedOption != null
                           ? () {
                               Navigator.pop(context); // オーバーレイを閉じる
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => TOEICWordQuiz(
-                                    level: problemLevel,
-                                    questionType: selectedOption!,
+                              if (category == '単語' && subCategory == '      単語') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => TOEICWordQuiz(
+                                      level: problemLevel,
+                                      questionType: selectedOption!,
+                                    ), 
                                   ),
-                                ),
-                              );
+                                );
+                              } else if (category == '文法' && subCategory == '      短文') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => TOEICShort_SentenceQuiz(
+                                      level: problemLevel,
+                                      questionType: selectedOption!,
+                                    ),
+                                  ),
+                                );
+                              }
                             }
                           : null, // チェックがない場合は無効
                     ),
