@@ -378,7 +378,7 @@ Future<void> uploadWordsToFirestore_idiom() async {
       // データをFirebaseに保存
       await firestore.collection(collectionPath).add({
         'Word_id': newWordId,
-        'Idion': wordData['Idiom'] ?? '', //イディオムの原型
+        'Idioms': wordData['Idiom'] ?? '', //イディオムの原型
         'Explanation': wordData['Explanation'] ?? '',  //イディオムの解説
         'Question': wordData['Question'] ?? '', //問題文（穴あき）
         'Question_JPN': wordData['Question_JPN'] ?? '',//問題文の日本語訳

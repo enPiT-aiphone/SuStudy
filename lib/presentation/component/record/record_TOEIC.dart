@@ -3,6 +3,7 @@ import '/import.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'problem_toeic_word.dart';
 import 'problem_toeic_short_sentence.dart';
+import 'problem_toeic_idiom.dart';
 
 class LanguageTOEICScreen extends StatefulWidget {
   final String selectedCategory;
@@ -83,6 +84,9 @@ class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
                               title: Text(subCategory),
                               onTap: () {
                                 if (category == '単語' && subCategory == '      単語') {
+                                  _showOverlay(context, problemLevel,category,subCategory);
+                                }
+                                else if (category == '単語' && subCategory == '      イディオム') {
                                   _showOverlay(context, problemLevel,category,subCategory);
                                 }
                                 else if (category == '文法' && subCategory == '      短文'){
@@ -215,7 +219,19 @@ class _LanguageTOEICScreenState extends State<LanguageTOEICScreen> {
                                     ), 
                                   ),
                                 );
-                              } else if (category == '文法' && subCategory == '      短文') {
+                              }
+                              else if (category == '単語' && subCategory == '      イディオム') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => TOEICIdiomQuiz(
+                                      level: problemLevel,
+                                      questionType: selectedOption!,
+                                    ), 
+                                  ),
+                                );
+                              } 
+                              else if (category == '文法' && subCategory == '      短文') {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
