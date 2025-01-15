@@ -1,16 +1,17 @@
 import '/import.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'result_idiom_toeic_toefl.dart';
 
 
-class TOEICWordQuiz extends StatefulWidget {
+class TOEICIdiomQuiz extends StatefulWidget {
   final String level; // TOEICレベル
   final String questionType; // 出題タイプ（random, unanswered, incorrect, recent_incorrect）
 
-  const TOEICWordQuiz({required this.level, required this.questionType, super.key});
+  const TOEICIdiomQuiz({required this.level, required this.questionType, super.key});
 
   @override
-  _TOEICWordQuizState createState() => _TOEICWordQuizState();
+  _TOEICIdiomQuizState createState() => _TOEICIdiomQuizState();
 }
 
 // バツ（×）印を描画するカスタムペインター
@@ -31,7 +32,7 @@ class CrossPainter extends CustomPainter {
   }
 }
 
-class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProviderStateMixin {
+class _TOEICIdiomQuizState extends State<TOEICIdiomQuiz> with SingleTickerProviderStateMixin {
   int currentQuestionIndex = 0;
   List<QueryDocumentSnapshot> questions = [];
   List<List<String>> shuffledOptions = [];
@@ -39,10 +40,12 @@ class _TOEICWordQuizState extends State<TOEICWordQuiz> with SingleTickerProvider
   List<bool?> isCorrectAnswers = List.filled(5, null);
   bool isDataLoaded = false;
   bool isShowingAnswer = false;
-  List<String> askedWordIds = [];
+  //bool isShuffle=false;
+  List<String> askedIdiomIds = [];
   late AnimationController _animationController;
   late Animation<double> _animation;
   late Animation<Color?> _colorAnimation;
+  //List<String> answers = List.filled(4, '', growable: false);
 
   @override
   void initState() {
@@ -102,114 +105,139 @@ Future<void> _fetchQuestions() async {
         .collection('record')
         .doc(formattedDate)
         .collection('TOEIC${extractedLevel}点')
-        .doc('Word');
+        .doc('Idioms');  
 
     QuerySnapshot snapshot;
 
+     // Idioms ドキュメントの存在確認
+    final idiomDocSnapshot = await recordRef.get();
+    if (!idiomDocSnapshot.exists) {
+      // "Idioms" ドキュメントが存在しない場合、新規に作成
+      await recordRef.set({
+        'answeredIdiomId': []  // ここでデフォルトのフィールドをセット
+      });
+      print('Idioms ドキュメントが存在しなかったため、新たに作成しました');
+    }
+
     if (widget.questionType == 'random') {
-      // ランダムな問題を取得
+      // ランダムなイディオムの問題を取得
       snapshot = await FirebaseFirestore.instance
           .collection('English_Skills')
           .doc('TOEIC')
           .collection(widget.level)
-          .doc('Words')
-          .collection('Word')
+          .doc('Words') 
+          .collection('Idioms')
           .get();
     } else if (widget.questionType == 'unanswered') {
-  // 未回答の問題を取得
-  List<String> answeredWordIds = [];
+      // 未回答のイディオムの問題を取得
+      List<String> answeredIdiomIds = [];
 
-  try {
-    // `Word` ドキュメントの `answeredWordId` フィールドを取得
-    final wordDocSnapshot = await FirebaseFirestore.instance
-        .collection('Users')
-        .doc(userId)
-        .collection('record')
-        .doc(formattedDate)
-        .collection('TOEIC${extractedLevel}点')
-        .doc('Word')
-        .get();
+      try {
+        // `Idiom` ドキュメントの `answeredIdiomId` フィールドを取得
+        final idiomDocSnapshot = await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(userId)
+            .collection('record')
+            .doc(formattedDate)
+            .collection('TOEIC${extractedLevel}点')
+            .doc('Idioms')  // "Word" から "Idiom" に変更
+            .get();
 
-    if (wordDocSnapshot.exists) {
-      // `answeredWordId` リストを取得
-      final wordData = wordDocSnapshot.data();
-      if (wordData != null && wordData['answeredWordId'] is List) {
-        answeredWordIds = List<String>.from(wordData['answeredWordId']);
+        // 'Idioms' ドキュメントが存在しない場合、作成して必要なデータを設定
+        if (!idiomDocSnapshot.exists) {
+          await FirebaseFirestore.instance
+              .collection('Users')
+              .doc(userId)
+              .collection('record')
+              .doc(formattedDate)
+              .collection('TOEIC${extractedLevel}点')
+              .doc('Idioms')
+              .set({
+            'answeredIdiomId': []  // 初期化など
+          });
+          print('Idioms ドキュメントが存在しなかったため、新たに作成しました');
+        }
+
+        if (idiomDocSnapshot.exists) {
+          // `answeredIdiomId` リストを取得
+          final idiomData = idiomDocSnapshot.data();
+          if (idiomData != null && idiomData['answeredIdiomId'] is List) {
+            answeredIdiomIds = List<String>.from(idiomData['answeredIdiomId']);
+          }
+        }
+
+        if (answeredIdiomIds.isEmpty) {
+          // 未回答の問題を全取得
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEIC')
+              .collection(widget.level)
+              .doc('Words')  // "Words" から "Idioms" に変更
+              .collection('Idioms')
+              .get();
+        } else {
+          // 未回答の問題をフィルタリング
+          snapshot = await FirebaseFirestore.instance
+              .collection('English_Skills')
+              .doc('TOEIC')
+              .collection(widget.level)
+              .doc('Words')  // "Words" から "Idioms" に変更
+              .collection('Idioms')
+              .where(FieldPath.documentId, whereNotIn: answeredIdiomIds)
+              .get();
+        }
+      } catch (e) {
+        print('未回答の問題取得中にエラーが発生しました: $e');
+        return;
       }
-    }
+    } else if (widget.questionType == 'incorrect') {
+      // 間違えたイディオムの問題を取得
+      List<String> incorrectIdiomIds = [];
 
-    if (answeredWordIds.isEmpty) {
-      // 未回答の問題を全取得
-      snapshot = await FirebaseFirestore.instance
-          .collection('English_Skills')
-          .doc('TOEIC')
-          .collection(widget.level)
-          .doc('Words')
-          .collection('Word')
-          .get();
-    } else {
-      // 未回答の問題をフィルタリング
-      snapshot = await FirebaseFirestore.instance
-          .collection('English_Skills')
-          .doc('TOEIC')
-          .collection(widget.level)
-          .doc('Words')
-          .collection('Word')
-          .where(FieldPath.documentId, whereNotIn: answeredWordIds)
-          .get();
-    }
-  } catch (e) {
-    print('未回答の問題取得中にエラーが発生しました: $e');
-    return;
-  }
-} else if (widget.questionType == 'incorrect') {
-      // 間違えた問題を取得
-      List<String> incorrectWordIds = [];
-
-      // Word サブコレクションのデータを確認して間違えた単語を収集
-      final wordDocs = await recordRef.get();
-      for (var wordDoc in wordDocs.data()!.keys) {
+      // Idiom サブコレクションのデータを確認して間違えたイディオムを収集
+      final idiomDocs = await recordRef.get();
+      for (var idiomDoc in idiomDocs.data()!.keys) {
         final attemptsSnapshot = await recordRef
-            .collection(wordDoc)
+            .collection(idiomDoc)
             .orderBy('timestamp', descending: true)
             .limit(1)
             .get();
 
         for (var attempt in attemptsSnapshot.docs) {
           if (!(attempt.data()['is_correct'] as bool)) {
-            incorrectWordIds.add(wordDoc);
+            incorrectIdiomIds.add(idiomDoc);
             break;
           }
         }
       }
 
-      if (incorrectWordIds.isEmpty) {
+      if (incorrectIdiomIds.isEmpty) {
         snapshot = await FirebaseFirestore.instance
             .collection('English_Skills')
             .doc('TOEIC')
             .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
+            .doc('Words')  // "Words" から "Idioms" に変更
+            .collection('Idioms')
             .get();
       } else {
         snapshot = await FirebaseFirestore.instance
             .collection('English_Skills')
             .doc('TOEIC')
             .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
-            .where(FieldPath.documentId, whereIn: incorrectWordIds)
+            .doc('Words')  // "Words" から "Idioms" に変更
+            .collection('Idioms')
+            .where(FieldPath.documentId, whereIn: incorrectIdiomIds)
             .get();
       }
     } else {
-      // 直近3問の間違えた問題を取得
-      List<String> recentWordIds = [];
+      // 直近3問の間違えたイディオムの問題を取得
+      List<String> recentIdiomIds = [];
 
-      // Word サブコレクションを確認して間違えた問題を収集
-      final wordDocs = await recordRef.get();
-      for (var wordDoc in wordDocs.data()!.keys) {
+      // Idiom サブコレクションを確認して間違えた問題を収集
+      final idiomDocs = await recordRef.get();
+      for (var idiomDoc in idiomDocs.data()!.keys) {
         final attemptsSnapshot = await recordRef
-            .collection(wordDoc)
+            .collection(idiomDoc)
             .orderBy('timestamp', descending: true)
             .limit(1)
             .get();
@@ -217,35 +245,35 @@ Future<void> _fetchQuestions() async {
         if (attemptsSnapshot.docs.isNotEmpty) {
           final attemptData = attemptsSnapshot.docs.first.data();
           if (!(attemptData['is_correct'] as bool)) {
-            recentWordIds.add(wordDoc);
+            recentIdiomIds.add(idiomDoc);
           }
         }
 
-        if (recentWordIds.length >= 3) break;
+        if (recentIdiomIds.length >= 3) break;
       }
 
-      if (recentWordIds.isEmpty) {
+      if (recentIdiomIds.isEmpty) {
         snapshot = await FirebaseFirestore.instance
             .collection('English_Skills')
             .doc('TOEIC')
             .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
+            .doc('Words')  // "Words" から "Idioms" に変更
+            .collection('Idioms')
             .get();
       } else {
         snapshot = await FirebaseFirestore.instance
             .collection('English_Skills')
             .doc('TOEIC')
             .collection(widget.level)
-            .doc('Words')
-            .collection('Word')
-            .where(FieldPath.documentId, whereIn: recentWordIds)
+            .doc('Words')  
+            .collection('Idioms')
+            .where(FieldPath.documentId, whereIn: recentIdiomIds)
             .get();
       }
     }
 
     List<QueryDocumentSnapshot> allQuestions = snapshot.docs;
-    questions = allQuestions.where((doc) => !askedWordIds.contains(doc.id)).toList();
+    questions = allQuestions.where((doc) => !askedIdiomIds.contains(doc.id)).toList();
 
     if (questions.isNotEmpty) {
       if (questions.length > 5) {
@@ -255,10 +283,10 @@ Future<void> _fetchQuestions() async {
 
       for (var question in questions) {
         List<String> options = [
-          question['ENG_to_JPN_Answer_A'],
-          question['ENG_to_JPN_Answer_B'],
-          question['ENG_to_JPN_Answer_C'],
-          question['ENG_to_JPN_Answer_D'],
+          question['Answer_A'],  // イディオムに対応する選択肢に変更
+          question['Answer_B'],
+          question['Answer_C'],
+          question['Answer_D'],
         ];
         options.shuffle();
         shuffledOptions.add(options);
@@ -273,6 +301,7 @@ Future<void> _fetchQuestions() async {
     print('エラーが発生しました: $e');
   }
 }
+
 
 
 
@@ -312,7 +341,7 @@ Future<void> _updateTierProgress(
         .collection('record')
         .doc(formattedDate)
         .collection('TOEIC${extractedLevel}点')
-        .doc('Word');
+        .doc('Idioms');
 
      final dateRef = FirebaseFirestore.instance
         .collection('Users')
@@ -407,7 +436,7 @@ Future<void> _updateTierProgress(
 
 // 保存メソッド
 Future<void> _saveRecord(
-    String selectedAnswer, QueryDocumentSnapshot wordData, bool isCorrect) async {
+    String selectedAnswer, QueryDocumentSnapshot idiomData, bool isCorrect) async {
   final userId = FirebaseAuth.instance.currentUser?.uid;
 
   if (userId == null) {
@@ -427,7 +456,7 @@ Future<void> _saveRecord(
       return;
     }
 
-    await _updateTierProgress(wordData, wordData['Word'], isCorrect);
+    await _updateTierProgress(idiomData, idiomData['Idioms'], isCorrect);
 
     // Firestore パス
     final recordRef = FirebaseFirestore.instance
@@ -436,93 +465,92 @@ Future<void> _saveRecord(
         .collection('record')
         .doc(formattedDate);
 
-    final wordDoc = recordRef.collection('TOEIC${extractedLevel}点').doc('Word');
-    final wordRef = recordRef.collection('TOEIC${extractedLevel}点').doc('Word').collection(wordData.id);
+    final idiomDoc = recordRef.collection('TOEIC${extractedLevel}点').doc('Idioms');
+    final idiomRef = recordRef.collection('TOEIC${extractedLevel}点').doc('Idioms').collection(idiomData.id);
 
     // Attempts サブコレクションの次のドキュメント名を決定
-    final attemptsSnapshot = await recordRef.collection('TOEIC${extractedLevel}点').doc('Word').collection(wordData.id).get();
+    final attemptsSnapshot = await recordRef.collection('TOEIC${extractedLevel}点').doc('Idioms').collection(idiomData.id).get();
     final attemptNumber = attemptsSnapshot.docs.length + 1;
 
     // データを保存
-    await wordRef..doc('$attemptNumber').set({
+    await idiomRef.doc('$attemptNumber').set({
       'attempt_number': attemptNumber,
       'timestamp': FieldValue.serverTimestamp(),
       'selected_answer': selectedAnswer,
-      'correct_answer': wordData['ENG_to_JPN_Answer'],
+      'correct_answer': idiomData['Answer'],
       'is_correct': isCorrect,
-      'word_id': wordData.id,
-    },SetOptions(merge: true));
+      'idiom_id': idiomData.id,
+    }, SetOptions(merge: true));
 
-    final currentWordList = (await wordDoc.get()).data()?['answeredWordId'] ?? [];
-    if (!currentWordList.contains(wordData.id)) {
-      currentWordList.add(wordData.id);
-      await wordDoc.set({
-        'answeredWordId': currentWordList,
+    final currentIdiomList = (await idiomDoc.get()).data()?['answeredIdiomId'] ?? [];
+    if (!currentIdiomList.contains(idiomData.id)) {
+      currentIdiomList.add(idiomData.id);
+      await idiomDoc.set({
+        'answeredIdiomId': currentIdiomList,
       }, SetOptions(merge: true));
     }
 
-    // todays_count を 1 増やす
-      await wordDoc.set({
-          't_solved_count': FieldValue.increment(1),
-      },SetOptions(merge: true));
+    // solved_count を 1 増やす
+    await idiomDoc.set({
+      't_solved_count': FieldValue.increment(1),
+    }, SetOptions(merge: true));
 
-      await recordRef.update({
-          't_solved_count_TOEIC${extractedLevel}点': FieldValue.increment(1),
-      });
+    await recordRef.update({
+      't_solved_count_TOEIC${extractedLevel}点': FieldValue.increment(1),
+    });
 
-    print('クイズ結果が保存されました: ${wordData.id}, Attempt: $attemptNumber');
+    print('クイズ結果が保存されました: ${idiomData.id}, Attempt: $attemptNumber');
   } catch (e) {
     print('レコードの保存中にエラーが発生しました: $e');
-    
-    } catch (e) {
-    print('クイズ結果の保存に失敗しました: $e');
   }
 }
 
+
   void _handleTimeout() {
-    setState(() {
-      _saveRecord('', questions[currentQuestionIndex], false);
-      isCorrectAnswers[currentQuestionIndex] = false;
-      isShowingAnswer = true;
+  setState(() {
+    _saveRecord('', questions[currentQuestionIndex], false);
+    isCorrectAnswers[currentQuestionIndex] = false;
+    isShowingAnswer = true;
 
-      showDialog(
-        context: context,
-        barrierColor: Colors.transparent,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          double circleSize = MediaQuery.of(context).size.width / 2;
-          return Center(
-            child: CustomPaint(
-              size: Size(circleSize * 0.8, circleSize * 0.8),
-              painter: CrossPainter(),
-            ),
-          );
-        },
-      );
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        double circleSize = MediaQuery.of(context).size.width / 2;
+        return Center(
+          child: CustomPaint(
+            size: Size(circleSize * 0.8, circleSize * 0.8),
+            painter: CrossPainter(),
+          ),
+        );
+      },
+    );
 
-      Future.delayed(const Duration(milliseconds: 600), () {
-        Navigator.of(context).pop();
-        if (currentQuestionIndex < 4) {
-          setState(() {
-            currentQuestionIndex++;
-            isShowingAnswer = false;
-            _startTimer();
-          });
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ResultPage_Word(
-                selectedAnswers: selectedAnswers,
-                isCorrectAnswers: isCorrectAnswers,
-                wordDetails: questions,
-              ),
+    Future.delayed(const Duration(milliseconds: 600), () {
+      Navigator.of(context).pop();
+      if (currentQuestionIndex < 4) {
+        setState(() {
+          currentQuestionIndex++;
+          isShowingAnswer = false;
+          _startTimer();
+        });
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ResultPage_Idiom(
+              selectedAnswers: selectedAnswers,
+              isCorrectAnswers: isCorrectAnswers,
+              idiomDetails: questions,
             ),
-          );
-        }
-      });
+          ),
+        );
+      }
     });
-  }
+  });
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -561,83 +589,93 @@ Future<void> _saveRecord(
     );
   }
 
-  Widget _buildQuestionUI(QueryDocumentSnapshot wordData) {
-    final screenHeight = MediaQuery.of(context).size.height;
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          LinearProgressIndicator(
-            borderRadius: BorderRadius.circular(20),
-            value: _animation.value,
-            backgroundColor: const Color(0xFFD9D9D9),
-            valueColor: AlwaysStoppedAnimation<Color?>(_colorAnimation.value),
-            minHeight: 20,
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            flex: 5,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    wordData['Word'],
-                    style: const TextStyle(
-                      fontSize: 30,
-                    ),
-                    softWrap: true,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8), 
-                  Text(
-                    "【${wordData['Phonetic_Symbols']}】", 
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey, 
-                    ),
-                    softWrap: true,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.topLeft,
-            child: Text(
-              '${currentQuestionIndex + 1}/5',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: _colorAnimation.value,
-              ),
-              softWrap: true,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            flex: 5,
-            child: ListView(
+Widget _buildQuestionUI(QueryDocumentSnapshot idiomData) {
+  final screenHeight = MediaQuery.of(context).size.height;
+  final options = shuffledOptions[currentQuestionIndex];  // 事前にシャッフルされた選択肢を取得
+
+  return Padding(
+    padding: const EdgeInsets.all(16.0),
+    child: Column(
+      children: [
+        LinearProgressIndicator(
+          borderRadius: BorderRadius.circular(20),
+          value: _animation.value,
+          backgroundColor: const Color(0xFFD9D9D9),
+          valueColor: AlwaysStoppedAnimation<Color?>(_colorAnimation.value),
+          minHeight: 20,
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          flex: 5,
+          child: SingleChildScrollView(  // 追加: 長いテキストに対応
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                for (var option in shuffledOptions[currentQuestionIndex])
-                  _buildAnswerButton(option, wordData, screenHeight),
+                Text(
+                  idiomData['Question'], // 問題文を表示
+                  style: const TextStyle(
+                    fontSize: 30,
+                  ),
+                  softWrap: true,
+                  overflow: TextOverflow.visible,  // 修正: テキストを切り捨てずに表示
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "【${idiomData['Phonetic_Symbols']}】", 
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey, 
+                  ),
+                  softWrap: true,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        Align(
+          alignment: Alignment.topLeft,
+          child: Text(
+            '${currentQuestionIndex + 1}/5',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: _colorAnimation.value,
+            ),
+            softWrap: true,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          flex: 5,
+          child: ListView(
+            children: [
+              // 事前にシャッフルされた選択肢を表示
+              _buildAnswerButton(options[0], idiomData, screenHeight),
+              _buildAnswerButton(options[1], idiomData, screenHeight),
+              _buildAnswerButton(options[2], idiomData, screenHeight),
+              _buildAnswerButton(options[3], idiomData, screenHeight),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
-  Widget _buildAnswerButton(String option, QueryDocumentSnapshot wordData, double screenHeight) {
+
+
+
+
+
+  Widget _buildAnswerButton(String option, QueryDocumentSnapshot idiomData, double screenHeight) {
     Color? backgroundColor;
     Color finalBorderColor = _colorAnimation.value ?? const Color(0xFF0ABAB5);
 
     if (isShowingAnswer) {
-      if (option == wordData['ENG_to_JPN_Answer']) {
+      if (option == idiomData['Answer']) {
         backgroundColor = const Color(0xFFE0F7FA);
         finalBorderColor = const Color(0xFF0ABAB5);
       } else if (selectedAnswers[currentQuestionIndex] == option) {
@@ -653,12 +691,12 @@ Future<void> _saveRecord(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: GestureDetector(
         onTap: () {
-          bool isCorrect = option == wordData['ENG_to_JPN_Answer'];
+          bool isCorrect = option == idiomData['Answer'];
           _animationController.stop();
           setState(() {
             selectedAnswers[currentQuestionIndex] = option;
             isCorrectAnswers[currentQuestionIndex] = isCorrect;
-            _saveRecord(option, wordData, isCorrect);
+            _saveRecord(option, idiomData, isCorrect);
             isShowingAnswer = true;
           });
 
@@ -698,10 +736,10 @@ Future<void> _saveRecord(
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ResultPage_Word(
+                  builder: (context) => ResultPage_Idiom(
                     selectedAnswers: selectedAnswers,
                     isCorrectAnswers: isCorrectAnswers,
-                    wordDetails: questions,
+                    idiomDetails: questions,
                   ),
                 ),
               );
@@ -726,4 +764,5 @@ Future<void> _saveRecord(
       ),
     );
   }
+
 }
