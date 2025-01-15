@@ -1,13 +1,15 @@
 import '/import.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../authentication/login_history.dart';
+import 'dart:math' as math;
 
 class ResultPage_Short_Sentence extends StatefulWidget {
   final List<String?> selectedAnswers;
   final List<bool?> isCorrectAnswers;
   final List<QueryDocumentSnapshot> wordDetails;
 
-  const ResultPage_Short_Sentence({super.key, 
+  const ResultPage_Short_Sentence({
+    super.key, 
     required this.selectedAnswers,
     required this.isCorrectAnswers,
     required this.wordDetails,
@@ -43,17 +45,15 @@ class _ResultPage_Short_SentenceState extends State<ResultPage_Short_Sentence> w
     super.dispose();
   }
 
-    Future<void> _addLoginHistoryAndNavigateHome() async {
+  Future<void> _addLoginHistoryAndNavigateHome() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
       print('ログイン中のユーザーがいません');
       return;
     }
 
-    // ログイン履歴を記録
     await addLoginHistory(userId);
 
-    // ホーム画面に遷移
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => HomeScreen()),
@@ -64,28 +64,34 @@ class _ResultPage_Short_SentenceState extends State<ResultPage_Short_Sentence> w
   @override
   Widget build(BuildContext context) {
     int correctCount = widget.isCorrectAnswers.where((answer) => answer == true).length;
+    final int itemCount = math.min(
+      widget.isCorrectAnswers.length,
+      math.min(
+        widget.selectedAnswers.length,
+        widget.wordDetails.length,
+      ),
+    );
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(60.0), // AppBarの高さを設定
+        preferredSize: const Size.fromHeight(60.0),
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF0ABAB5), Color.fromARGB(255, 255, 255, 255)], // グラデーションの色設定
+              colors: [Color(0xFF0ABAB5), Color.fromARGB(255, 255, 255, 255)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
           ),
           child: AppBar(
             automaticallyImplyLeading: false,
-            backgroundColor: Colors.transparent, // AppBar自体の背景色を透明に
+            backgroundColor: Colors.transparent,
             elevation: 0,
             title: Row(
               children: [
                 IconButton(
                   icon: const Icon(Icons.close, color: Colors.white),
                   onPressed: () => _addLoginHistoryAndNavigateHome(),
-
                 ),
                 const SizedBox(width: 10),
                 const Text(
@@ -174,14 +180,8 @@ class _ResultPage_Short_SentenceState extends State<ResultPage_Short_Sentence> w
             const SizedBox(height: 20),
             Expanded(
               child: ListView.builder(
-                // itemCountをisCorrectAnswersの長さに合わせる
-                itemCount: widget.isCorrectAnswers.length, 
+                itemCount: itemCount,
                 itemBuilder: (context, index) {
-                  // インデックスが範囲外でないか確認
-                  if (index >= widget.wordDetails.length || index >= widget.selectedAnswers.length) {
-                    return Container(); // 範囲外の場合、空のコンテナを返す
-                  }
-
                   var wordData = widget.wordDetails[index];
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -240,7 +240,6 @@ class _ResultPage_Short_SentenceState extends State<ResultPage_Short_Sentence> w
                 },
               ),
             )
-
           ],
         ),
       ),

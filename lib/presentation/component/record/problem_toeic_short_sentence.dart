@@ -417,7 +417,7 @@ Future<void> _saveRecord(
       return;
     }
 
-    await _updateTierProgress(wordData, wordData['Grammar'], isCorrect);
+    await _updateTierProgress(wordData, wordData['Question'], isCorrect);
 
     // Firestore パス
     final recordRef = FirebaseFirestore.instance
