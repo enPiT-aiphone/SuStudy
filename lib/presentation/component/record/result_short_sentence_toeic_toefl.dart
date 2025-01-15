@@ -5,12 +5,12 @@ import '../authentication/login_history.dart';
 class ResultPage_Short_Sentence extends StatefulWidget {
   final List<String?> selectedAnswers;
   final List<bool?> isCorrectAnswers;
-  final List<QueryDocumentSnapshot> wordDetails;
+  final List<QueryDocumentSnapshot> short_sentenceDetails;
 
   const ResultPage_Short_Sentence({super.key, 
     required this.selectedAnswers,
     required this.isCorrectAnswers,
-    required this.wordDetails,
+    required this.short_sentenceDetails,
   });
 
   @override
@@ -178,16 +178,16 @@ class _ResultPage_Short_SentenceState extends State<ResultPage_Short_Sentence> w
                 itemCount: widget.isCorrectAnswers.length, 
                 itemBuilder: (context, index) {
                   // インデックスが範囲外でないか確認
-                  if (index >= widget.wordDetails.length || index >= widget.selectedAnswers.length) {
+                  if (index >= widget.short_sentenceDetails.length || index >= widget.selectedAnswers.length) {
                     return Container(); // 範囲外の場合、空のコンテナを返す
                   }
 
-                  var wordData = widget.wordDetails[index];
+                  var short_sentenceData = widget.short_sentenceDetails[index];
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 10.0),
                     child: GestureDetector(
                       onTap: () {
-                        _showWordDetailsDialog(context, wordData);
+                        _showWordDetailsDialog(context, short_sentenceData);
                       },
                       child: Container(
                         padding: const EdgeInsets.all(16.0),
@@ -209,7 +209,7 @@ class _ResultPage_Short_SentenceState extends State<ResultPage_Short_Sentence> w
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${index + 1}. ${wordData['Answer']}',
+                                  '${index + 1}. ${short_sentenceData['Answer']}',
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
@@ -247,73 +247,115 @@ class _ResultPage_Short_SentenceState extends State<ResultPage_Short_Sentence> w
     );
   }
 
-  void _showWordDetailsDialog(BuildContext context, QueryDocumentSnapshot wordData) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Column(
+void _showWordDetailsDialog(BuildContext context, QueryDocumentSnapshot wordData) {
+  final data = wordData.data() as Map<String, dynamic>; // データを取得
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  '${data['Answer']} ',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 30,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Text(
-                    '${wordData['Answer']} ',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 30,
-                    ),
-                  ),
-                  if (wordData['Phonetic_Symbols'] != null && wordData['Phonetic_Symbols'].isNotEmpty)
-                    Text(
-                      '[${wordData['Phonetic_Symbols']}]',
-                      style: const TextStyle(
-                        fontSize: 16,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              // 「問題:」ラベルと内容を横並びで表示
+              if (data.containsKey('Question') && data['Question'] != null && data['Question'].toString().isNotEmpty)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      '解説: ',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      '問題: ',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     ),
+                    const SizedBox(width: 46), // ラベルと内容の間隔を統一
                     Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: FractionallySizedBox(
-                          widthFactor: 0.85,
-                          child: Text(
-                            '　${wordData['Explanation_1']}',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                        ),
+                      child: Text(
+                        data['Question'],
+                        style: const TextStyle(fontSize: 16),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              const SizedBox(height: 16),
+              
+              // 「日本語訳:」ラベルと内容を横並びで表示
+              if (data.containsKey('JPN_Translation') && data['JPN_Translation'] != null && data['JPN_Translation'].toString().isNotEmpty)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '日本語訳: ',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                    const SizedBox(width: 8), // 微調整で「問題:」より少し狭く
+                    Expanded(
+                      child: Text(
+                        data['JPN_Translation'],
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 16),
+
+              // 「解説:」ラベルと内容を横並びで表示
+              for (int i = 1; i <= 4; i++)
+                if (data.containsKey('Explanation_$i') && data['Explanation_$i'] != null && data['Explanation_$i'].toString().isNotEmpty)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (i == 1) // 最初の解説だけ「解説:」を表示
+                        const Text(
+                          '解説: ',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                        )
+                      else
+                        const SizedBox(width: 46), // それ以降はスペースを挿入
+                      const SizedBox(width: 46), // ラベルと内容の間隔を統一
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,  // 左揃えに変更
+                          child: FractionallySizedBox(
+                            widthFactor: 0.85,
+                            child: Text(
+                              data['Explanation_$i'],
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('閉じる'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('閉じる'),
+          ),
+        ],
+      );
+    },
+  );
+}
 }

@@ -394,6 +394,7 @@ class _SubjectDetailsScreenState extends State<SubjectDetailsScreen> {
         await subCollectionRefGrammar.set({
           'timestamp': FieldValue.serverTimestamp(),
           'tierProgress_today': 0,
+          'tierProgress_all': 0,
         });
       }
 
