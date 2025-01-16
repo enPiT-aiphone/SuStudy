@@ -1005,7 +1005,7 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                   }
                 },
               ),
-          if (_userNumber == 21)
+          if (_userNumber == 4)
               ListTile(
                 leading: const Icon(Icons.add),
                 title: const Text('文法を追加'),
