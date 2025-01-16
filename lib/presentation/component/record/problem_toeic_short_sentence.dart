@@ -414,7 +414,7 @@ Future<void> _updateTierProgress(
     }
 
     // tierProgress_all を Firestore に保存
-    await dateRef.update({'t_solved_count': tierProgress * 1.5});
+    await dateRef.update({'t_solved_count': tierProgress});
     await recordRef.update({'tierProgress_today': tierProgress * 1.5});
     await recordRef.update({'tierProgress_all': tierProgressAll * 1.5});
     print('date ドキュメントの t_solved_count が更新されました: $tSolvedCount');

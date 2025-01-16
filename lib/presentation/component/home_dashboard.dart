@@ -33,8 +33,9 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   int longestStreak = 0; // 最長連続ログイン日数
   int totalLogins = 0;       // 総ログイン回数
   double tierProgress = 0.0; // 今日の達成度
-  int wordCount = 66; // 単語数
+  double wordCount = 0; // 単語数
   double tierProgress_all = 0.0; // 目標全体に対する達成度
+  List<String> _followingSubjects = []; // フォロー中の教科のリスト
 
   late AnimationController _controller; // アニメーションコントローラ
   late Animation<double> _progressAnimation; // 今日の達成度のアニメーション
@@ -92,6 +93,14 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
         if (userSnapshot.docs.isNotEmpty) {
           final userData = userSnapshot.docs.first.data();
+          setState(() {
+            _followingSubjects = List<String>.from(userData['following_subjects'] ?? []); // フォロー中の教科
+          });
+        }
+        print(_followingSubjects);
+
+        if (userSnapshot.docs.isNotEmpty) {
+          final userData = userSnapshot.docs.first.data();
           userName = userData['user_name'] ?? 'Unknown'; // ユーザー名がない場合、"Unknown"を代入
           // login_historyを取得して計算
 
@@ -125,7 +134,7 @@ Future<void> fetchTierProgress() async {
     }
 
     final userId = currentUser.uid;
-    final category = widget.selectedCategory == '全体' ? 'TOEIC500点' : widget.selectedCategory;
+    final category = widget.selectedCategory;
 
     // ユーザードキュメントを取得
     final userDoc = await FirebaseFirestore.instance
@@ -140,6 +149,17 @@ Future<void> fetchTierProgress() async {
 
     final followingSubjects =
         List<String>.from(userDoc.data()?['following_subjects'] ?? []);
+
+    if (category == '全体'){
+      wordCount = 0;
+      for (final subject in followingSubjects){
+        wordCount += getTotalMinutes(subject);
+      }
+      print(wordCount);
+    }
+    else{
+      wordCount = getTotalMinutes(category);
+    }
 
     // TOEICスコア部分を抽出
     final toeicSubject = followingSubjects.firstWhere(
@@ -163,7 +183,30 @@ Future<void> fetchTierProgress() async {
 
     // ▼ ここから修正開始：コレクション内すべてのドキュメントから合計を取る
     // 選択中のカテゴリサブコレクション（例: .collection('TOEIC500点')）を取得
-    final categoryCollectionSnapshot = await FirebaseFirestore.instance
+    if (category == '全体'){
+      tierProgress = 0;
+      tierProgress_all = 0;
+      for (final subject in followingSubjects){
+        print('subject=$subject');
+        final categoryCollectionSnapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(userId)
+        .collection('record')
+        .doc(todayDate)
+        .collection(subject)
+        .get();
+
+    // すべてのドキュメントの tierProgress_today, tierProgress_all を合計
+        for (final doc in categoryCollectionSnapshot.docs) {
+          final data = doc.data();
+          tierProgress += data['tierProgress_today'] ?? 0;
+          tierProgress_all += data['tierProgress_all'] ?? 0;
+        }
+      }
+    }else{
+      tierProgress = 0;
+      tierProgress_all = 0;
+      final categoryCollectionSnapshot = await FirebaseFirestore.instance
         .collection('Users')
         .doc(userId)
         .collection('record')
@@ -172,10 +215,11 @@ Future<void> fetchTierProgress() async {
         .get();
 
     // すべてのドキュメントの tierProgress_today, tierProgress_all を合計
-    for (final doc in categoryCollectionSnapshot.docs) {
-      final data = doc.data();
-      tierProgress += data['tierProgress_today'] ?? 0;
-      tierProgress_all += data['tierProgress_all'] ?? 0;
+      for (final doc in categoryCollectionSnapshot.docs) {
+       final data = doc.data();
+        tierProgress += data['tierProgress_today'] ?? 0;
+        tierProgress_all += data['tierProgress_all'] ?? 0;
+      }
     }
 
     // ゴールの取得（例: doc(todayDate) の中に "${category}_goal" フィールドがある想定）
@@ -187,12 +231,24 @@ Future<void> fetchTierProgress() async {
 
     final todayWordsGoalDocSnapshot = await todayWordsGoalDocRef.get();
     final tierProgressTodayGoal = todayWordsGoalDocSnapshot.data()?['${category}_goal'] ?? 0;
+    double tierProgressGoal = 0;
+    for (final category in followingSubjects){
+      tierProgressGoal += todayWordsGoalDocSnapshot.data()?['${category}_goal'] ?? 0;
+    }
+
+    double normalizedTierProgressAll;
+    double normalizedTierProgress;
 
     // tierProgress_all を単語数で割って計算
-    final normalizedTierProgressAll = tierProgress_all / wordCount;
+    if (category == '全体'){
+      normalizedTierProgressAll = tierProgress_all / wordCount;
     // 例: 「*2 する」というなら既存ロジックに合わせる
-    final normalizedTierProgress = tierProgress / tierProgressTodayGoal;
-
+      normalizedTierProgress = tierProgress / tierProgressGoal;
+    }else{
+      normalizedTierProgressAll = tierProgress_all / wordCount;
+    // 例: 「*2 する」というなら既存ロジックに合わせる
+      normalizedTierProgress = tierProgress / tierProgressTodayGoal;
+    }
     // アニメーションを更新
     setState(() {
       _progressAllAnimation = Tween<double>(
@@ -680,7 +736,7 @@ void _calculateProgressForSelectedDay() async {
   }
 
   final userId = currentUser.uid;
-  final category = widget.selectedCategory == '全体' ? 'TOEIC500点' : widget.selectedCategory;
+  final category = widget.selectedCategory;
 
   try {
     // ▼ ここから修正開始：当日のサブコレクションをすべて取得
@@ -794,4 +850,27 @@ void _calculateProgressForSelectedDay() async {
     print('選択された日のデータ取得エラー: $e');
   }
 }
+
+// カテゴリーに基づく問題レベルを取得する関数
+  double getTotalMinutes(String category) {
+    if (category == 'TOEIC300点'){
+      return 5+10;
+    }
+    else if (category == 'TOEIC500点'){
+      return 27+33+28;
+    }
+    else if (category == 'TOEIC700点'){
+      return 39.5+8;
+    }
+    else if (category == 'TOEIC900点'){
+      return 48+15+45;
+    }
+    else if (category == 'TOEIC990点'){
+      return 50+8;
+    }
+    else{
+      return 1;
+    }
+  }
 }
+
