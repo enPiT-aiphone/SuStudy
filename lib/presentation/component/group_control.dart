@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'home.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   final Function(String groupId, String groupName)? onGroupCreated;
@@ -103,7 +104,11 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       _groupNameController.clear();
 
       // 作成後に画面を閉じる
-      Navigator.pop(context);
+      // Navigator.pop(context);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
     } catch (e) {
       print('グループ作成エラー: $e');
       ScaffoldMessenger.of(context).showSnackBar(
