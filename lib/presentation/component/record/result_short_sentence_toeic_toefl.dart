@@ -316,33 +316,39 @@ void _showWordDetailsDialog(BuildContext context, QueryDocumentSnapshot wordData
               const SizedBox(height: 16),
 
               // 「解説:」ラベルと内容を横並びで表示
-              for (int i = 1; i <= 4; i++)
-                if (data.containsKey('Explanation_$i') && data['Explanation_$i'] != null && data['Explanation_$i'].toString().isNotEmpty)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (i == 1) // 最初の解説だけ「解説:」を表示
-                        const Text(
-                          '解説: ',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                        )
-                      else
-                        const SizedBox(width: 46), // それ以降はスペースを挿入
-                      const SizedBox(width: 46), // ラベルと内容の間隔を統一
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.centerLeft,  // 左揃えに変更
-                          child: FractionallySizedBox(
-                            widthFactor: 0.85,
-                            child: Text(
-                              data['Explanation_$i'],
-                              style: const TextStyle(fontSize: 16),
-                            ),
+            for (int i = 1; i <= 5; i++)
+              if (data.containsKey('Explanation_$i') && data['Explanation_$i'] != null && data['Explanation_$i'].toString().isNotEmpty) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (i == 1) // 最初の解説だけ「解説:」を表示
+                      const Text(
+                        '解説: ',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      )
+                    else
+                      const SizedBox(width: 46), // それ以降はスペースを挿入
+                    const SizedBox(width: 46), // ラベルと内容の間隔を統一
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft, // 左揃えに変更
+                        child: FractionallySizedBox(
+                          widthFactor: 0.85,
+                          child: Text(
+                            data['Explanation_$i'],
+                            style: const TextStyle(fontSize: 16),
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+                if (i < 5 &&
+                    data.containsKey('Explanation_${i + 1}') &&
+                    data['Explanation_${i + 1}'] != null &&
+                    data['Explanation_${i + 1}'].toString().isNotEmpty)
+                  const SizedBox(height: 16), // 空白の高さを追加
+              ],
             ],
           ),
         ),

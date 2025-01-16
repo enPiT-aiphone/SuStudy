@@ -346,9 +346,9 @@ Future<void> _updateTierProgress(
         .collection('record')
         .doc(formattedDate);
 
-    int tierProgress = 0;
-    int tierProgressAll = 0;
-    int tSolvedCount = 0;
+    double tierProgress = 0.0;
+    double tierProgressAll = 0.0;
+    double tSolvedCount = 0.0;
 
     // 現在の `tierProgress_all` を取得
     final recordSnapshot = await recordRef.get();
@@ -415,8 +415,8 @@ Future<void> _updateTierProgress(
 
     // tierProgress_all を Firestore に保存
     await dateRef.update({'t_solved_count': tierProgress});
-    await recordRef.update({'tierProgress_today': tierProgress});
-    await recordRef.update({'tierProgress_all': tierProgressAll});
+    await recordRef.update({'tierProgress_today': tierProgress * 1.5});
+    await recordRef.update({'tierProgress_all': tierProgressAll * 1.5});
     print('date ドキュメントの t_solved_count が更新されました: $tSolvedCount');
     print('Words ドキュメントの tierProgress_today が更新されました: $tierProgress');
     print('Words ドキュメントの tierProgress_all が更新されました: $tierProgressAll');
