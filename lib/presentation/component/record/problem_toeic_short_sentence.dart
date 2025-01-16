@@ -417,6 +417,7 @@ Future<void> _updateTierProgress(
     await dateRef.update({'t_solved_count': tierProgress});
     await recordRef.update({'tierProgress_today': tierProgress});
     await recordRef.update({'tierProgress_all': tierProgressAll});
+
     print('date ドキュメントの t_solved_count が更新されました: $tSolvedCount');
     print('Words ドキュメントの tierProgress_today が更新されました: $tierProgress');
     print('Words ドキュメントの tierProgress_all が更新されました: $tierProgressAll');
