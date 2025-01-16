@@ -53,7 +53,7 @@ class _TOEICIdiomQuizState extends State<TOEICIdiomQuiz> with SingleTickerProvid
     _fetchQuestions();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: const Duration(seconds: 20),
     );
 
     _animation = Tween<double>(begin: 1.0, end: 0.0).animate(_animationController)
@@ -592,12 +592,13 @@ Future<void> _saveRecord(
 
 Widget _buildQuestionUI(QueryDocumentSnapshot idiomData) {
   final screenHeight = MediaQuery.of(context).size.height;
-  final options = shuffledOptions[currentQuestionIndex];  // 事前にシャッフルされた選択肢を取得
+  final options = shuffledOptions[currentQuestionIndex]; // 事前にシャッフルされた選択肢を取得
 
   return Padding(
     padding: const EdgeInsets.all(16.0),
     child: Column(
       children: [
+        // プログレスバー
         LinearProgressIndicator(
           borderRadius: BorderRadius.circular(20),
           value: _animation.value,
@@ -606,9 +607,14 @@ Widget _buildQuestionUI(QueryDocumentSnapshot idiomData) {
           minHeight: 20,
         ),
         const SizedBox(height: 20),
+        
+        // Spacerを追加して間隔を調整
+        const Spacer(flex: 2),
+        
+        // 質問文
         Expanded(
-          flex: 5,
-          child: SingleChildScrollView(  // 追加: 長いテキストに対応
+          flex: 4,
+          child: SingleChildScrollView( // 長いテキストに対応
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -618,23 +624,16 @@ Widget _buildQuestionUI(QueryDocumentSnapshot idiomData) {
                     fontSize: 30,
                   ),
                   softWrap: true,
-                  overflow: TextOverflow.visible,  // 修正: テキストを切り捨てずに表示
+                  overflow: TextOverflow.visible, // テキストを切り捨てずに表示
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  "【${idiomData['Phonetic_Symbols']}】", 
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey, 
-                  ),
-                  softWrap: true,
-                  overflow: TextOverflow.ellipsis,
-                ),
               ],
             ),
           ),
         ),
-        Align(
+
+        
+         Align(
           alignment: Alignment.topLeft,
           child: Text(
             '${currentQuestionIndex + 1}/5',
@@ -647,7 +646,8 @@ Widget _buildQuestionUI(QueryDocumentSnapshot idiomData) {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        const SizedBox(height: 20),
+
+        // 選択肢
         Expanded(
           flex: 5,
           child: ListView(
