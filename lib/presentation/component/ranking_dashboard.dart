@@ -346,7 +346,7 @@ class _RankingScreenState extends State<RankingScreen> {
       ),
       title: Text(user['userName']),
       trailing: Text(
-        '${user['tSolvedCount']} 問',
+        '${user['tSolvedCount']} pt',
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
       onTap: () {
