@@ -85,7 +85,7 @@ class GroupMembersScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('Groups')
             .doc(groupId)
-            .collection('members')
+            .collection('members_id')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -104,8 +104,8 @@ class GroupMembersScreen extends StatelessWidget {
             itemCount: members.length,
             itemBuilder: (context, index) {
               final member = members[index];
-              final memberName = member['name'] ?? '名前なし';
-              final memberId = member['userId'] ?? 'IDなし';
+              final memberName = member['userName'] ?? '名前なし';
+              final memberId = member['auth_uid'] ?? 'IDなし';
 
               return ListTile(
                 title: Text(memberName),

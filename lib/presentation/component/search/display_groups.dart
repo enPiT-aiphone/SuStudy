@@ -6,7 +6,8 @@ class GroupDetailsPage extends StatefulWidget {
   final String groupId;
   final String groupName;
 
-  const GroupDetailsPage({super.key, required this.groupId, required this.groupName});
+  const GroupDetailsPage(
+      {super.key, required this.groupId, required this.groupName});
 
   @override
   _GroupDetailsPageState createState() => _GroupDetailsPageState();
@@ -14,14 +15,16 @@ class GroupDetailsPage extends StatefulWidget {
 
 class _GroupDetailsPageState extends State<GroupDetailsPage> {
   bool _isJoined = false;
+  bool _isGrouped = false;
 
   @override
   void initState() {
     super.initState();
     _checkIfJoined();
+    _checkIfGrouped();
   }
 
-  // グループ参加状態を確認
+  // 表示グループへの参加状態を確認
   Future<void> _checkIfJoined() async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) return;
@@ -38,25 +41,57 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
     });
   }
 
+  // 参加グループ有無を確認
+  Future<void> _checkIfGrouped() async {
+    final isGrouped = await checkIfGrouped();
+    setState(() {
+      _isGrouped = isGrouped;
+    });
+  }
+
+  Future<bool> checkIfGrouped() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return false;
+
+    final groupSnapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(currentUser.uid)
+        .collection('groups')
+        .get();
+
+    setState(() {
+      _isGrouped = groupSnapshot.docs.isNotEmpty;
+    });
+    
+    return groupSnapshot.docs.isNotEmpty;
+  }
+
   // グループに参加
   Future<void> _joinGroup() async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) return;
 
     try {
-      final userDoc = FirebaseFirestore.instance.collection('Users').doc(currentUserId);
+      final userDoc =
+          FirebaseFirestore.instance.collection('Users').doc(currentUserId);
+      final userSnapshot = await userDoc.get();
+      final userName = userSnapshot['user_name'];
 
       if (!_isJoined) {
         // グループをユーザーのサブコレクションに追加
         await userDoc.collection('groups').doc(widget.groupId).set({
-          'group_name': widget.groupName,
+          'groupId': widget.groupId,
+          'groupName': widget.groupName,
           'timestamp': FieldValue.serverTimestamp(),
         });
 
-        // グループの参加者数を更新
-        final groupDoc = FirebaseFirestore.instance.collection('Groups').doc(widget.groupId);
-        await groupDoc.update({
-          'member_count': FieldValue.increment(1),
+        // グループの参加者情報を更新
+        final groupDoc =
+            FirebaseFirestore.instance.collection('Groups').doc(widget.groupId);
+        await groupDoc.collection('members_id').doc().set({
+          'auth_uid': currentUserId,
+          'userName': userName,
+          'joined_at': FieldValue.serverTimestamp(),
         });
 
         setState(() {
@@ -74,14 +109,16 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
     if (currentUserId == null) return;
 
     try {
-      final userDoc = FirebaseFirestore.instance.collection('Users').doc(currentUserId);
+      final userDoc =
+          FirebaseFirestore.instance.collection('Users').doc(currentUserId);
 
       if (_isJoined) {
         // ユーザーのサブコレクションからグループを削除
         await userDoc.collection('groups').doc(widget.groupId).delete();
 
         // グループの参加者数を更新
-        final groupDoc = FirebaseFirestore.instance.collection('Groups').doc(widget.groupId);
+        final groupDoc =
+            FirebaseFirestore.instance.collection('Groups').doc(widget.groupId);
         await groupDoc.update({
           'member_count': FieldValue.increment(-1),
         });
@@ -116,10 +153,12 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
               style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 20),
+            if (!_isGrouped)
             ElevatedButton(
               onPressed: _isJoined ? _leaveGroup : _joinGroup,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isJoined ? Colors.grey : const Color(0xFF0ABAB5),
+                backgroundColor:
+                    _isJoined ? Colors.grey : const Color(0xFF0ABAB5),
               ),
               child: Text(
                 _isJoined ? '参加をキャンセル' : '参加する',

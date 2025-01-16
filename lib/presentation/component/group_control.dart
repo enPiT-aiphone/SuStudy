@@ -68,6 +68,28 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           .doc(groupId)
           .set(groupData);
 
+      // 現在のユーザーの情報を取得
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('ログインしているユーザーがいません');
+        return;
+      }
+
+      final userId = user.uid;
+      final userDoc = await FirebaseFirestore.instance.collection('Users').doc(userId).get();
+      final userName = userDoc['user_name'];
+
+      // サブコレクション "members_id" にユーザーを追加
+      await FirebaseFirestore.instance
+          .collection('Groups')
+          .doc(groupId)
+          .collection('members_id')
+          .doc(userId)
+          .set({
+        'auth_uid': userId,
+        'userName': userName,
+        'joined_at': FieldValue.serverTimestamp(),
+      });
       // コールバック関数が指定されている場合、呼び出す
       if (widget.onGroupCreated != null) {
         widget.onGroupCreated!(groupId, groupName);

@@ -21,6 +21,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
   String? _currentUserId; // 現在のユーザーID
   List<String> _followingUserIds = []; // フォロー中のユーザーIDリスト
   List<String> _groupMemberIds = []; // グループのユーザーIDリスト
+  bool? _isGrouped; // グループに所属しているかどうか
   String? _myGroup; // グループ名
   int? _progressCount; // グループメンバーの進捗数
   DocumentSnapshot? _lastDocument; // 最後に読み取ったドキュメント
@@ -86,13 +87,16 @@ class _TimelineScreenState extends State<TimelineScreen> {
           .collection('Users')
           .doc(userId)
           .collection('groups')
-          .orderBy('timestamp') // 作成日時でソート
-          .limit(1) // 最初のドキュメントを取得
           .get();
 
-      if (groupsSnapshot.docs.isNotEmpty) {
+      if (groupsSnapshot.docs.isEmpty) {
         setState(() {
-          _myGroup = groupsSnapshot.docs.first['group_name'];
+          _isGrouped = false;
+        });
+      } else {
+        setState(() {
+          _isGrouped = true;
+          _myGroup = groupsSnapshot.docs.first['groupName'];
         });
       }
     } catch (e) {
@@ -138,7 +142,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       setState(() {
         _progressCount = count;
       });
-      if(_progressCount == _groupMemberIds.length){
+      if (_progressCount == _groupMemberIds.length) {
         //グループのポイント制度を導入したらここでグループポイント加算
         print('全員の進捗が100%です');
       }
@@ -354,7 +358,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                 },
                 child: Column(
                   children: [
-                    if (widget.selectedTab == 'グループ') ...[
+                    if (widget.selectedTab == 'グループ' && _isGrouped == true) ...[
                       ListTile(
                         leading:
                             const Icon(Icons.star, color: Color(0xFF0ABAB5)),
@@ -389,7 +393,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
                     ],
                     Expanded(
                       child: _timelinePosts.isEmpty
-                          ? const Center(child: Text('投稿がありません'))
+                          ? Center(
+                              child: Text(_isGrouped == false
+                                  ? 'グループに所属していません'
+                                  : '投稿がありません'))
                           : ListView.separated(
                               itemCount: _timelinePosts.length,
                               separatorBuilder: (context, index) => Divider(
