@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../utils/progress_utils.dart';
 
 class TimelineScreen extends StatefulWidget {
   final String selectedTab;
@@ -20,6 +22,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
   List<String> _followingUserIds = []; // フォロー中のユーザーIDリスト
   List<String> _groupMemberIds = []; // グループのユーザーIDリスト
   String? _myGroup; // グループ名
+  int? _progressCount; // グループメンバーの進捗数
   DocumentSnapshot? _lastDocument; // 最後に読み取ったドキュメント
   bool _isFetchingMore = false; // データ取得中かどうか
   final int _fetchLimit = 10; // 一度に読み取る投稿数
@@ -30,10 +33,12 @@ class _TimelineScreenState extends State<TimelineScreen> {
     _fetchCurrentUser();
     _fetchFollowingUsers();
     _fetchMyGroup().then((_) {
-    if (_myGroup != null) {
-      _fetchGroupMemberIds();
-    }
-  });
+      if (_myGroup != null) {
+        _fetchGroupMemberIds().then((_) {
+          _fetchGroupMemberProgress();
+        });
+      }
+    });
     _fetchTimelinePosts();
   }
 
@@ -116,6 +121,29 @@ class _TimelineScreenState extends State<TimelineScreen> {
       }
     } catch (e) {
       print('グループメンバーの取得エラー: $e');
+    }
+  }
+
+//グループメンバーの今日の目標進捗を取得
+  Future<void> _fetchGroupMemberProgress() async {
+    try {
+      int count = 0;
+      for (var userId in _groupMemberIds) {
+        final normalizedTierProgress = await fetchTierProgress(userId, '全体');
+        if (normalizedTierProgress >= 1) {
+          count++;
+        }
+      }
+
+      setState(() {
+        _progressCount = count;
+      });
+      if(_progressCount == _groupMemberIds.length){
+        //グループのポイント制度を導入したらここでグループポイント加算
+        print('全員の進捗が100%です');
+      }
+    } catch (e) {
+      print('グループメンバーの進捗取得エラー: $e');
     }
   }
 
@@ -309,139 +337,184 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
-            ))
-          : NotificationListener<ScrollNotification>(
-              onNotification: (ScrollNotification scrollInfo) {
-                if (scrollInfo.metrics.pixels ==
-                        scrollInfo.metrics.maxScrollExtent &&
-                    !_isFetchingMore) {
-                  // スクロール位置が一番下に到達した場合、次の投稿を取得
-                  _fetchTimelinePosts(isFetchingMore: true);
-                }
-                return false;
-              },
-              child: _timelinePosts.isEmpty
-                  ? const Center(child: Text('投稿がありません'))
-                  : ListView.separated(
-                      itemCount: _timelinePosts.length,
-                      separatorBuilder: (context, index) => Divider(
-                        color: Colors.grey[300], // 線の色を指定
-                        thickness: 1, // 線の太さを指定
-                        height: 1, // 線の高さ
+        body: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+              ))
+            : NotificationListener<ScrollNotification>(
+                onNotification: (ScrollNotification scrollInfo) {
+                  if (scrollInfo.metrics.pixels ==
+                          scrollInfo.metrics.maxScrollExtent &&
+                      !_isFetchingMore) {
+                    // スクロール位置が一番下に到達した場合、次の投稿を取得
+                    _fetchTimelinePosts(isFetchingMore: true);
+                  }
+                  return false;
+                },
+                child: Column(
+                  children: [
+                    if (widget.selectedTab == 'グループ') ...[
+                      ListTile(
+                        leading:
+                            const Icon(Icons.star, color: Color(0xFF0ABAB5)),
+                        title: Text(
+                          _myGroup ?? '',
+                          style: GoogleFonts.roboto(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0ABAB5),
+                          ),
+                        ),
                       ),
-                      itemBuilder: (context, index) {
-                        final post = _timelinePosts[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 12.0, horizontal: 16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                                'グループメンバーの進捗: $_progressCount / ${_groupMemberIds.length}'),
+                            LinearProgressIndicator(
+                              value: (_progressCount ?? 0) /
+                                  (_groupMemberIds.isNotEmpty
+                                      ? _groupMemberIds.length
+                                      : 1),
+                              backgroundColor: Colors.grey[300],
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF0ABAB5)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    Expanded(
+                      child: _timelinePosts.isEmpty
+                          ? const Center(child: Text('投稿がありません'))
+                          : ListView.separated(
+                              itemCount: _timelinePosts.length,
+                              separatorBuilder: (context, index) => Divider(
+                                color: Colors.grey[300], // 線の色を指定
+                                thickness: 1, // 線の太さを指定
+                                height: 1, // 線の高さ
+                              ),
+                              itemBuilder: (context, index) {
+                                final post = _timelinePosts[index];
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12.0, horizontal: 16.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      GestureDetector(
-                                        onTap: () {
-                                          // プロフィール表示のコールバックを実行
-                                          widget.onUserProfileTap(
-                                              post['auth_uid']);
-                                        },
-                                        child: CircleAvatar(
-                                          radius: 27,
-                                          backgroundColor: Colors.grey[200],
-                                          child: Text(
-                                            post['user_name'] != null
-                                                ? post['user_name'][0]
-                                                : '?',
-                                            style: const TextStyle(
-                                              fontSize: 25,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Column(
+                                      Row(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Row(
                                             children: [
-                                              Text(
-                                                post['user_name'],
-                                                style: const TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
+                                              GestureDetector(
+                                                onTap: () {
+                                                  // プロフィール表示のコールバックを実行
+                                                  widget.onUserProfileTap(
+                                                      post['auth_uid']);
+                                                },
+                                                child: CircleAvatar(
+                                                  radius: 27,
+                                                  backgroundColor:
+                                                      Colors.grey[200],
+                                                  child: Text(
+                                                    post['user_name'] != null
+                                                        ? post['user_name'][0]
+                                                        : '?',
+                                                    style: const TextStyle(
+                                                      fontSize: 25,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
-                                              Text(
-                                                '@${post['user_id']}',
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.grey,
-                                                ),
+                                              const SizedBox(width: 10),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      Text(
+                                                        post['user_name'],
+                                                        style: const TextStyle(
+                                                          fontSize: 18,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        '@${post['user_id']}',
+                                                        style: const TextStyle(
+                                                          fontSize: 13,
+                                                          color: Colors.grey,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
                                               ),
                                             ],
                                           ),
+                                          Text(
+                                            post['createdAt'] != null
+                                                ? _timeAgo(post['createdAt'])
+                                                : '',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                            left: 64.0), // descriptionの位置を調整
+                                        child: Text(
+                                          post['description'],
+                                          style: const TextStyle(fontSize: 16),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(
+                                              post['is_liked']
+                                                  ? Icons.thumb_up_alt
+                                                  : Icons.thumb_up_alt_outlined,
+                                              color: post['is_liked']
+                                                  ? Colors.blue
+                                                  : Colors.grey,
+                                            ),
+                                            onPressed: () {
+                                              _toggleLike(
+                                                  post['post_id'],
+                                                  post['is_liked'],
+                                                  post['like_count']);
+                                            },
+                                          ),
+                                          Text('${post['like_count']}'),
                                         ],
                                       ),
                                     ],
                                   ),
-                                  Text(
-                                    post['createdAt'] != null
-                                        ? _timeAgo(post['createdAt'])
-                                        : '',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                    left: 64.0), // descriptionの位置を調整
-                                child: Text(
-                                  post['description'],
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(
-                                      post['is_liked']
-                                          ? Icons.thumb_up_alt
-                                          : Icons.thumb_up_alt_outlined,
-                                      color: post['is_liked']
-                                          ? Colors.blue
-                                          : Colors.grey,
-                                    ),
-                                    onPressed: () {
-                                      _toggleLike(post['post_id'],
-                                          post['is_liked'], post['like_count']);
-                                    },
-                                  ),
-                                  Text('${post['like_count']}'),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                                );
+                              },
+                            ),
                     ),
-            ),
-    );
+                  ],
+                ),
+              ));
   }
 }

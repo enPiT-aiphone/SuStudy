@@ -217,7 +217,6 @@ Future<void> fetchTierProgress() async {
   }
 }
 
-
 void _calculateLoginStats(List<dynamic> loginHistory) {
   if (loginHistory.isEmpty) {
     setState(() {

@@ -506,7 +506,7 @@ Future<void> uploadGrammarToFirestore() async {
         'Explanation_2': grammarData['Explanation_2'] ?? '',
         'Explanation_3': grammarData['Explanation_3'] ?? '',
         'Explanation_4': grammarData['Explanation_4'] ?? '',
-        'JPN_Translation':grammarData['JPN_translation'] ?? "",
+        'JPN_Translation':grammarData['JPN_Translation'] ?? "",
         'Question': grammarData['Question'] ?? '',
         'Question_id': grammarData['Question_id'] ?? '',
         'Tips': grammarData['Tips'] ?? '',
