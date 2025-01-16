@@ -275,7 +275,7 @@ class _ResultPage_IdiomState extends State<ResultPage_Idiom> with SingleTickerPr
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    '解説: ',
+                    '意味: ',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Expanded(
