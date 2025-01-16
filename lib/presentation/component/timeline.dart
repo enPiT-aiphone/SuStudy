@@ -19,7 +19,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
   String? _currentUserId; // 現在のユーザーID
   List<String> _followingUserIds = []; // フォロー中のユーザーIDリスト
   List<String> _groupMemberIds = []; // グループのユーザーIDリスト
-  final _myGroup = 'あいうえお'; // グループ名
+  String? _myGroup; // グループ名
   DocumentSnapshot? _lastDocument; // 最後に読み取ったドキュメント
   bool _isFetchingMore = false; // データ取得中かどうか
   final int _fetchLimit = 10; // 一度に読み取る投稿数
@@ -29,6 +29,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
     super.initState();
     _fetchCurrentUser();
     _fetchFollowingUsers();
+    _fetchMyGroup().then((_) {
+    if (_myGroup != null) {
+      _fetchGroupMemberIds();
+    }
+  });
     _fetchTimelinePosts();
   }
 
@@ -63,6 +68,57 @@ class _TimelineScreenState extends State<TimelineScreen> {
     }
   }
 
+//自分が所属しているグループ名を取得（所属グループを一つにしたら微修正）
+  Future<void> _fetchMyGroup() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        print('ログインしているユーザーがいません');
+        return;
+      }
+
+      final groupsSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(userId)
+          .collection('groups')
+          .orderBy('timestamp') // 作成日時でソート
+          .limit(1) // 最初のドキュメントを取得
+          .get();
+
+      if (groupsSnapshot.docs.isNotEmpty) {
+        setState(() {
+          _myGroup = groupsSnapshot.docs.first['group_name'];
+        });
+      }
+    } catch (e) {
+      print('グループ名の取得エラー: $e');
+    }
+  }
+
+//グループメンバーidを取得
+  Future<void> _fetchGroupMemberIds() async {
+    try {
+      final groupSnapshot = await FirebaseFirestore.instance
+          .collection('Groups')
+          .where('groupName', isEqualTo: _myGroup)
+          .get();
+
+      if (groupSnapshot.docs.isNotEmpty) {
+        final groupDoc = groupSnapshot.docs.first;
+        final membersSnapshot =
+            await groupDoc.reference.collection('members_id').get();
+
+        setState(() {
+          _groupMemberIds = membersSnapshot.docs
+              .map((doc) => doc['auth_uid'] as String)
+              .toList();
+        });
+      }
+    } catch (e) {
+      print('グループメンバーの取得エラー: $e');
+    }
+  }
+
   // Timelineコレクションから投稿を取得
   Future<void> _fetchTimelinePosts({bool isFetchingMore = false}) async {
     if (_isFetchingMore) return;
@@ -78,6 +134,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
       if (widget.selectedTab == 'フォロー中' && _followingUserIds.isNotEmpty) {
         query = query.where('auth_uid', whereIn: _followingUserIds);
+      } else if (widget.selectedTab == 'グループ' && _groupMemberIds.isNotEmpty) {
+        query = query.where('auth_uid', whereIn: _groupMemberIds);
       }
 
       query = query.limit(_fetchLimit);
@@ -91,7 +149,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
       if (timelineSnapshot.docs.isNotEmpty) {
         final List<Map<String, dynamic>> newPosts = [];
         final List<String> userIds = timelineSnapshot.docs
-            .map((doc) => (doc.data() as Map<String, dynamic>)['auth_uid'] as String)
+            .map((doc) =>
+                (doc.data() as Map<String, dynamic>)['auth_uid'] as String)
             .toList();
 
         final usersSnapshot = await FirebaseFirestore.instance
@@ -109,6 +168,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
           if (widget.selectedTab == 'フォロー中' &&
               !_followingUserIds.contains(postData['auth_uid'])) {
+            continue;
+          } else if (widget.selectedTab == 'グループ' &&
+              !_groupMemberIds.contains(postData['auth_uid'])) {
             continue;
           }
 
