@@ -124,18 +124,20 @@ class _RankingScreenState extends State<RankingScreen> {
               final formattedDate = DateFormat('yyyy-MM-dd').format(today);
 
               // 現在の日付のレコードからデータを取得
-              final recordDocSnapshot = await FirebaseFirestore.instance
+             final recordDocSnapshot = await FirebaseFirestore.instance
                   .collection('Users')
-                  .doc(doc.id) // ユーザーのIDを使ってそのユーザーのサブコレクションにアクセス
-                  .collection('record')
+                  .doc(doc.id) // 現在のユーザー ID
+                  .collection('record') // レコードサブコレクション
                   .doc(formattedDate) // 今日の日付を使ったドキュメント
                   .collection(widget.selectedCategory) // カテゴリ名を使ったサブコレクション
-                  .doc('Word') // 'Word' ドキュメント
                   .get();
 
-              // tierProgress_today を取得
-              final recordData = recordDocSnapshot.data();
-              final tierProgressToday = recordData?['tierProgress_today'] ?? 0;
+                // すべてのドキュメントから tierProgress_today と tierProgress_all を合計
+                double tierProgressToday = 0.0;
+                for (final doc in recordDocSnapshot.docs) {
+                  final data = doc.data();
+                  tierProgressToday += data['tierProgress_today'] ?? 0;
+                }
 
               rankingData.add({
                 'userName': data['user_name'] ?? 'Unknown',
@@ -190,12 +192,14 @@ class _RankingScreenState extends State<RankingScreen> {
                   .collection('record') // レコードサブコレクション
                   .doc(formattedDate) // 今日の日付を使ったドキュメント
                   .collection(widget.selectedCategory) // カテゴリ名を使ったサブコレクション
-                  .doc('Word') // 'Word' ドキュメント
                   .get();
 
-              // tierProgress_today を取得
-              final recordData = recordDocSnapshot.data();
-              final tierProgressToday = recordData?['tierProgress_today'] ?? 0;
+                // すべてのドキュメントから tierProgress_today と tierProgress_all を合計
+                double tierProgressToday = 0.0;
+                for (final doc in recordDocSnapshot.docs) {
+                  final data = doc.data();
+                  tierProgressToday += data['tierProgress_today'] ?? 0;
+                }
 
               _userData = {
                 'userName': userData['user_name'] ?? 'Unknown',

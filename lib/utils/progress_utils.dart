@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 Future<double> fetchTierProgress(String userId, String selectedCategory) async {
   try {
-    final category = selectedCategory == '全体' ? 'TOEIC500点' : selectedCategory;
+    final category = selectedCategory;
 
     // ユーザードキュメントを取得
     final userDoc = await FirebaseFirestore.instance

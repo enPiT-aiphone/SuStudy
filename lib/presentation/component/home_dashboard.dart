@@ -871,4 +871,3 @@ void _calculateProgressForSelectedDay() async {
     }
   }
 }
-
