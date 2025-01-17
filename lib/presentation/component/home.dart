@@ -650,98 +650,104 @@ class _HomeScreenState extends State<HomeScreen>
         child: NestedScrollView(
           physics: const ClampingScrollPhysics(),
           // ---- SliverAppBar （+ タブバー） ----
-headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-  return [
-    SliverAppBar(
-      // スクロール時の動作設定
-      pinned: false, // スクロールで上へ消える
-      floating: true, // 下スクロールで再表示
-      snap: true, // スクロール終了後に自動スナップ
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      backgroundColor: Colors.transparent,
-      expandedHeight: (_currentIndex == 2 || _currentIndex == 3) ? 70 : 100, // 現在のタブに応じた高さ
-
-      flexibleSpace: LayoutBuilder(
-        builder: (context, constraints) {
-          final topPadding = MediaQuery.of(context).padding.top; // Safariアドレスバー考慮
-          return FlexibleSpaceBar(
-            background: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF0ABAB5).withOpacity(1.0),
-                    Colors.white.withOpacity(0.4),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: topPadding, // Safariアドレスバー分の余白を追加
-                  left: 16.0,
-                  right: 16.0,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center, // 中央揃え
-                  children: [
-                    GestureDetector(
-                      onTap: () => Scaffold.of(context).openDrawer(),
-                      child: CircleAvatar(
-                        backgroundColor: Colors.white,
-                        radius: 18,
-                        child: Text(
-                          _accountName.isNotEmpty ? _accountName[0] : '?',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            color: Color(0xFF0ABAB5),
+          headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+            return [
+              SliverAppBar(
+                // スクロール時に上へ消え、上方向にフリックで戻る
+                pinned: false,
+                floating: true,
+                snap: true,
+                elevation: 0,
+                automaticallyImplyLeading: false,
+                backgroundColor: Colors.transparent,
+                // 大きくしたいなら expandedHeightを上げる
+                expandedHeight: (_currentIndex == 2 || _currentIndex == 3)? 70 :100, 
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF0ABAB5).withOpacity(1.0),
+                          Colors.white.withOpacity(0.4),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                    child: FlexibleSpaceBar(
+                      background: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF0ABAB5).withOpacity(1.0),
+                              Colors.white.withOpacity(0.4),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 10.0), // 上部を調整
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start, // 上揃え
+                            children: [
+                              // Drawerアイコンの代わりにアバター
+                              GestureDetector(
+                                onTap: () => Scaffold.of(context).openDrawer(),
+                                child: CircleAvatar(
+                                  backgroundColor: Colors.white,
+                                  radius: 18,
+                                  child: Text(
+                                    _accountName.isNotEmpty ? _accountName[0] : '?',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      color: Color(0xFF0ABAB5),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'SuStudy,',
+                                style: TextStyle(
+                                  fontSize: 25,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: const Icon(Icons.group_add),
+                                onPressed: () {
+                                  _toggleGroupNavigationOverlay(context);
+                                },
+                              ),
+                              _buildNotificationIcon(),
+                              IconButton(
+                                icon: const Icon(Icons.mail),
+                                onPressed: () {},
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'SuStudy,',
-                      style: TextStyle(
-                        fontSize: 25,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.group_add),
-                      onPressed: () {
-                        _toggleGroupNavigationOverlay(context);
-                      },
-                    ),
-                    _buildNotificationIcon(),
-                    IconButton(
-                      icon: const Icon(Icons.mail),
-                      onPressed: () {},
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          );
-        },
-      ),
 
-      bottom: _shouldShowTabBar
-          ? PreferredSize(
-              preferredSize: const Size.fromHeight(50),
-              child: Container(
-                color: Colors.transparent,
-                alignment: Alignment.center,
-                child: _buildTabBarArea(),
+                // タブバーを表示する画面なら bottom に設定、不要なら null
+                bottom: _shouldShowTabBar
+                    ? PreferredSize(
+                        preferredSize: const Size.fromHeight(50),
+                        child: Container(
+                          color: Colors.transparent,
+                          alignment: Alignment.center,
+                          child: _buildTabBarArea(), // カスタムタブバー
+                        ),
+                      )
+                    : null,
               ),
-            )
-          : null,
-    ),
-  ];
-},
-
+            ];
+          },
 
           // ---- 本体部分 ----
           body: NotificationListener<ScrollNotification>(
