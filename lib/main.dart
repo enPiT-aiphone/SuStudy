@@ -31,15 +31,15 @@ void main() async {
 Future<void> setupFirebaseMessaging() async {
   final messagingInstance = FirebaseMessaging.instance; // Firebase Messagingインスタンスの取得
 
-  // 初回トークンの取得（ユーザーごとのデバイストークン）
-  String? fcmToken = await messagingInstance.getToken();
-  if (fcmToken != null) {
-    // 取得したトークンをFirestoreのサブコレクションに保存
-    await saveTokenToSubcollection(fcmToken);
-  }
+  // // 初回トークンの取得（ユーザーごとのデバイストークン）
+  // String? fcmToken = await messagingInstance.getToken();
+  // if (fcmToken != null) {
+  //   // 取得したトークンをFirestoreのサブコレクションに保存
+  //   await saveTokenToSubcollection(fcmToken);
+  // }
 
-  // トークンが更新された場合に再保存するようリスナーを設定
-  messagingInstance.onTokenRefresh.listen(saveTokenToSubcollection);
+  // // トークンが更新された場合に再保存するようリスナーを設定
+  // messagingInstance.onTokenRefresh.listen(saveTokenToSubcollection);
 
   // フォアグラウンドでメッセージ受信時の処理
   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {

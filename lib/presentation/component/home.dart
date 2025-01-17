@@ -18,6 +18,8 @@ import 'group_control.dart';
 import 'timeline.dart';
 import 'group_list.dart';
 import '../add_idiom.dart';
+import 'package:sustudy_add/main.dart' show saveTokenToSubcollection;
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -142,6 +144,7 @@ class _HomeScreenState extends State<HomeScreen>
       if (_loginHistory.isEmpty) {
         // 初回ログイン
         _showWelcomeDialog(userId, isFirstLogin: true);
+        _showNotificationDialog();
       } else if (!_hasLoggedInToday()) {
         // 過去にログインしたことはあるが当日の履歴がない場合
         _showWelcomeDialog(userId, isFirstLogin: false);
@@ -169,6 +172,59 @@ class _HomeScreenState extends State<HomeScreen>
 
     return false; // 当日のログインが存在しない場合
   }
+
+
+  Future<void> _requestNotificationPermission() async {
+    try {
+      // ユーザー操作（ボタン押下）内なのでエラーにならない
+      final messaging = FirebaseMessaging.instance;
+
+      // 通知トークンを取得
+      final fcmToken = await messaging.getToken();
+      if (fcmToken != null) {
+        // トークンをサブコレクションに保存
+        await saveTokenToSubcollection(fcmToken);
+
+        // トークンが更新された場合も再保存
+        messaging.onTokenRefresh.listen(saveTokenToSubcollection);
+
+        // 必要に応じて「通知が許可されました！」などユーザーに案内
+        print('通知が許可され、トークンを取得しました: $fcmToken');
+      }
+    } catch (e) {
+      print('通知許可リクエスト中にエラー: $e');
+    }
+  }
+
+  void _showNotificationDialog() {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('通知を許可して問題の通知やリアクションを受け取る'),
+        content: const Text('「次の画面で通知を許可」ボタンを押すと、ブラウザから通知許可ダイアログが表示されます。'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // ダイアログを閉じる
+            },
+            child: const Text('あとで'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // ダイアログを閉じる
+              // ダイアログを閉じてすぐにリクエストを呼ぶのではなく、
+              // 別途ボタンをタップさせたい場合はさらに分けても良い
+              await _requestNotificationPermission();
+            },
+            child: const Text('次の画面で通知を許可'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
 // ウェルカムダイアログを表示
 void _showWelcomeDialog(String userId, {required bool isFirstLogin}) {
