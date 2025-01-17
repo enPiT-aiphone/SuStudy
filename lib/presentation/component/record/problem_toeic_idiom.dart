@@ -349,9 +349,9 @@ Future<void> _updateTierProgress(
         .collection('record')
         .doc(formattedDate);
 
-    int tierProgress = 0;
-    int tierProgressAll = 0;
-    int tSolvedCount = 0;
+    double tierProgress = 0.0;
+    double tierProgressAll = 0.0;
+    double tSolvedCount = 0.0;
 
     // 現在の `tierProgress_all` を取得
     final recordSnapshot = await recordRef.get();
@@ -372,16 +372,16 @@ Future<void> _updateTierProgress(
     if (attemptsSnapshot.docs.isEmpty) {
       if (isCorrect) {
         tierProgress += 1;
-        tSolvedCount += 1;;
-        await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
-        await dateRef.set({'t_solved_count': tSolvedCount}, SetOptions(merge: true));
+        tSolvedCount += 1;
+        await recordRef.update({'tierProgress_today': tierProgress});
+        await dateRef.update({'t_solved_count': tSolvedCount});
         tierProgressAll += 1;
-        await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
+        await recordRef.update({'tierProgress_all': tierProgressAll});
         print('初めての試行: 正解 +1');
       } else {
-        await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
-        await dateRef.set({'t_solved_count': tSolvedCount}, SetOptions(merge: true));
-        await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
+        await recordRef.update({'tierProgress_today': tierProgress});
+        await dateRef.update({'t_solved_count': tSolvedCount});
+        await recordRef.update({'tierProgress_all': tierProgressAll});
         print('初めての試行: 不正解のためそのまま');
       }
       return;

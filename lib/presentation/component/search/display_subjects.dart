@@ -294,6 +294,16 @@ class _SubjectDetailsScreenState extends State<SubjectDetailsScreen> {
           'tierProgress_today': 0,
         });
       }
+      
+      final subCollectionRefIdioms = 
+          recordDocRef.collection(widget.subjectName).doc('Idioms');
+      final scSnapshotIdioms = await subCollectionRefIdioms.get();
+      if (!scSnapshotIdioms.exists) {
+        await subCollectionRefIdioms.set({
+          'timestamp': FieldValue.serverTimestamp(),
+          'tierProgress_today': 0,
+        });
+      }
       // t_solved_count_教科名
       await recordDocRef.set(
         {'t_solved_count_${widget.subjectName}': 0},
@@ -392,6 +402,17 @@ class _SubjectDetailsScreenState extends State<SubjectDetailsScreen> {
       final scSnapshotGrammar = await subCollectionRefGrammar.get();
       if (!scSnapshotGrammar.exists) {
         await subCollectionRefGrammar.set({
+          'timestamp': FieldValue.serverTimestamp(),
+          'tierProgress_today': 0,
+          'tierProgress_all': 0,
+        });
+      }
+
+            
+      final subCollectionRefIdioms = recordDocRef.collection(levelName).doc('Idioms');
+      final scSnapshotIdioms = await subCollectionRefIdioms.get();
+      if (!scSnapshotIdioms.exists) {
+        await subCollectionRefIdioms.set({
           'timestamp': FieldValue.serverTimestamp(),
           'tierProgress_today': 0,
           'tierProgress_all': 0,
