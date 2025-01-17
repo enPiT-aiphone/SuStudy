@@ -3,6 +3,7 @@ import '/import.dart';
 class AuthenticationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    double screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -14,7 +15,6 @@ class AuthenticationScreen extends StatelessWidget {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final double screenHeight = constraints.maxHeight;
 
             return Stack(
               children: [
