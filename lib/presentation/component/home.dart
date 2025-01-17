@@ -19,6 +19,12 @@ import 'timeline.dart';
 import 'group_list.dart';
 import '../add_idiom.dart';
 import 'package:sustudy_add/main.dart' show saveTokenToSubcollection;
+import 'dart:html' as html;
+
+double getDynamicHeight() {
+  return (html.window.innerHeight ?? 0).toDouble();
+}
+
 
 
 class MyApp extends StatelessWidget {
@@ -636,6 +642,7 @@ Widget get _currentScreen {
 
 @override
 Widget build(BuildContext context) {
+  final double dynamicHeight = getDynamicHeight(); // 動的高さを取得
   return Scaffold(
     body: Stack(
       children: [
@@ -643,6 +650,7 @@ Widget build(BuildContext context) {
         child: Column(
           children: [
             Container(
+              height: dynamicHeight * 0.3,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF0ABAB5), Color(0xFFFFFFFF)],
