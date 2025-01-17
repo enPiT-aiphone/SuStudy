@@ -143,6 +143,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter App',
       theme: ThemeData(
+        fontFamily: 'NotoSansJP',
         primarySwatch: Colors.blue,
       ),
       home: AuthChecker(), // AuthCheckerがアプリの初期画面を決定する

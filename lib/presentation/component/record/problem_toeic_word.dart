@@ -343,16 +343,16 @@ Future<void> _updateTierProgress(
     if (attemptsSnapshot.docs.isEmpty) {
       if (isCorrect) {
         tierProgress += 0.5;
-        tSolvedCount += 0.5;;
-        await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
-        await dateRef.set({'t_solved_count': tSolvedCount}, SetOptions(merge: true));
+        tSolvedCount += 0.5;
+        await recordRef.update({'tierProgress_today': tierProgress});
+        await dateRef.update({'t_solved_count': tSolvedCount});
         tierProgressAll += 0.5;
-        await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
+        await recordRef.update({'tierProgress_all': tierProgressAll});
         print('初めての試行: 正解 +0.5');
       } else {
-        await recordRef.set({'tierProgress_today': tierProgress}, SetOptions(merge: true));
-        await dateRef.set({'t_solved_count': tSolvedCount}, SetOptions(merge: true));
-        await recordRef.set({'tierProgress_all': tierProgressAll}, SetOptions(merge: true));
+        await recordRef.update({'tierProgress_today': tierProgress});
+        await dateRef.update({'t_solved_count': tSolvedCount});
+        await recordRef.update({'tierProgress_all': tierProgressAll});
         print('初めての試行: 不正解のためそのまま');
       }
       return;
@@ -473,9 +473,6 @@ Future<void> _saveRecord(
     print('クイズ結果が保存されました: ${wordData.id}, Attempt: $attemptNumber');
   } catch (e) {
     print('レコードの保存中にエラーが発生しました: $e');
-    
-    } catch (e) {
-    print('クイズ結果の保存に失敗しました: $e');
   }
 }
 
