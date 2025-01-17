@@ -1,14 +1,18 @@
-// 必要なパッケージのインポート
-import 'dart:ui'; // ImageFilterを使用するためのインポート
+import 'dart:ui'; // for ImageFilter
+import 'dart:html' as html; // Safari動的高さ用
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart'; // BadgeViewModel用
+
+// --- 以下は元の import 群 ---
 import 'package:sustudy_add/presentation/component/group_navigation.dart';
 import '../add_word.dart';
 import '../add_grammar.dart';
-import '/import.dart'; // 他ファイルの内容を含む
-import 'notification.dart'; // NotificationPageクラスが定義されているファイル
-import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
-import 'record/record_TOEIC.dart'; // 記録画面のコンポーネント
+import '/import.dart'; 
+import 'notification.dart';
+import 'record/record_TOEIC.dart';
 import 'record/add_daily.dart';
-import 'record/problem_toeic_word.dart'; // 記録画面のコンポーネント
+import 'record/problem_toeic_word.dart';
 import 'search/user_profile_screen.dart';
 import 'post/post.dart';
 import 'search/search.dart';
@@ -19,31 +23,23 @@ import 'timeline.dart';
 import 'group_list.dart';
 import '../add_idiom.dart';
 import 'package:sustudy_add/main.dart' show saveTokenToSubcollection;
-import 'dart:html' as html;
-
-double getDynamicHeight() {
-  return (html.window.innerHeight ?? 0).toDouble();
-}
-
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // メインのFlutterアプリケーション構築
     return MaterialApp(
-      home: HomeScreen(), // アプリの初期画面をHomeScreenに設定
+      home: HomeScreen(),
       theme: ThemeData(
-        primaryColor: const Color(0xFF0ABAB5), // テーマカラーを設定
+        primaryColor: const Color(0xFF0ABAB5),
       ),
     );
   }
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -51,81 +47,96 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  int _currentIndex = 0; // 現在選択されているボトムナビゲーションのインデックス
+  // ---------------------------------------------------
+  // もともとの変数類
+  // ---------------------------------------------------
+  int _currentIndex = 0;
   bool _isRecordPageVisible = false;
   bool _isPostCreateVisible = false;
-  bool _showExtraButtons = false; // サブボタンを表示するかの状態管理
+  bool _showExtraButtons = false;
   bool _isProfileVisible = false;
   bool _isGroupCreateVisible = false;
   bool _isGroupShowVisible = false;
   String _profileUserId = '';
-  String _currentUserId = ''; 
-  int _loginStreak = 0; // ログイン日数
-  OverlayEntry? _overlayEntry; // OverlayEntryの参照を保持
-  bool _isNotificationVisible = false; // 通知が表示されているかどうかを管理
-  String _selectedCategory = ''; // 現在選択されたカテゴリ
-  String _selectedTab = '最新'; // 現在選択されたタブ
-  late AnimationController _animationController; // アニメーションコントローラ
-  late Animation<double> _scaleAnimation; // スケールアニメーション
-  late Animation<double> _opacityAnimation; // 透過アニメーション
+  String _currentUserId = '';
+  int _loginStreak = 0;
+  OverlayEntry? _overlayEntry;
+  bool _isNotificationVisible = false;
+  String _selectedCategory = '';
+  String _selectedTab = '最新';
 
-  // Firebaseから取得したユーザー情報の変数
-  String _accountName = ''; // ユーザー名
-  String _accountId = ''; // ユーザーID
-  int _userNumber = 0; // ユーザー番号
-  int _followers = 0; // フォロワー数
-  int _follows = 0; // フォロー数
-  List<String> _followingSubjects = []; // フォロー中の教科のリスト
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
+
+  // Firebase
+  String _accountName = '';
+  String _accountId = '';
+  int _userNumber = 0;
+  int _followers = 0;
+  int _follows = 0;
+  List<String> _followingSubjects = [];
   List<dynamic> _loginHistory = [];
 
-  @override
-  // コールバック関数を定義
-  void _onLoginStreakCalculated(int loginStreak) {
-    setState(() {
-      _loginStreak = loginStreak;
-    });
-  }
+  // Safariの動的高さ対応
+  double _browserHeight = (html.window.innerHeight ?? 0).toDouble();
+
+  // 下スクロール時に BottomNavigationBar を半透明に
+  double _bottomNavOpacity = 1.0;
 
   @override
   void initState() {
     super.initState();
-    _fetchUserData(); // Firebaseからのユーザーデータ取得を呼び出し
+
+    // Safariのアドレスバー表示/非表示を拾う
+    html.window.addEventListener('resize', (event) {
+      setState(() {
+        _browserHeight = (html.window.innerHeight ?? 0).toDouble();
+      });
+    });
+
+    _fetchUserData();
+
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 220), // アニメーション時間を設定
-      vsync: this, // アニメーションコントローラの初期化
+      duration: const Duration(milliseconds: 220),
+      vsync: this,
     );
 
-    // スケールアニメーションの設定
     _scaleAnimation = TweenSequence([
       TweenSequenceItem(
         tween: Tween<double>(begin: 0, end: 1.05)
-            .chain(CurveTween(curve: Curves.easeOut)), // スケールアップ
+            .chain(CurveTween(curve: Curves.easeOut)),
         weight: 170,
       ),
       TweenSequenceItem(
         tween: Tween<double>(begin: 1.05, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeIn)), // スケールダウン
+            .chain(CurveTween(curve: Curves.easeIn)),
         weight: 50,
       ),
     ]).animate(_animationController);
 
-    // 透過アニメーションの設定
     _opacityAnimation = Tween<double>(begin: 0, end: 0.9).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
 
-  // Firebaseからユーザーデータを取得
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  //==================================================
+  // Firebase関連
+  //==================================================
   Future<void> _fetchUserData() async {
     try {
-      // FirebaseAuthを使用して現在ログイン中のユーザーIDを取得
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) {
         print('ログインしているユーザーがいません');
         return;
       }
 
-      // Usersコレクションから現在ログイン中のユーザーのデータを取得
       final userSnapshot = await FirebaseFirestore.instance
           .collection('Users')
           .where('auth_uid', isEqualTo: userId)
@@ -134,27 +145,25 @@ class _HomeScreenState extends State<HomeScreen>
       if (userSnapshot.docs.isNotEmpty) {
         final userData = userSnapshot.docs.first.data();
         setState(() {
-          _accountName = userData['user_name'] ?? 'Unknown'; // ユーザー名
-          _accountId = userData['user_id'] ?? 'ID Unknown'; // ユーザーID
+          _accountName = userData['user_name'] ?? 'Unknown';
+          _accountId = userData['user_id'] ?? 'ID Unknown';
           _currentUserId = userData['auth_uid'] ?? 'uid Unknown';
-          _userNumber = userData['user_number'] ?? 0; // ユーザー番号
+          _userNumber = userData['user_number'] ?? 0;
           _followers = userData['follower_count'];
           _follows = userData['follow_count'];
-          _followingSubjects = List<String>.from(
-              userData['following_subjects'] ?? []); // フォロー中の教科
+          _followingSubjects =
+              List<String>.from(userData['following_subjects'] ?? []);
           _loginHistory = userData['login_history'] ?? [];
           if (_followingSubjects.isNotEmpty) {
-            _selectedCategory = _followingSubjects[0]; // 最初の教科を選択
+            _selectedCategory = _followingSubjects[0];
           }
         });
-      if (_loginHistory.isEmpty) {
-        // 初回ログイン
-        _showWelcomeDialog(userId, isFirstLogin: true);
-        _showNotificationDialog();
-      } else if (!_hasLoggedInToday()) {
-        // 過去にログインしたことはあるが当日の履歴がない場合
-        _showWelcomeDialog(userId, isFirstLogin: false);
-      }
+        if (_loginHistory.isEmpty) {
+          _showWelcomeDialog(userId, isFirstLogin: true);
+          _showNotificationDialog();
+        } else if (!_hasLoggedInToday()) {
+          _showWelcomeDialog(userId, isFirstLogin: false);
+        }
       } else {
         print('ユーザーデータが見つかりません');
       }
@@ -163,38 +172,29 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // 当日の日付でログイン履歴をチェック
   bool _hasLoggedInToday() {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-
     for (var timestamp in _loginHistory) {
       final loginDate = (timestamp as Timestamp).toDate();
       final normalizedDate = DateTime(loginDate.year, loginDate.month, loginDate.day);
       if (normalizedDate == todayDate) {
-        return true; // 当日ログインが見つかった場合
+        return true;
       }
     }
-
-    return false; // 当日のログインが存在しない場合
+    return false;
   }
 
-
+  //==================================================
+  // 通知許可ダイアログ etc
+  //==================================================
   Future<void> _requestNotificationPermission() async {
     try {
-      // ユーザー操作（ボタン押下）内なのでエラーにならない
       final messaging = FirebaseMessaging.instance;
-
-      // 通知トークンを取得
       final fcmToken = await messaging.getToken();
       if (fcmToken != null) {
-        // トークンをサブコレクションに保存
         await saveTokenToSubcollection(fcmToken);
-
-        // トークンが更新された場合も再保存
         messaging.onTokenRefresh.listen(saveTokenToSubcollection);
-
-        // 必要に応じて「通知が許可されました！」などユーザーに案内
         print('通知が許可され、トークンを取得しました: $fcmToken');
       }
     } catch (e) {
@@ -203,112 +203,112 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _showNotificationDialog() {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text('通知を許可して問題の通知やリアクションを受け取る'),
-        content: const Text('「次の画面で通知を許可」ボタンを押すと、ブラウザから通知許可ダイアログが表示されます。'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // ダイアログを閉じる
-            },
-            child: const Text('あとで'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context); // ダイアログを閉じる
-              // ダイアログを閉じてすぐにリクエストを呼ぶのではなく、
-              // 別途ボタンをタップさせたい場合はさらに分けても良い
-              await _requestNotificationPermission();
-            },
-            child: const Text('次の画面で通知を許可'),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-// ウェルカムダイアログを表示
-void _showWelcomeDialog(String userId, {required bool isFirstLogin}) {
-  final toeicLevel = _extractToeicLevel(_followingSubjects);
-  final titleMessage = isFirstLogin
-      ? '$_accountNameさん、初めまして！'
-      : '$_accountNameさん、おかえりなさい！';
-  final contentMessage = isFirstLogin
-      ? 'まず今日のログイン問題に取り組んでログインカウントを貯めていこう！🔥'
-      : '今日もログイン問題に取り組んでログインカウントを貯めていこう！🔥';
-
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) {
-      return Dialog(
-        backgroundColor: Colors.transparent,
-        child: Stack(
-          children: [
-            BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-              child: Container(
-              ),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('通知を許可して問題の通知やリアクションを受け取る'),
+          content:
+              const Text('「次の画面で通知を許可」ボタンを押すと、ブラウザから通知許可ダイアログが表示されます。'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('あとで'),
             ),
-            Center(
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.7,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      titleMessage,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      contentMessage,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () async {// ダイアログを閉じる
-                            await addDailyRecord(_selectedCategory, context); // ゴール値を設定
-                            Navigator.of(context).pop();  
-                            _navigateToQuiz(toeicLevel); // クイズ画面に遷移
-                          },
-                          child: const Text('挑戦する'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _requestNotificationPermission();
+              },
+              child: const Text('次の画面で通知を許可'),
             ),
           ],
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
+  //==================================================
+  // ウェルカムダイアログ
+  //==================================================
+  void _showWelcomeDialog(String userId, {required bool isFirstLogin}) {
+    final toeicLevel = _extractToeicLevel(_followingSubjects);
+    final titleMessage = isFirstLogin
+        ? '$_accountNameさん、初めまして！'
+        : '$_accountNameさん、おかえりなさい！';
+    final contentMessage = isFirstLogin
+        ? 'まず今日のログイン問題に取り組んでログインカウントを貯めていこう！🔥'
+        : '今日もログイン問題に取り組んでログインカウントを貯めていこう！🔥';
 
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Stack(
+            children: [
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                child: Container(),
+              ),
+              Center(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.7,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        titleMessage,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        contentMessage,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () async {
+                              await addDailyRecord(_selectedCategory, context);
+                              Navigator.of(context).pop();
+                              _navigateToQuiz(toeicLevel);
+                            },
+                            child: const Text('挑戦する'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   String _extractToeicLevel(List<String> subjects) {
-    final toeicSubject =
-        subjects.firstWhere((subject) => subject.startsWith('TOEIC'), orElse: () => '');
+    final toeicSubject = subjects.firstWhere(
+      (subject) => subject.startsWith('TOEIC'),
+      orElse: () => '',
+    );
     final scoreMatch = RegExp(r'\d+').firstMatch(toeicSubject);
     return scoreMatch != null ? 'up_to_${scoreMatch.group(0)}' : 'up_to_500';
   }
@@ -317,62 +317,55 @@ void _showWelcomeDialog(String userId, {required bool isFirstLogin}) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TOEICWordQuiz(level: level, questionType:'random'),
+        builder: (context) => TOEICWordQuiz(level: level, questionType: 'random'),
       ),
     );
   }
 
-  // フローティングボタンを長押しした際にサブボタンを表示
-void _onLongPress() {
-  setState(() {
-    _showExtraButtons = !_showExtraButtons;
-  });
-}
-
-
- // サブボタンをクリックした際の処理
-void _onMenuItemTap(String menu) {
-  setState(() {
-    _showExtraButtons = false; // サブボタンを閉じる
-  });
-
-  if (menu == "btn1") {
-    // btn1 特有の処理: LanguageCategoryScreen を表示
+  //==================================================
+  // フローティングボタン & サブボタン
+  //==================================================
+  void _onLongPress() {
     setState(() {
-      _isRecordPageVisible = true; // 記録ページ表示状態に設定
-      _isPostCreateVisible = false; // 他の状態をリセット
-    });
-  }else if(menu == "btn2") {
-    // btn2 特有の処理: NewPostScreen を表示
-    setState(() {
-      _isPostCreateVisible = true; // 投稿作成ページを表示状態に設定
-      _isRecordPageVisible = false; // 他の状態をリセット
+      _showExtraButtons = !_showExtraButtons;
     });
   }
-}
-  
 
-  // カテゴリの選択処理
+  void _onMenuItemTap(String menu) {
+    setState(() {
+      _showExtraButtons = false;
+    });
+    if (menu == "btn1") {
+      setState(() {
+        _isRecordPageVisible = true;
+        _isPostCreateVisible = false;
+      });
+    } else if (menu == "btn2") {
+      setState(() {
+        _isPostCreateVisible = true;
+        _isRecordPageVisible = false;
+      });
+    }
+  }
+
+  //==================================================
+  // カテゴリ関連
+  //==================================================
   void _selectCategory(String category) {
     setState(() {
       _selectedCategory = category;
     });
   }
 
-  // タブの選択処理
   void _selectTab(String tab) {
     setState(() {
       _selectedTab = tab;
     });
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose(); // アニメーションコントローラの破棄
-    super.dispose();
-  }
-
-  // 通知リストをOverlayで表示
+  //==================================================
+  // Notification Overlay
+  //==================================================
   void _toggleNotificationOverlay(BuildContext context) {
     if (_isNotificationVisible) {
       _animationController.reverse().then((_) {
@@ -380,111 +373,101 @@ void _onMenuItemTap(String menu) {
       });
     } else {
       _showOverlay(context);
-      _animationController.reset(); // アニメーションの状態をリセット
-      _animationController.forward(); // アニメーション開始
+      _animationController.reset();
+      _animationController.forward();
     }
   }
 
-  // 通知オーバーレイを表示
   void _showOverlay(BuildContext context) {
-    _overlayEntry = _createOverlayEntry(); // OverlayEntryを生成
-    Overlay.of(context).insert(_overlayEntry!); // オーバーレイに挿入
+    _overlayEntry = _createOverlayEntry();
+    Overlay.of(context).insert(_overlayEntry!);
     _isNotificationVisible = true;
   }
 
-  // 通知オーバーレイを削除
   void _removeOverlay() {
     _overlayEntry?.remove();
     _overlayEntry = null;
     _isNotificationVisible = false;
   }
 
-
-  // 通知オーバーレイのエントリを生成
-OverlayEntry _createOverlayEntry() {
-  return OverlayEntry(
-    builder: (context) => Stack(
-      children: [
-        GestureDetector(
-          onTap: () => _toggleNotificationOverlay(context),
-          child: Container(color: Colors.transparent),
-        ),
-        Positioned(
-          top: kToolbarHeight + 10,
-          right: 50,
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            alignment: Alignment.topRight,
-            child: FadeTransition(
-              opacity: _opacityAnimation,
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  width: 250,
-                  height: 300,
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Consumer<BadgeViewModel>(
-                      builder: (context, badgeViewModel, _) {
-                        return NotificationPage(
-                          notifications: badgeViewModel.notifications,
-                          onNotificationTap: (docId) async {
-
-                            // クリックされた通知を取得
-                            final selectedNotification = badgeViewModel.notifications.firstWhere(
-                              (notif) => notif['id'] == docId,
-                              orElse: () => {},
-                            );
-
-                            if (selectedNotification.isNotEmpty) {
-                              // レベルを取得（デフォルトは 'up_to_500'）
-                              final level = selectedNotification['level'] ?? 'up_to_500';
-
-                              // 通知を既読にする処理
-                              await badgeViewModel.markNotificationAsRead(docId);
-
-                              // NotificationTOEICWordQuiz に遷移
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => TOEICWordQuiz(level: level, questionType:'random'),
-                                ),
+  OverlayEntry _createOverlayEntry() {
+    return OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          GestureDetector(
+            onTap: () => _toggleNotificationOverlay(context),
+            child: Container(color: Colors.transparent),
+          ),
+          Positioned(
+            top: kToolbarHeight + 10,
+            right: 50,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              alignment: Alignment.topRight,
+              child: FadeTransition(
+                opacity: _opacityAnimation,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 250,
+                    height: 300,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Consumer<BadgeViewModel>(
+                        builder: (context, badgeViewModel, _) {
+                          return NotificationPage(
+                            notifications: badgeViewModel.notifications,
+                            onNotificationTap: (docId) async {
+                              final selectedNotification = badgeViewModel
+                                  .notifications
+                                  .firstWhere(
+                                (notif) => notif['id'] == docId,
+                                orElse: () => {},
                               );
-                            } else {
-                              print('通知が見つかりませんでした');
-                            }
-                            // オーバーレイを閉じる
-                            _removeOverlay();
-                          },
-                        );
-                      },
+                              if (selectedNotification.isNotEmpty) {
+                                final level =
+                                    selectedNotification['level'] ?? 'up_to_500';
+                                await badgeViewModel.markNotificationAsRead(docId);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => TOEICWordQuiz(
+                                      level: level,
+                                      questionType: 'random',
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                print('通知が見つかりませんでした');
+                              }
+                              _removeOverlay();
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
-
-
-  // 通知アイコンのウィジェットを構築
   Widget _buildNotificationIcon() {
     return Stack(
       children: [
@@ -501,7 +484,7 @@ OverlayEntry _createOverlayEntry() {
                       radius: 10,
                       backgroundColor: Colors.red,
                       child: Text(
-                        '${badgeViewModel.badgeCount}', // バッジに未読数を表示
+                        '${badgeViewModel.badgeCount}',
                         style: const TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     )
@@ -513,335 +496,59 @@ OverlayEntry _createOverlayEntry() {
     );
   }
 
-
-
+  //==================================================
+  // グループナビゲーション
+  //==================================================
   OverlayEntry _createGroupNavigationOverlay() {
-  return OverlayEntry(
-    builder: (context) => Stack(
-      children: [
-        // 背景をタップするとオーバーレイを閉じる
-        GestureDetector(
-          onTap: () => _removeOverlay(), // オーバーレイを閉じる
-          child: Container(color: Colors.transparent),
-        ),
-        // グループナビゲーション画面
-        Positioned(
-          top: kToolbarHeight + 10,
-          right: 50,
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            alignment: Alignment.topRight,
-            child: FadeTransition(
-              opacity: _opacityAnimation,
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  width: 250,
-                  height: 300,
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: GroupNavigationScreen(
-                      onGroupMenuTap: () {
-                        // グループ一覧を表示
-                        setState(() {
-                          _isGroupShowVisible = true;
-                          _removeOverlay(); // オーバーレイを閉じる
-                        });
-                      },
-                      onCreateGroupTap: () {
-                        // グループ作成を表示
-                        setState(() {
-                          _isGroupCreateVisible = true;
-                          _removeOverlay(); // オーバーレイを閉じる
-                        });
-                      },
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-
-void _toggleGroupNavigationOverlay(BuildContext context) {
-  if (_isNotificationVisible) {
-    _animationController.reverse().then((_) {
-      _removeOverlay();
-    });
-  } else {
-    _overlayEntry = _createGroupNavigationOverlay(); // 新しいオーバーレイを作成
-    Overlay.of(context).insert(_overlayEntry!);
-    _isNotificationVisible = true; // オーバーレイ表示状態を管理
-    _animationController.reset();
-    _animationController.forward();
-  }
-}
-
-
-// ボトムナビゲーションバーの項目を管理
-Widget get _currentScreen {
-  if (_isGroupShowVisible) {
-      return const UserGroupsScreen(); // グループ一覧画面
-    } else if (_isGroupCreateVisible) {
-      return CreateGroupScreen(); // グループ作成画面
-    } if (_isProfileVisible) {
-    return UserProfileScreen(
-          userId: _profileUserId ,
-          onBack: () {
-            setState(() {
-              _isProfileVisible = false; // プロフィール画面を閉じる
-              _profileUserId = ''; // プロフィール表示のユーザーIDをリセット
-            });
-          },
-        );
-      } else if (_currentIndex == 0) {
-    return  TimelineScreen(
-      selectedTab: _selectedTab,
-      onUserProfileTap: (userId) { // コールバックの実装
-        setState(() {
-          _isProfileVisible = true; // プロフィール画面を表示
-          _profileUserId = userId; // ユーザーIDを保存
-        });
-      },
-    );
-  } else if (_currentIndex == 1) {
-    return RankingScreen(
-      selectedTab: _selectedTab,
-      selectedCategory: _selectedCategory,
-    );
-  } else if (_currentIndex == 2) {
-    return SearchScreen();
-  } else {
-    return DashboardScreen(
-      selectedTab: _selectedTab,
-      selectedCategory: _selectedCategory,
-      onLoginStreakCalculated: _onLoginStreakCalculated,
-    );
-  }
-}
-
-
-
-
-@override
-Widget build(BuildContext context) {
-  final double dynamicHeight = getDynamicHeight(); // 動的高さを取得
-  return Scaffold(
-    body: Stack(
-      children: [
-        Positioned.fill(
-        child: Column(
-          children: [
-            Container(
-              height: dynamicHeight * 0.3,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0ABAB5), Color(0xFFFFFFFF)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-              child: Column(
-                children: [
-                  AppBar(
-                    automaticallyImplyLeading: false,
-                    title: Builder(
-                      builder: (context) => Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => Scaffold.of(context).openDrawer(),
-                            child: CircleAvatar(
-                              backgroundColor: Colors.white,
-                              radius: 18,
-                                      child: Text(
-                                _accountName.isNotEmpty ? _accountName[0] : '?', // user_nameの一文字目
-                                style: const TextStyle(
-                                  fontSize: 20, // フォントサイズ
-                                  color: Color(0xFF0ABAB5), // テキストカラー
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          const Text(
-                            'SuStudy,',
-                            style: TextStyle(fontSize: 25, color: Colors.white),
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            icon: const Icon(Icons.group_add),
-                            onPressed: () {
-                              _toggleGroupNavigationOverlay(context);
-                            },
-                          ),
-                          _buildNotificationIcon(), // 通知アイコンを表示
-                          IconButton(icon: const Icon(Icons.mail), onPressed: () {}),
-                          
-                        ],
-                      ),
-                    ),
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                  ),
-                  if (!_isProfileVisible && !_isRecordPageVisible && !_isPostCreateVisible && _currentIndex == 0 || !_isProfileVisible && !_isRecordPageVisible && !_isPostCreateVisible && _currentIndex == 1)
-                    _buildCustomTabBar(), // タブバーを表示
-                ],
-              ),
-            ),
-            Expanded(
-              child: Stack(
-                children: [
-                  _currentScreen,
-                  if (_isRecordPageVisible)
-                    LanguageCategoryScreen(
-                      selectedCategory: _selectedCategory,
-                      onClose: () {
-                        setState(() {
-                          _isRecordPageVisible = false; // フローティングボタンで開いたページを閉じる
-                        });
-                      },
-                      categoryBar: _buildCategoryBar(context), // カテゴリバーを渡す
-                    )
-                  else if (_isPostCreateVisible)
-                    NewPostScreen(
-                      selectedCategory: _selectedCategory,
-                      onPostSubmitted: (){
-                        setState(() {
-                          _isPostCreateVisible = false; // 投稿後にページを閉じる
-                        });
-                      },
-                    ),
-                ],
-              ),
-            ),
-           ],
-         ),
-        ),
-          if (!_isRecordPageVisible && !_isPostCreateVisible && _currentIndex != 2)
-          Positioned(
-            bottom: 0, // 画面の下部に配置
-            left: 0,
-            right: 0,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 10.0), // 下のマージン調整
-              child: _buildCategoryBar(context),
-            ),
-          ),
-      ],
-    ),
-    drawerEnableOpenDragGesture: true,
-    drawer: _buildDrawer(), // ドロワー
-
-floatingActionButton: _isRecordPageVisible || _isPostCreateVisible
-    ? null // 記録画面が表示中の場合、フローティングボタンを非表示
-    : Stack(
-      alignment: Alignment.bottomRight,
-        clipBehavior: Clip.none, // Stack の外も描画できるようにする
+    return OverlayEntry(
+      builder: (context) => Stack(
         children: [
-          // サブボタンを閉じるための透明なタップ領域
-          if (_showExtraButtons)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _showExtraButtons = false; // サブボタンを閉じる
-                  });
-                },
-                child: Container(
-                  color: Colors.transparent, // 背景を透明にする
-                ),
-              ),
-            ),
-          // サブボタンを表示
-          if (_showExtraButtons)
-            Stack(
-              children: [
-                // サブボタン1（左上）
-                Positioned(
-                  bottom: MediaQuery.of(context).size.height * 0.05 + 100,
-                  right: MediaQuery.of(context).size.width * 0 + 10,
-                  child: FloatingActionButton(
-                    heroTag: null,
-                    shape: const CircleBorder(),
-                    backgroundColor: const Color(0xFF0ABAB5),
-                    child: const Icon(Icons.edit_note),
-                    onPressed: () {
-                      _onMenuItemTap("btn1");
-                    },
-                  ),
-                ),
-                // サブボタン2（真上）
-                Positioned(
-                  bottom: MediaQuery.of(context).size.height * 0.05 + 70,
-                  right: MediaQuery.of(context).size.width * 0+ 70,
-                  child: FloatingActionButton(
-                    heroTag: null,
-                    shape: const CircleBorder(),
-                    backgroundColor: const Color.fromARGB(255, 23, 214, 208),
-                    child: const Icon(Icons.text_snippet),
-                    onPressed: () {
-                      _onMenuItemTap("btn2");
-                    },
-                  ),
-                ),
-                // サブボタン3（左）
-                Positioned(
-                  bottom: MediaQuery.of(context).size.height * 0.05 + 10,
-                  right: MediaQuery.of(context).size.width * 0 + 100,
-                  child: FloatingActionButton(
-                    heroTag: null,
-                    shape: const CircleBorder(),
-                    backgroundColor: const Color.fromARGB(255, 64, 239, 234),
-                    child: const Icon(Icons.done),
-                    onPressed: () {
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-          // メインフローティングボタン
+          GestureDetector(
+            onTap: () => _removeOverlay(),
+            child: Container(color: Colors.transparent),
+          ),
           Positioned(
-            bottom: MediaQuery.of(context).size.height * 0.05,
-            right: MediaQuery.of(context).size.width * 0,
-            child: SizedBox(
-              width: 80, // ボタンの幅を適切なサイズに設定
-              height: 80, // ボタンの高さを適切なサイズに設定
-              child: GestureDetector(
-                onLongPress: _onLongPress, // 長押しでサブボタンを表示
-                child: FloatingActionButton(
-                  heroTag: null,
-                  onPressed: () {
-                    setState(() {
-                      if (_showExtraButtons) {
-                        _showExtraButtons = false; // サブボタンを閉じる
-                      } else {
-                        _isRecordPageVisible = true; // 記録画面を表示
-                      }
-                    });
-                  },
-                  backgroundColor: const Color(0xFF0ABAB5),
-                  shape: const CircleBorder(),
-                  child: Icon(
-                    _showExtraButtons ? Icons.close : Icons.post_add,
-                    size: 36,
+            top: kToolbarHeight + 10,
+            right: 50,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              alignment: Alignment.topRight,
+              child: FadeTransition(
+                opacity: _opacityAnimation,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 250,
+                    height: 300,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: GroupNavigationScreen(
+                        onGroupMenuTap: () {
+                          setState(() {
+                            _isGroupShowVisible = true;
+                            _removeOverlay();
+                          });
+                        },
+                        onCreateGroupTap: () {
+                          setState(() {
+                            _isGroupCreateVisible = true;
+                            _removeOverlay();
+                          });
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -849,216 +556,624 @@ floatingActionButton: _isRecordPageVisible || _isPostCreateVisible
           ),
         ],
       ),
-floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
 
+  void _toggleGroupNavigationOverlay(BuildContext context) {
+    if (_isNotificationVisible) {
+      _animationController.reverse().then((_) {
+        _removeOverlay();
+      });
+    } else {
+      _overlayEntry = _createGroupNavigationOverlay();
+      Overlay.of(context).insert(_overlayEntry!);
+      _isNotificationVisible = true;
+      _animationController.reset();
+      _animationController.forward();
+    }
+  }
 
+  //==================================================
+  // 表示する中身の切り替え
+  //==================================================
+  Widget get _currentScreen {
+    if (_isGroupShowVisible) {
+      return const UserGroupsScreen();
+    } else if (_isGroupCreateVisible) {
+      return CreateGroupScreen();
+    } else if (_isProfileVisible) {
+      return UserProfileScreen(
+        userId: _profileUserId,
+        onBack: () {
+          setState(() {
+            _isProfileVisible = false;
+            _profileUserId = '';
+          });
+        },
+      );
+    } else if (_currentIndex == 0) {
+      // タイムライン
+      return TimelineScreen(
+        selectedTab: _selectedTab,
+        onUserProfileTap: (userId) {
+          setState(() {
+            _isProfileVisible = true;
+            _profileUserId = userId;
+          });
+        },
+      );
+    } else if (_currentIndex == 1) {
+      return RankingScreen(
+        selectedTab: _selectedTab,
+        selectedCategory: _selectedCategory,
+      );
+    } else if (_currentIndex == 2) {
+      return const SearchScreen();
+    } else {
+      return DashboardScreen(
+        selectedTab: _selectedTab,
+        selectedCategory: _selectedCategory,
+        onLoginStreakCalculated: _onLoginStreakCalculated,
+      );
+    }
+  }
 
-    bottomNavigationBar: BottomNavigationBar(
-      backgroundColor: const Color(0xFF0ABAB5),
-      type: BottomNavigationBarType.fixed,
-      currentIndex: _currentIndex,
-      onTap: (index) {
-        setState(() {
-          if (_isRecordPageVisible || _isPostCreateVisible || _isProfileVisible ||_isGroupShowVisible ||_isGroupCreateVisible) {
-            _isRecordPageVisible = false; // フロート画面を閉じる
-            _isPostCreateVisible = false;
-            _isProfileVisible = false; // プロフィール画面を閉じる
-            _isGroupShowVisible = false;
-            _isGroupCreateVisible = false;
-          }
-          _currentIndex = index; // ボトムナビゲーションバーの選択を反映
-        });
-      },
-      selectedItemColor: _isRecordPageVisible || _isPostCreateVisible
-          ? const Color.fromARGB(255, 68, 68, 68) // フロート画面時は全てグレー
-          : Colors.white, // 通常時は選択された項目を白色に
-      unselectedItemColor: const Color.fromARGB(255, 68, 68, 68), // 未選択は常にグレー
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'タイムライン',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.leaderboard),
-          label: 'ランキング',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.search),
-          label: '検索',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.timeline),
-          label: 'データ',
-        ),
-      ],
-    ),
-  );
-}
+  //==================================================
+  // スクロール量監視
+  //==================================================
+  void _handleScrollNotification(ScrollNotification scrollInfo) {
+    // 100px以上スクロールするとBottomNavを半透明に
+    if (scrollInfo.metrics.pixels > 100 && _bottomNavOpacity != 0.5) {
+      setState(() => _bottomNavOpacity = 0.5);
+    } else if (scrollInfo.metrics.pixels <= 100 && _bottomNavOpacity != 1.0) {
+      setState(() => _bottomNavOpacity = 1.0);
+    }
+  }
 
+  //==================================================
+  // ビルド
+  //==================================================
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      /// Bodyをボトムナビの裏まで拡張
+      extendBody: true,
 
+      /// ドロワー関連
+      drawerEnableOpenDragGesture: true,
+      drawer: _buildDrawer(),
 
- Widget _buildDrawer() {
-  return SizedBox(
-    width: MediaQuery.of(context).size.width * 0.8,
-    child: Drawer(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: <Widget>[
-                GestureDetector(
-                  onTap: () {
-                  setState(() {
-                    _isProfileVisible = true;
-                    _profileUserId = _currentUserId; // 自分の userId
-                  });
-                  Navigator.pop(context); // ドロワーを閉じる
-                },
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xFF0ABAB5),
-                        Color.fromARGB(255, 255, 255, 255)
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+      /// メインコンテンツ
+      body: Container(
+        height: _browserHeight,
+        color: Colors.white,
+        child: NestedScrollView(
+          physics: const ClampingScrollPhysics(),
+          // ---- SliverAppBar （+ タブバー） ----
+          headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+            return [
+              SliverAppBar(
+                // スクロール時に上へ消え、上方向にフリックで戻る
+                pinned: false,
+                floating: true,
+                snap: true,
+                elevation: 0,
+                automaticallyImplyLeading: false,
+                backgroundColor: Colors.transparent,
+                // 大きくしたいなら expandedHeightを上げる
+                expandedHeight: (_currentIndex == 2 || _currentIndex == 3)? 70 :100, 
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF0ABAB5).withOpacity(1.0),
+                          Colors.white.withOpacity(0.4),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
                     ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: Colors.white,
-                        radius: 30,
-                          child: Text(
-                          _accountName.isNotEmpty ? _accountName[0] : '?', // user_nameの一文字目
-                          style: const TextStyle(
-                            fontSize: 35, // フォントサイズ
-                            color: Color(0xFF0ABAB5), // テキストカラー
+                    child: FlexibleSpaceBar(
+                      background: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF0ABAB5).withOpacity(1.0),
+                              Colors.white.withOpacity(0.4),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 10.0), // 上部を調整
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start, // 上揃え
+                            children: [
+                              // Drawerアイコンの代わりにアバター
+                              GestureDetector(
+                                onTap: () => Scaffold.of(context).openDrawer(),
+                                child: CircleAvatar(
+                                  backgroundColor: Colors.white,
+                                  radius: 18,
+                                  child: Text(
+                                    _accountName.isNotEmpty ? _accountName[0] : '?',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      color: Color(0xFF0ABAB5),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'SuStudy,',
+                                style: TextStyle(
+                                  fontSize: 25,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: const Icon(Icons.group_add),
+                                onPressed: () {
+                                  _toggleGroupNavigationOverlay(context);
+                                },
+                              ),
+                              _buildNotificationIcon(),
+                              IconButton(
+                                icon: const Icon(Icons.mail),
+                                onPressed: () {},
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: <Widget>[
-                          if (_loginStreak < 8)
-                            Container()
-                          else if (_loginStreak < 15)
-                            Image.asset('images/smallCrown.png', width: 24, height: 24)
-                          else if (_loginStreak < 22)
-                            Image.asset('images/middleCrown.png', width: 24, height: 24)
-                          else
-                            Image.asset('images/bigCrown.png', width: 24, height: 24),
-                          const SizedBox(width: 5),
+                    ),
+                  ),
+                ),
+
+                // タブバーを表示する画面なら bottom に設定、不要なら null
+                bottom: _shouldShowTabBar
+                    ? PreferredSize(
+                        preferredSize: const Size.fromHeight(50),
+                        child: Container(
+                          color: Colors.transparent,
+                          alignment: Alignment.center,
+                          child: _buildTabBarArea(), // カスタムタブバー
+                        ),
+                      )
+                    : null,
+              ),
+            ];
+          },
+
+          // ---- 本体部分 ----
+          body: NotificationListener<ScrollNotification>(
+            onNotification: (scrollInfo) {
+              _handleScrollNotification(scrollInfo);
+              return false;
+            },
+            child: Stack(
+              children: [
+                Positioned.fill(child: _buildBodyStack()),
+
+                // カテゴリバーを画面下に配置（本体が透けて見える）
+                if (!_isRecordPageVisible &&
+                    !_isPostCreateVisible &&
+                    _currentIndex != 2)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 80.0),
+                      child: _buildCategoryBar(context),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+
+      /// BottomNavBar
+      bottomNavigationBar: AnimatedOpacity(
+        opacity: _bottomNavOpacity,
+        duration: const Duration(milliseconds: 200),
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF0ABAB5),
+          type: BottomNavigationBarType.fixed,
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              // いろいろフラグが立ってたら閉じる
+              if (_isRecordPageVisible ||
+                  _isPostCreateVisible ||
+                  _isProfileVisible ||
+                  _isGroupShowVisible ||
+                  _isGroupCreateVisible) {
+                _isRecordPageVisible = false;
+                _isPostCreateVisible = false;
+                _isProfileVisible = false;
+                _isGroupShowVisible = false;
+                _isGroupCreateVisible = false;
+              }
+              _currentIndex = index;
+            });
+          },
+          selectedItemColor: _isRecordPageVisible || _isPostCreateVisible
+              ? const Color.fromARGB(255, 68, 68, 68)
+              : Colors.white,
+          unselectedItemColor: const Color.fromARGB(255, 68, 68, 68),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: 'タイムライン',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.leaderboard),
+              label: 'ランキング',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.search),
+              label: '検索',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.timeline),
+              label: 'データ',
+            ),
+          ],
+        ),
+      ),
+
+      /// FAB
+      floatingActionButton: _isRecordPageVisible || _isPostCreateVisible
+          ? null
+          : _buildFAB(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  //==================================================
+  // タブバー
+  //==================================================
+  // タブバーの表示有無は _shouldShowTabBar で制御
+  bool get _shouldShowTabBar {
+    return !_isProfileVisible &&
+        !_isRecordPageVisible &&
+        !_isPostCreateVisible &&
+        (_currentIndex == 0 || _currentIndex == 1);
+  }
+
+  Widget _buildTabBarArea() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildTabButton('最新'),
+          _buildTabButton('フォロー中'),
+          _buildTabButton('グループ'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton(String tab) {
+    final bool selected = (_selectedTab == tab);
+    return GestureDetector(
+      onTap: () => _selectTab(tab),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF0ABAB5) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          tab,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.black,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  //==================================================
+  // BodyStack
+  //==================================================
+  Widget _buildBodyStack() {
+    return Stack(
+      children: [
+        Positioned.fill(child: _currentScreen),
+        if (_isRecordPageVisible)
+          LanguageCategoryScreen(
+            selectedCategory: _selectedCategory,
+            onClose: () {
+              setState(() {
+                _isRecordPageVisible = false;
+              });
+            },
+            categoryBar: _buildCategoryBar(context),
+          )
+        else if (_isPostCreateVisible)
+          NewPostScreen(
+            selectedCategory: _selectedCategory,
+            onPostSubmitted: () {
+              setState(() {
+                _isPostCreateVisible = false;
+              });
+            },
+          ),
+      ],
+    );
+  }
+
+  //==================================================
+  // カテゴリバー
+  //==================================================
+  Widget _buildCategoryBar(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          double maxBarWidth = constraints.maxWidth * 0.68;
+          double totalWidth = 0.0;
+          List<Widget> categoryButtons = [];
+
+          // 「全体」
+          if (!_isRecordPageVisible &&
+              (_currentIndex == 0 || _currentIndex == 1 || _currentIndex == 3)) {
+            double buttonWidth = _calculateButtonWidth('全体');
+            categoryButtons.add(_buildCategoryButton('全体'));
+            totalWidth += buttonWidth;
+          }
+
+          // フォロー中の教科
+          for (String subject in _followingSubjects) {
+            double buttonWidth = _calculateButtonWidth(subject);
+            categoryButtons.add(_buildCategoryButton(subject));
+            totalWidth += buttonWidth;
+          }
+
+          double barWidth = totalWidth < maxBarWidth ? totalWidth : maxBarWidth;
+
+          return Container(
+            width: barWidth,
+            margin: const EdgeInsets.only(left: 8.0, right: 8.0),
+            padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(50),
+                right: Radius.circular(50),
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 4.0,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: categoryButtons),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  double _calculateButtonWidth(String text) {
+    const textStyle = TextStyle(fontSize: 14.0);
+    final textPainter = TextPainter(
+      text: TextSpan(text: text, style: textStyle),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    double paddingWidth = 36.0;
+    return textPainter.width + paddingWidth;
+  }
+
+  Widget _buildCategoryButton(String category) {
+    final bool isSelected = (_selectedCategory == category);
+    return GestureDetector(
+      onTap: () => _selectCategory(category),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF0ABAB5) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          category,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  //==================================================
+  // Drawer
+  //==================================================
+  Widget _buildDrawer() {
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.8,
+      child: Drawer(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: <Widget>[
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isProfileVisible = true;
+                        _profileUserId = _currentUserId;
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFF0ABAB5),
+                            Color.fromARGB(255, 255, 255, 255)
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Colors.white,
+                            radius: 30,
+                            child: Text(
+                              _accountName.isNotEmpty ? _accountName[0] : '?',
+                              style: const TextStyle(
+                                fontSize: 35,
+                                color: Color(0xFF0ABAB5),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: <Widget>[
+                              if (_loginStreak < 8)
+                                Container()
+                              else if (_loginStreak < 15)
+                                Image.asset('images/smallCrown.png',
+                                    width: 24, height: 24)
+                              else if (_loginStreak < 22)
+                                Image.asset('images/middleCrown.png',
+                                    width: 24, height: 24)
+                              else
+                                Image.asset('images/bigCrown.png',
+                                    width: 24, height: 24),
+                              const SizedBox(width: 5),
+                              Text(
+                                _accountName,
+                                style: const TextStyle(
+                                  color: Color.fromARGB(255, 100, 100, 100),
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                           Text(
-                            _accountName,
+                            '@$_accountId',
+                            style: const TextStyle(
+                              color: Color.fromARGB(179, 160, 160, 160),
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Text(
+                                'フォロワー: $_followers',
+                                style: const TextStyle(
+                                    color: Color.fromARGB(255, 100, 100, 100)),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'フォロー中: $_follows',
+                                style: const TextStyle(
+                                    color: Color.fromARGB(255, 100, 100, 100)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'フォロー中の教科: ${_followingSubjects.join(', ')}',
                             style: const TextStyle(
                               color: Color.fromARGB(255, 100, 100, 100),
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
                       ),
-                      Text(
-                        '@$_accountId',
-                        style: const TextStyle(
-                          color: Color.fromARGB(179, 160, 160, 160),
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text(
-                            'フォロワー: $_followers',
-                            style: const TextStyle(
-                                color: Color.fromARGB(255, 100, 100, 100)),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'フォロー中: $_follows',
-                            style: const TextStyle(
-                                color: Color.fromARGB(255, 100, 100, 100)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'フォロー中の教科: ${_followingSubjects.join(', ')}',
-                        style: const TextStyle(
-                            color: Color.fromARGB(255, 100, 100, 100)),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.person),
-                  title: const Text('プロフィール'),
-                  onTap: () {
-                    setState(() {
-                      _isProfileVisible = true;
-                      _profileUserId = _currentUserId; // 自分の userId を設定
-                    });
-                    Navigator.pop(context); // ドロワーを閉じる
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.settings),
-                  title: const Text('設定'),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.logout),
-                  title: const Text('ログアウト'),
-                  onTap: () async {
-                    try {
-                      await FirebaseAuth.instance.signOut(); // Firebaseでログアウト
-                      // FirebaseAuth の状態を監視
-                      FirebaseAuth.instance.authStateChanges().listen((User? user) {
-                        if (user == null) {
-                          // ユーザーがログアウトした場合は AuthenticationScreen に遷移
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => AuthenticationScreen()),
-                          );
-                        }
+                  ListTile(
+                    leading: const Icon(Icons.person),
+                    title: const Text('プロフィール'),
+                    onTap: () {
+                      setState(() {
+                        _isProfileVisible = true;
+                        _profileUserId = _currentUserId;
                       });
-                      print('ログアウト成功');
-                    } catch (e) {
-                      print('ログアウトエラー: $e');
-                    }
-                  },
-                ),
-              ],
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.settings),
+                    title: const Text('設定'),
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.logout),
+                    title: const Text('ログアウト'),
+                    onTap: () async {
+                      try {
+                        await FirebaseAuth.instance.signOut();
+                        FirebaseAuth.instance
+                            .authStateChanges()
+                            .listen((User? user) {
+                          if (user == null) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AuthenticationScreen(),
+                              ),
+                            );
+                          }
+                        });
+                        print('ログアウト成功');
+                      } catch (e) {
+                        print('ログアウトエラー: $e');
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-          // ���定のユーザ番号に応じてデータベース管理フォームを表示
-        if (_userNumber >= 1 && _userNumber <= 6)
+            if (_userNumber >= 1 && _userNumber <= 6)
               ListTile(
                 leading: const Icon(Icons.build),
                 title: const Text('データベース管理フォーム'),
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const ViewFormSelection()),
+                    MaterialPageRoute(
+                      builder: (context) => const ViewFormSelection(),
+                    ),
                   );
                 },
               ),
-          if (_userNumber == 1)
+            if (_userNumber == 1)
               ListTile(
                 leading: const Icon(Icons.add),
                 title: const Text('単語を追加'),
                 onTap: () async {
                   try {
-                    await uploadWordsToFirestore(); // add_word.dartの関数を呼び出し
+                    await uploadWordsToFirestore();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('単語の追加が完了しました！')),
                     );
@@ -1069,13 +1184,13 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                   }
                 },
               ),
-          if (_userNumber == 4)
+            if (_userNumber == 4)
               ListTile(
                 leading: const Icon(Icons.add),
                 title: const Text('文法を追加'),
                 onTap: () async {
                   try {
-                    await uploadGrammarToFirestore(); // add_grammar.dartの関数を呼び出し
+                    await uploadGrammarToFirestore();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('文法の追加が完了しました！')),
                     );
@@ -1086,159 +1201,112 @@ floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
                   }
                 },
               ),
+          ],
+        ),
+      ),
+    );
+  }
 
+  //==================================================
+  // FAB
+  //==================================================
+  Widget _buildFAB() {
+    return Stack(
+      alignment: Alignment.bottomRight,
+      clipBehavior: Clip.none,
+      children: [
+        if (_showExtraButtons)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () {
+                setState(() => _showExtraButtons = false);
+              },
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+        if (_showExtraButtons)
+          Stack(
+            children: [
+              Positioned(
+                bottom: MediaQuery.of(context).size.height * 0.05 + 100,
+                right: 10,
+                child: FloatingActionButton(
+                  heroTag: null,
+                  shape: const CircleBorder(),
+                  backgroundColor: const Color(0xFF0ABAB5),
+                  child: const Icon(Icons.edit_note),
+                  onPressed: () {
+                    _onMenuItemTap("btn1");
+                  },
+                ),
+              ),
+              Positioned(
+                bottom: MediaQuery.of(context).size.height * 0.05 + 70,
+                right: 70,
+                child: FloatingActionButton(
+                  heroTag: null,
+                  shape: const CircleBorder(),
+                  backgroundColor: const Color.fromARGB(255, 23, 214, 208),
+                  child: const Icon(Icons.text_snippet),
+                  onPressed: () {
+                    _onMenuItemTap("btn2");
+                  },
+                ),
+              ),
+              Positioned(
+                bottom: MediaQuery.of(context).size.height * 0.05 + 10,
+                right: 100,
+                child: FloatingActionButton(
+                  heroTag: null,
+                  shape: const CircleBorder(),
+                  backgroundColor: const Color.fromARGB(255, 64, 239, 234),
+                  child: const Icon(Icons.done),
+                  onPressed: () {
+                    // 何かの処理
+                  },
+                ),
+              ),
             ],
           ),
-        ),
-      );
-    }
-
-  // タブバーを構築するメソッド
-Widget _buildCustomTabBar() {
-  return Container(
-    color: Colors.transparent,
-    padding: const EdgeInsets.only(top: 20.0, bottom: 10.0),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _buildTabButton('最新'),
-        _buildTabButton('フォロー中'),
-        _buildTabButton('グループ'),
-      ],
-    ),
-  );
-}
-
-Widget _buildTabButton(String tab) {
-  return GestureDetector(
-    onTap: () {
-      setState(() {
-        _selectedTab = tab; // 選択されたタブを更新
-      });
-    },
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-      decoration: BoxDecoration(
-        color: _selectedTab == tab ? const Color(0xFF0ABAB5) : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        tab,
-        style: TextStyle(
-          color: _selectedTab == tab ? Colors.white : Colors.black,
-          fontSize: 14,
-        ),
-      ),
-    ),
-  );
-}
-
-
-  // カテゴリバーの構築メソッド
-Widget _buildCategoryBar(BuildContext context) {
-  return Align(
-    alignment: Alignment.bottomCenter,
-    child: LayoutBuilder(
-      builder: (context, constraints) {
-        // 画面幅の0.7倍を最大幅として設定
-        double maxBarWidth = constraints.maxWidth * 0.68;
-
-        // 各カテゴリのボタンを生成して、その合計幅を計算
-        double totalWidth = 0.0;
-        List<Widget> categoryButtons = [];
-
-        if (!_isRecordPageVisible && _currentIndex == 0 ||
-            !_isRecordPageVisible && _currentIndex == 1 ||
-            !_isRecordPageVisible && _currentIndex == 3) {
-          double buttonWidth = _calculateButtonWidth('全体');
-          categoryButtons.add(_buildCategoryButton('全体'));
-          totalWidth += buttonWidth;
-        }
-
-        for (String subject in _followingSubjects) {
-          double buttonWidth = _calculateButtonWidth(subject);
-          categoryButtons.add(_buildCategoryButton(subject));
-          totalWidth += buttonWidth;
-        }
-
-        // カテゴリバーの幅を、教科に依存する合計幅と最大幅の小さい方に設定
-        double barWidth = totalWidth < maxBarWidth ? totalWidth : maxBarWidth;
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10.0), // 上下の余白を調整
-          child: Container(
-            width: barWidth,
-            padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
-            decoration: BoxDecoration(
-              color: Colors.grey[200], // バーの背景色
-              borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(50),
-                right: Radius.circular(50),
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12, // 軽い影をつけてバーを浮かせる
-                  blurRadius: 4.0,
-                  offset: Offset(0, 2),
+        Positioned(
+          bottom: MediaQuery.of(context).size.height * 0.05,
+          right: 0,
+          child: SizedBox(
+            width: 80,
+            height: 80,
+            child: GestureDetector(
+              onLongPress: _onLongPress,
+              child: FloatingActionButton(
+                heroTag: null,
+                onPressed: () {
+                  setState(() {
+                    if (_showExtraButtons) {
+                      _showExtraButtons = false;
+                    } else {
+                      _isRecordPageVisible = true;
+                    }
+                  });
+                },
+                backgroundColor: const Color(0xFF0ABAB5),
+                shape: const CircleBorder(),
+                child: Icon(
+                  _showExtraButtons ? Icons.close : Icons.post_add,
+                  size: 36,
                 ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: categoryButtons,
               ),
             ),
           ),
-        );
-      },
-    ),
-  );
-}
-
-
-  // 各カテゴリボタンの幅を計算するメソッド
-  double _calculateButtonWidth(String text) {
-    // テキストスタイルを定義
-    TextStyle textStyle = const TextStyle(
-      fontSize: 14.0, // ボタン内のテキストのフォントサイズ
+        ),
+      ],
     );
-
-    // TextPainterを使ってテキストの幅を計算
-    TextPainter textPainter = TextPainter(
-      text: TextSpan(text: text, style: textStyle),
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout(); // テキストのレイアウトを計算
-
-    // テキスト幅に余白を加算
-    double paddingWidth = 36.0; // 両サイドの余白
-    return textPainter.width + paddingWidth;
   }
 
-  // カテゴリボタンの構築メソッド
-  Widget _buildCategoryButton(String category) {
-    return GestureDetector(
-      onTap: () {
-        _selectCategory(category);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        decoration: BoxDecoration(
-          color: _selectedCategory == category
-              ? const Color(0xFF0ABAB5)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          category,
-          style: TextStyle(
-            color: _selectedCategory == category ? Colors.white : Colors.black,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
+  //==================================================
+  // ログイン日数
+  //==================================================
+  void _onLoginStreakCalculated(int loginStreak) {
+    setState(() {
+      _loginStreak = loginStreak;
+    });
   }
 }
-
