@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart'; // カスタムフォント
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart'; // ローディングアニメーション
 import 'search/user_profile_screen.dart';
+import '../../utils/fetchGroup.dart';
 
 class RankingScreen extends StatefulWidget {
   final String selectedTab;
@@ -23,25 +24,39 @@ class RankingScreen extends StatefulWidget {
 
 class _RankingScreenState extends State<RankingScreen> {
   late Future<List<Map<String, dynamic>>> _rankingDataFuture;
+  final FetchGroup fetchGroup = FetchGroup();
 
   late Map<String, dynamic> _userData;
   int? _userRank = -1;
+  String? _myGroup; // グループ名
+  List<String> _groupMemberIds = []; // グループのユーザーIDリスト
 
   @override
   void initState() {
     super.initState();
     _rankingDataFuture = _fetchRankingData();
+    _initializeGroupData();
   }
-
 
   @override
   void didUpdateWidget(covariant RankingScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.selectedTab != oldWidget.selectedTab ||
-        widget.selectedCategory != oldWidget.selectedCategory) { // カテゴリの変更も監視
+        widget.selectedCategory != oldWidget.selectedCategory) {
+      // カテゴリの変更も監視
       setState(() {
         _rankingDataFuture = _fetchRankingData();
       });
+    }
+  }
+
+  //グループ名とメンバーidを取得
+  Future<void> _initializeGroupData() async {
+    _myGroup = await fetchGroup.fetchMyGroup();
+    if (_myGroup != null) {
+      _groupMemberIds = await fetchGroup.fetchGroupMemberIds();
+      print('Group Name: $_myGroup');
+      print('Member IDs: $_groupMemberIds');
     }
   }
 
@@ -49,13 +64,12 @@ class _RankingScreenState extends State<RankingScreen> {
     try {
       final today = DateTime.now();
       final todayStart = DateTime(today.year, today.month, today.day);
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return [];
 
       Query query;
 
       if (widget.selectedTab == 'フォロー中') {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) return [];
-
         final followsSnapshot = await FirebaseFirestore.instance
             .collection('Users')
             .doc(user.uid)
@@ -74,12 +88,19 @@ class _RankingScreenState extends State<RankingScreen> {
             .where('auth_uid', whereIn: follows);
 
         follows.add(user.uid);
-      } else {
+      } else if (widget.selectedTab == 'グループ') {
+        if (_myGroup == null || _groupMemberIds.isEmpty) return [];
+
+        query = FirebaseFirestore.instance
+            .collection('Users')
+            .where('auth_uid', whereIn: _groupMemberIds);
+      } else{
         query = FirebaseFirestore.instance.collection('Users');
       }
 
       if (widget.selectedCategory != '全体') {
-        query = query.where('following_subjects', arrayContains: widget.selectedCategory);
+        query = query.where('following_subjects',
+            arrayContains: widget.selectedCategory);
       }
 
       final querySnapshot = await query.get();
@@ -96,27 +117,27 @@ class _RankingScreenState extends State<RankingScreen> {
 
         if (todayLogins.isNotEmpty) {
           if (widget.selectedCategory == "全体") {
-              // Firestore パスを動的に取得
-              final today = DateTime.now();
-              final formattedDate = DateFormat('yyyy-MM-dd').format(today);
+            // Firestore パスを動的に取得
+            final today = DateTime.now();
+            final formattedDate = DateFormat('yyyy-MM-dd').format(today);
 
-              // 現在の日付のレコードからデータを取得
-              final recordDocSnapshot = await FirebaseFirestore.instance
-                  .collection('Users')
-                  .doc(doc.id) // ユーザーのIDを使ってそのユーザーのサブコレクションにアクセス
-                  .collection('record')
-                  .doc(formattedDate) // 今日の日付を使ったドキュメント
-                  .get();
+            // 現在の日付のレコードからデータを取得
+            final recordDocSnapshot = await FirebaseFirestore.instance
+                .collection('Users')
+                .doc(doc.id) // ユーザーのIDを使ってそのユーザーのサブコレクションにアクセス
+                .collection('record')
+                .doc(formattedDate) // 今日の日付を使ったドキュメント
+                .get();
 
-              // tierProgress_today を取得
-              final formattedDateData = recordDocSnapshot.data();
-              final tSolvedCount = formattedDateData?['t_solved_count'] ?? 0;
+            // tierProgress_today を取得
+            final formattedDateData = recordDocSnapshot.data();
+            final tSolvedCount = formattedDateData?['t_solved_count'] ?? 0;
 
-              rankingData.add({
-                'userName': data['user_name'] ?? 'Unknown',
-                'tSolvedCount': tSolvedCount, // tierProgress_today を設定
-                'auth_uid': data['auth_uid'], // auth_uid を追加
-              });
+            rankingData.add({
+              'userName': data['user_name'] ?? 'Unknown',
+              'tSolvedCount': tSolvedCount, // tierProgress_today を設定
+              'auth_uid': data['auth_uid'], // auth_uid を追加
+            });
           } else {
             try {
               // Firestore パスを動的に取得
@@ -124,7 +145,7 @@ class _RankingScreenState extends State<RankingScreen> {
               final formattedDate = DateFormat('yyyy-MM-dd').format(today);
 
               // 現在の日付のレコードからデータを取得
-             final recordDocSnapshot = await FirebaseFirestore.instance
+              final recordDocSnapshot = await FirebaseFirestore.instance
                   .collection('Users')
                   .doc(doc.id) // 現在のユーザー ID
                   .collection('record') // レコードサブコレクション
@@ -132,12 +153,12 @@ class _RankingScreenState extends State<RankingScreen> {
                   .collection(widget.selectedCategory) // カテゴリ名を使ったサブコレクション
                   .get();
 
-                // すべてのドキュメントから tierProgress_today と tierProgress_all を合計
-                double tierProgressToday = 0.0;
-                for (final doc in recordDocSnapshot.docs) {
-                  final data = doc.data();
-                  tierProgressToday += data['tierProgress_today'] ?? 0;
-                }
+              // すべてのドキュメントから tierProgress_today と tierProgress_all を合計
+              double tierProgressToday = 0.0;
+              for (final doc in recordDocSnapshot.docs) {
+                final data = doc.data();
+                tierProgressToday += data['tierProgress_today'] ?? 0;
+              }
 
               rankingData.add({
                 'userName': data['user_name'] ?? 'Unknown',
@@ -150,9 +171,6 @@ class _RankingScreenState extends State<RankingScreen> {
           }
         }
       }
-
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return [];
 
       final userSnapshot = await FirebaseFirestore.instance
           .collection('Users')
@@ -194,12 +212,12 @@ class _RankingScreenState extends State<RankingScreen> {
                   .collection(widget.selectedCategory) // カテゴリ名を使ったサブコレクション
                   .get();
 
-                // すべてのドキュメントから tierProgress_today と tierProgress_all を合計
-                double tierProgressToday = 0.0;
-                for (final doc in recordDocSnapshot.docs) {
-                  final data = doc.data();
-                  tierProgressToday += data['tierProgress_today'] ?? 0;
-                }
+              // すべてのドキュメントから tierProgress_today と tierProgress_all を合計
+              double tierProgressToday = 0.0;
+              for (final doc in recordDocSnapshot.docs) {
+                final data = doc.data();
+                tierProgressToday += data['tierProgress_today'] ?? 0;
+              }
 
               _userData = {
                 'userName': userData['user_name'] ?? 'Unknown',
@@ -227,13 +245,15 @@ class _RankingScreenState extends State<RankingScreen> {
         });
       }
 
-      rankingData.sort((a, b) => b['tSolvedCount'].compareTo(a['tSolvedCount']));
+      rankingData
+          .sort((a, b) => b['tSolvedCount'].compareTo(a['tSolvedCount']));
 
       // 同率順位の計算
       int rank = 1;
       for (int i = 0; i < rankingData.length; i++) {
         if (i > 0 &&
-            rankingData[i]['tSolvedCount'] == rankingData[i - 1]['tSolvedCount']) {
+            rankingData[i]['tSolvedCount'] ==
+                rankingData[i - 1]['tSolvedCount']) {
           rankingData[i]['rank'] = rankingData[i - 1]['rank'];
         } else {
           rankingData[i]['rank'] = rank;
@@ -241,9 +261,9 @@ class _RankingScreenState extends State<RankingScreen> {
         rank++;
       }
 
-      _userRank = rankingData
-              .firstWhere((user) => user['auth_uid'] == _userData['auth_uid'],
-                  orElse: () => {'rank': -1})['rank'] ??
+      _userRank = rankingData.firstWhere(
+              (user) => user['auth_uid'] == _userData['auth_uid'],
+              orElse: () => {'rank': -1})['rank'] ??
           -1;
 
       return rankingData.take(100).toList();
@@ -253,19 +273,19 @@ class _RankingScreenState extends State<RankingScreen> {
     }
   }
 
-    String getSubjectName(String selectedCategory) {
-      if (selectedCategory.contains('TOEIC')){
-        return 'TOEIC';
-    } else if (selectedCategory.contains('TOEFL')){
-        return 'TOEFL';
-    } else if (selectedCategory.contains('英検')){
-        return '英検';
-    } else{
+  String getSubjectName(String selectedCategory) {
+    if (selectedCategory.contains('TOEIC')) {
+      return 'TOEIC';
+    } else if (selectedCategory.contains('TOEFL')) {
+      return 'TOEFL';
+    } else if (selectedCategory.contains('英検')) {
+      return '英検';
+    } else {
       return '英検';
     }
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     final themeColor = const Color(0xFF0ABAB5);
     return Scaffold(
@@ -333,43 +353,42 @@ class _RankingScreenState extends State<RankingScreen> {
                   ),
                 ),
               Expanded(
-                child: ListView.builder(
-  itemCount: rankingData.length,
-  itemBuilder: (context, index) {
-    final user = rankingData[index];
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: _getRankColor(user['rank']),
-        child: Text(
-          '${user['rank']}',
-          style: TextStyle(
-            color:  Colors.white, // 視認性のために色変更
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      title: Text(user['userName']),
-      trailing: Text(
-        '${user['tSolvedCount']} pt',
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => UserProfileScreen(
-              userId: user['auth_uid'],
-              onBack: () {
-                Navigator.pop(context);
-              },
-            ),
-          ),
-        );
-      },
-    );
-  },
-)
-              ),
+                  child: ListView.builder(
+                itemCount: rankingData.length,
+                itemBuilder: (context, index) {
+                  final user = rankingData[index];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: _getRankColor(user['rank']),
+                      child: Text(
+                        '${user['rank']}',
+                        style: TextStyle(
+                          color: Colors.white, // 視認性のために色変更
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text(user['userName']),
+                    trailing: Text(
+                      '${user['tSolvedCount']} pt',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserProfileScreen(
+                            userId: user['auth_uid'],
+                            onBack: () {
+                              Navigator.pop(context);
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              )),
             ],
           );
         },

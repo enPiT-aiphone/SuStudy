@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../utils/progress_utils.dart';
+import '../../utils/fetchGroup.dart';
 
 class TimelineScreen extends StatefulWidget {
   final String selectedTab;
@@ -15,7 +16,8 @@ class TimelineScreen extends StatefulWidget {
   _TimelineScreenState createState() => _TimelineScreenState();
 }
 
-class _TimelineScreenState extends State<TimelineScreen> {
+class _TimelineScreenState extends State<TimelineScreen> {  
+  final FetchGroup fetchGroup = FetchGroup();
   final List<Map<String, dynamic>> _timelinePosts = []; // タイムラインの投稿リスト
   bool _isLoading = true;
   String? _currentUserId; // 現在のユーザーID
@@ -33,11 +35,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
     super.initState();
     _fetchCurrentUser();
     _fetchFollowingUsers();
-    _fetchMyGroup().then((_) {
-      if (_myGroup != null) {
-        _fetchGroupMemberIds().then((_) {
-          _fetchGroupMemberProgress();
-        });
+    _initializeGroupData().then((_){
+      if (_isGrouped == true) {
+        _fetchGroupMemberProgress();
       }
     });
     _fetchTimelinePosts();
@@ -74,58 +74,15 @@ class _TimelineScreenState extends State<TimelineScreen> {
     }
   }
 
-//自分が所属しているグループ名を取得（所属グループを一つにしたら微修正）
-  Future<void> _fetchMyGroup() async {
-    try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) {
-        print('ログインしているユーザーがいません');
-        return;
-      }
-
-      final groupsSnapshot = await FirebaseFirestore.instance
-          .collection('Users')
-          .doc(userId)
-          .collection('groups')
-          .get();
-
-      if (groupsSnapshot.docs.isEmpty) {
-        setState(() {
-          _isGrouped = false;
-        });
-      } else {
-        setState(() {
-          _isGrouped = true;
-          _myGroup = groupsSnapshot.docs.first['groupName'];
-        });
-      }
-    } catch (e) {
-      print('グループ名の取得エラー: $e');
-    }
-  }
-
-//グループメンバーidを取得
-  Future<void> _fetchGroupMemberIds() async {
-    try {
-      final groupSnapshot = await FirebaseFirestore.instance
-          .collection('Groups')
-          .where('groupName', isEqualTo: _myGroup)
-          .get();
-
-      if (groupSnapshot.docs.isNotEmpty) {
-        final groupDoc = groupSnapshot.docs.first;
-        final membersSnapshot =
-            await groupDoc.reference.collection('members_id').get();
-
-        setState(() {
-          _groupMemberIds = membersSnapshot.docs
-              .map((doc) => doc['auth_uid'] as String)
-              .toList();
-        });
-      }
-    } catch (e) {
-      print('グループメンバーの取得エラー: $e');
-    }
+//グループ名とメンバーidを取得
+  Future<void> _initializeGroupData() async {
+    _myGroup = await fetchGroup.fetchMyGroup();
+    if (_myGroup != null) {
+      _isGrouped = true;
+      _groupMemberIds = await fetchGroup.fetchGroupMemberIds();
+      print('Group Name: $_myGroup');
+      print('Member IDs: $_groupMemberIds');
+    }    
   }
 
 //グループメンバーの今日の目標進捗を取得
@@ -394,8 +351,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
                     Expanded(
                       child: _timelinePosts.isEmpty
                           ? Center(
-                              child: Text(_isGrouped == false
-                                  ? 'グループに所属していません'
+                              child: Text(_isGrouped != true
+                                  ? (widget.selectedTab == 'フォロー中' ? 'フォロー中のユーザーがいません' : 'グループに所属していません')
                                   : '投稿がありません'))
                           : ListView.separated(
                               itemCount: _timelinePosts.length,
