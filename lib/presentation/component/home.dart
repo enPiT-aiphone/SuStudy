@@ -1,6 +1,10 @@
 import 'dart:ui'; // for ImageFilter
 import 'dart:html' as html; // Safari動的高さ用
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart'; // BadgeViewModel用
+
+// --- 以下は元の import 群 ---
 import 'package:sustudy_add/presentation/component/group_navigation.dart';
 import '../add_word.dart';
 import '../add_grammar.dart';
@@ -118,6 +122,7 @@ class _HomeScreenState extends State<HomeScreen>
     _animationController.dispose();
     super.dispose();
   }
+
   //==================================================
   // ログイン日数
   //==================================================
@@ -126,6 +131,7 @@ class _HomeScreenState extends State<HomeScreen>
       _loginStreak = loginStreak;
     });
   }
+
   //==================================================
   // Firebase関連
   //==================================================
