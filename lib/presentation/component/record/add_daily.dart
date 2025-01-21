@@ -9,9 +9,9 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return Center(
+        return const Center(
           child: CircularProgressIndicator(
-            valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
           ),
         );
       },
@@ -20,6 +20,7 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
       print('ユーザーがログインしていません');
+      Navigator.pop(context); // ダイアログを閉じる
       return;
     }
 
@@ -58,41 +59,53 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
 
       // following_subjects のサブコレクションのみを取得
       for (var subCollectionName in followingSubjects) {
-        final subCollectionSnapshot = await latestDoc.reference.collection(subCollectionName).get();
+        final subCollectionSnapshot = await latestDoc.reference
+            .collection(subCollectionName)
+            .get();
 
         subCollectionData[subCollectionName] = [];
 
+        // サブコレクションの各ドキュメントをコピー
         for (var doc in subCollectionSnapshot.docs) {
-          final data = {'docName': doc.id, ...doc.data()};
+          // もとのデータをコピーしつつ、tierProgress_today を 0 にリセット
+          final data = {
+            'docName': doc.id,
+            ...doc.data(),
+            'tierProgress_today': 0, // ここでリセット
+          };
 
-          // デバッグ: サブコレクションが「TOEICX点」で Word ドキュメントが存在する場合
-          if (subCollectionName.startsWith('TOEIC') && doc.id == 'Word') {
+          subCollectionData[subCollectionName]?.add(data);
 
+          // TOEIC用のサブサブコレクション（Word, Short_Sentenceなど）対応
+          // ここでは doc.id が "Word", "Short_Sentence" などの場合にコピー
+          if (subCollectionName.startsWith('TOEIC') && (doc.id == 'Word' || doc.id == 'Short_Sentence')) {
             final xMatch = RegExp(r'TOEIC(\d+)点').firstMatch(subCollectionName);
             if (xMatch != null) {
               final xValue = xMatch.group(1);
 
-              final englishSkillsRef = FirebaseFirestore.instance
-                  .collection('English_Skills')
-                  .doc('TOEIC')
-                  .collection('up_to_$xValue')
-                  .doc('Words')
-                  .collection('Word');
+              // "Word"の場合
+              if (doc.id == 'Word') {
+                final englishSkillsRef = FirebaseFirestore.instance
+                    .collection('English_Skills')
+                    .doc('TOEIC')
+                    .collection('up_to_$xValue')
+                    .doc('Words')
+                    .collection('Word');
 
-              final englishSkillsDocs = await englishSkillsRef.get();
+                final englishSkillsDocs = await englishSkillsRef.get();
 
-              for (var englishDoc in englishSkillsDocs.docs) {
-                final collectionName = englishDoc.id;
+                for (var englishDoc in englishSkillsDocs.docs) {
+                  final collectionName = englishDoc.id;
 
-                // 「TOEICX点」サブコレクションの Word ドキュメント内に一致するコレクションが存在する場合
-                final toeicSubDocRef = latestDoc.reference.collection(subCollectionName).doc('Word');
-                final wordSubDocRef = toeicSubDocRef.collection(collectionName);
+                  // 最新記録の subCollectionName（例：TOEIC600点）/ Word / collectionName
+                  final toeicSubDocRef = latestDoc.reference
+                      .collection(subCollectionName)
+                      .doc('Word')
+                      .collection(collectionName);
 
-                final wordSubCollectionDocs = await wordSubDocRef.get();
+                  final wordSubCollectionDocs = await toeicSubDocRef.get();
 
-                if (wordSubCollectionDocs.docs.isNotEmpty) {
-
-                  // サブコレクションを複製
+                  // サブサブコレクションのデータをコピー
                   for (var wordSubDoc in wordSubCollectionDocs.docs) {
                     final targetDocRef = recordDocRef
                         .collection('TOEIC${xValue}点')
@@ -100,41 +113,76 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
                         .collection(collectionName)
                         .doc(wordSubDoc.id);
 
-                    await targetDocRef.set(wordSubDoc.data(), SetOptions(merge: true));
+                    // tierProgress_today = 0 を付与してコピー
+                    final newData = {
+                      ...wordSubDoc.data(),
+                      'tierProgress_today': 0,
+                    };
+                    await targetDocRef.set(newData, SetOptions(merge: true));
                   }
                 }
               }
-            }
-          }
 
-           // デバッグ: サブコレクションが「TOEICX点」で Word ドキュメントが存在する場合
-          if (subCollectionName.startsWith('TOEIC') && doc.id == 'Short_Sentence') {
+              // "Idioms"の場合
+              if (doc.id == 'Idioms') {
+                final englishSkillsRef = FirebaseFirestore.instance
+                    .collection('English_Skills')
+                    .doc('TOEIC')
+                    .collection('up_to_$xValue')
+                    .doc('Words')
+                    .collection('Idioms');
 
-            final xMatch = RegExp(r'TOEIC(\d+)点').firstMatch(subCollectionName);
-            if (xMatch != null) {
-              final xValue = xMatch.group(1);
+                final englishSkillsDocs = await englishSkillsRef.get();
 
-              final englishSkillsRef = FirebaseFirestore.instance
-                  .collection('English_Skills')
-                  .doc('TOEIC')
-                  .collection('up_to_$xValue')
-                  .doc('Grammar')
-                  .collection('Short_Sentence');
+                for (var englishDoc in englishSkillsDocs.docs) {
+                  final collectionName = englishDoc.id;
 
-              final englishSkillsDocs = await englishSkillsRef.get();
+                  // 最新記録の subCollectionName（例：TOEIC600点）/ Word / collectionName
+                  final toeicSubDocRef = latestDoc.reference
+                      .collection(subCollectionName)
+                      .doc('Idioms')
+                      .collection(collectionName);
 
-              for (var englishDoc in englishSkillsDocs.docs) {
-                final collectionName = englishDoc.id;
+                  final wordSubCollectionDocs = await toeicSubDocRef.get();
 
-                // 「TOEICX点」サブコレクションの Word ドキュメント内に一致するコレクションが存在する場合
-                final toeicSubDocRef = latestDoc.reference.collection(subCollectionName).doc('Short_Sentence');
-                final wordSubDocRef = toeicSubDocRef.collection(collectionName);
+                  // サブサブコレクションのデータをコピー
+                  for (var wordSubDoc in wordSubCollectionDocs.docs) {
+                    final targetDocRef = recordDocRef
+                        .collection('TOEIC${xValue}点')
+                        .doc('Idioms')
+                        .collection(collectionName)
+                        .doc(wordSubDoc.id);
 
-                final wordSubCollectionDocs = await wordSubDocRef.get();
+                    // tierProgress_today = 0 を付与してコピー
+                    final newData = {
+                      ...wordSubDoc.data(),
+                      'tierProgress_today': 0,
+                    };
+                    await targetDocRef.set(newData, SetOptions(merge: true));
+                  }
+                }
+              }
 
-                if (wordSubCollectionDocs.docs.isNotEmpty) {
+              // "Short_Sentence"の場合
+              if (doc.id == 'Short_Sentence') {
+                final englishSkillsRef = FirebaseFirestore.instance
+                    .collection('English_Skills')
+                    .doc('TOEIC')
+                    .collection('up_to_$xValue')
+                    .doc('Grammar')
+                    .collection('Short_Sentence');
 
-                  // サブコレクションを複製
+                final englishSkillsDocs = await englishSkillsRef.get();
+
+                for (var englishDoc in englishSkillsDocs.docs) {
+                  final collectionName = englishDoc.id;
+
+                  final toeicSubDocRef = latestDoc.reference
+                      .collection(subCollectionName)
+                      .doc('Short_Sentence')
+                      .collection(collectionName);
+
+                  final wordSubCollectionDocs = await toeicSubDocRef.get();
                   for (var wordSubDoc in wordSubCollectionDocs.docs) {
                     final targetDocRef = recordDocRef
                         .collection('TOEIC${xValue}点')
@@ -142,14 +190,17 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
                         .collection(collectionName)
                         .doc(wordSubDoc.id);
 
-                    await targetDocRef.set(wordSubDoc.data(), SetOptions(merge: true));
+                    // tierProgress_today = 0 を付与してコピー
+                    final newData = {
+                      ...wordSubDoc.data(),
+                      'tierProgress_today': 0,
+                    };
+                    await targetDocRef.set(newData, SetOptions(merge: true));
                   }
                 }
               }
             }
           }
-
-          subCollectionData[subCollectionName]?.add(data);
         }
       }
     }
@@ -158,13 +209,18 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
     final todaySnapshot = await recordDocRef.get();
 
     if (todaySnapshot.exists) {
+      // 目標フィールドを更新
       if (goalFieldsToCopy.isNotEmpty) {
         await recordDocRef.update(goalFieldsToCopy);
       }
 
+      // サブコレクションをコピー
       for (var entry in subCollectionData.entries) {
         for (var subData in entry.value) {
-          final subDocRef = recordDocRef.collection(entry.key).doc(subData['docName']);
+          // subDataにも tierProgress_today=0 が含まれている
+          final subDocRef = recordDocRef
+              .collection(entry.key)
+              .doc(subData['docName']);
           await subDocRef.set(subData, SetOptions(merge: true));
         }
       }
@@ -177,11 +233,15 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
         ...goalFieldsToCopy,
       };
 
+      // 新しいドキュメント作成
       await recordDocRef.set(dataToSet);
 
+      // サブコレクションをコピー
       for (var entry in subCollectionData.entries) {
         for (var subData in entry.value) {
-          final subDocRef = recordDocRef.collection(entry.key).doc(subData['docName']);
+          final subDocRef = recordDocRef
+              .collection(entry.key)
+              .doc(subData['docName']);
           await subDocRef.set(subData, SetOptions(merge: true));
         }
       }
@@ -190,5 +250,8 @@ Future<void> addDailyRecord(String selectedCategory, BuildContext context) async
     }
   } catch (e) {
     print('デイリーレコードの作成中にエラーが発生しました: $e');
+  } finally {
+    // プログレスダイアログを閉じる
+    Navigator.of(context).pop();
   }
 }

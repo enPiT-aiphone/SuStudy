@@ -1,8 +1,12 @@
+import 'dart:html' as html;
 import '/import.dart';
 
 class AuthenticationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // ブラウザの高さを取得
+    double browserHeight = (html.window.innerHeight ?? 0).toDouble();
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -12,76 +16,70 @@ class AuthenticationScreen extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final double screenHeight = constraints.maxHeight;
-
-            return Stack(
-              children: [
-                // 「SuStudy,」を画面の40%の位置に配置
-                Positioned(
-                  top: screenHeight * 0.4 - 30, // 40%の位置に配置（-30は文字の高さ調整）
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Text(
-                      'SuStudy,',
-                      style: TextStyle(
-                        fontSize: 60, // フォントサイズを大きく設定
-                        color: Colors.white, // 文字色を白に設定
-                      ),
-                    ),
+        child: Stack(
+          children: [
+            // 「SuStudy,」を画面の40%の位置に配置
+            Positioned(
+              top: browserHeight * 0.4 - 30, // 40%の位置に配置（-30は文字の高さ調整）
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  'SuStudy,',
+                  style: TextStyle(
+                    fontSize: 60, // フォントサイズを大きく設定
+                    color: Colors.white, // 文字色を白に設定
                   ),
                 ),
-                // 新規アカウント登録ボタンを画面の80%の位置に配置
-                Positioned(
-                  top: screenHeight * 0.8 - 30, // 80%の位置に配置（-30はボタンの高さ調整）
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: _buildAuthenticationButton(
+              ),
+            ),
+            // 新規アカウント登録ボタンを画面の80%の位置に配置
+            Positioned(
+              top: browserHeight * 0.8 - 30, // 80%の位置に配置（-30はボタンの高さ調整）
+              left: 0,
+              right: 0,
+              child: Center(
+                child: _buildAuthenticationButton(
+                  context,
+                  '新規アカウント登録',
+                  () {
+                    Navigator.push(
                       context,
-                      '新規アカウント登録',
-                      () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => SignInScreen()), // SignInScreen に遷移
-                        );
-                      },
-                    ),
-                  ),
+                      MaterialPageRoute(builder: (context) => SignInScreen()), // SignInScreen に遷移
+                    );
+                  },
                 ),
-                // すでにアカウントをお持ちの方テキストをその下に配置
-                Positioned(
-                  top: screenHeight * 0.85, // 80%より少し下に配置
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: () {
-                        // フォーカスを解除
-                        FocusScope.of(context).unfocus();
+              ),
+            ),
+            // すでにアカウントをお持ちの方テキストをその下に配置
+            Positioned(
+              top: browserHeight * 0.85, // 80%より少し下に配置
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {
+                    // フォーカスを解除
+                    FocusScope.of(context).unfocus();
 
-                        // ログイン画面に遷移
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => LogInScreen()),
-                        );
-                      },
-                      child: const Text(
-                        'すでにアカウントをお持ちの方',
-                        style: TextStyle(
-                          color: Colors.grey, // テキストの色をグレーに設定
-                          fontSize: 16, // フォントサイズを設定
-                          decoration: TextDecoration.underline, // 下線を引く
-                        ),
-                      ),
+                    // ログイン画面に遷移
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => LogInScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'すでにアカウントをお持ちの方',
+                    style: TextStyle(
+                      color: Colors.grey, // テキストの色をグレーに設定
+                      fontSize: 16, // フォントサイズを設定
+                      decoration: TextDecoration.underline, // 下線を引く
                     ),
                   ),
                 ),
-              ],
-            );
-          },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -114,4 +112,3 @@ class AuthenticationScreen extends StatelessWidget {
     );
   }
 }
-//
