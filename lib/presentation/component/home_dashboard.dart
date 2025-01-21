@@ -355,6 +355,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
         } else {
           // データ取得後のUI表示
           return Scaffold(
+            backgroundColor: Colors.white,
             body: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(20.0),

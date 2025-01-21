@@ -344,7 +344,7 @@ Future<void> _updateTierProgress(
       if (isCorrect) {
         tierProgress += 0.5;
         tSolvedCount += 0.5;
-        await recordRef.update({'tierProgress_today': tierProgress});
+        await recordRef.set({'tierProgress_today': tierProgress});
         await dateRef.update({'t_solved_count': tSolvedCount});
         tierProgressAll += 0.5;
         await recordRef.update({'tierProgress_all': tierProgressAll});

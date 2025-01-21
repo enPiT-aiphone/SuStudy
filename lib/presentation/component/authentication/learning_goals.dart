@@ -94,6 +94,13 @@ Future<void> _saveGoals() async {
 
     await recordRef.set(dataToUpdate, SetOptions(merge: true));
 
+    await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(widget.userId)
+        .update({
+      'registrationStep': 3,
+    });
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => HomeScreen()),
@@ -154,6 +161,8 @@ Future<void> _saveGoals() async {
 
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double imageWidth = screenWidth > 600 ? 600 : screenWidth;
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60.0),
@@ -184,7 +193,7 @@ Future<void> _saveGoals() async {
         children: [
           const SizedBox(height: 10),
           const Text(
-            '学習目標を登録',
+            '今日の学習目標を立てよう！',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -192,7 +201,13 @@ Future<void> _saveGoals() async {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 20),
+          Center(
+            child: Image.asset(
+              'images/learning_goals.png',
+              width: imageWidth,
+              fit: BoxFit.contain,
+            ),
+          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -204,7 +219,7 @@ Future<void> _saveGoals() async {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       ListTile(
-                        title: Text(subject),
+                        title: Text('目標設定'),
                         trailing: const Icon(Icons.keyboard_arrow_down),
                         onTap: () => _selectGoal(subject),
                       ),

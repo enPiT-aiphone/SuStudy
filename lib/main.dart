@@ -2,6 +2,8 @@
 import 'import.dart';
 import 'package:flutter/foundation.dart' show kIsWeb; // kIsWebを使用してWebかどうかを判定
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
+import 'presentation/component/authentication/registration_subjects.dart';
+import 'presentation/component/authentication/learning_goals.dart';
 
 
 void main() async {
@@ -152,29 +154,82 @@ class MyApp extends StatelessWidget {
 }
 
 // 認証状態を監視して適切な画面を表示するウィジェット
+// main.dart
 class AuthChecker extends StatelessWidget {
   const AuthChecker({super.key});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(), // 認証状態を監視
+      stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
+        // 1) FirebaseAuth 未接続待ち中
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),));
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+            ),
+          );
         }
 
-        if (snapshot.hasData) {
-          // ユーザーがログインしている場合、ホーム画面に遷移
-          //ここでLogin_historyに追加
-           // ユーザーがログインしている場合、userId を取得
-          final userId = snapshot.data?.uid; // snapshotからuidを取得
-          return HomeScreen();
-        } else {
-          // ログインしていない場合、認証選択画面を表示
+        // 2) 未ログイン(=snapshot.hasData == false)なら認証画面へ
+        if (!snapshot.hasData) {
           return AuthenticationScreen();
         }
+
+        // 3) ログイン済みのユーザーがいる ⇒ Firestoreにステップ状態を確認しに行く
+        final currentUser = snapshot.data!;
+        final userId = currentUser.uid;
+
+        return FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance
+              .collection('Users')
+              .doc(userId)
+              .get(),
+          builder: (context, userSnapshot) {
+            if (userSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+                ),
+              );
+            }
+
+            if (userSnapshot.hasError) {
+              return const Center(
+                child: Text('ユーザーデータの取得中にエラーが発生しました。'),
+              );
+            }
+
+            // ドキュメントが存在しない or まだ無い場合
+            if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+              // 本来であれば、ドキュメントがない時点で何かしら初期登録が必要かもしれない
+              // ひとまず、サインイン直後ならここに来ることは少ないはず
+              return const Center(child: Text('ユーザー情報が存在しません'));
+            }
+
+            // 取得したユーザードキュメント
+            final userData = userSnapshot.data!;
+            final registrationStep = userData['registrationStep'] ?? 0;
+
+            // registrationStep の値に応じて画面振り分け
+            if (registrationStep == 0) {
+              // information_registration.dart のステップ
+              return InformationRegistrationScreen(userId: userId);
+            } else if (registrationStep == 1) {
+              // registration_subjects.dart のステップ
+              return SubjectSelectionScreen(userId: userId);
+            } else if (registrationStep == 2) {
+              // learning_goals.dart のステップ
+              return LearningGoalsScreen(userId: userId);
+            } else {
+              // registrationStep == 3 以上 ＝ すべてのステップ完了
+              return HomeScreen();
+            }
+          },
+        );
       },
     );
   }
 }
+

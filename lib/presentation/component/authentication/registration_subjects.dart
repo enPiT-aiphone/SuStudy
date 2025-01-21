@@ -60,6 +60,18 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
   Future<void> _saveSelectedSubject() async {
     bool hasError = false;
 
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return const Center(
+          child: CircularProgressIndicator(
+            valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+          ),
+        );
+      },
+    );
+
     setState(() {
       _errors.clear(); // エラーをリセット
 
@@ -107,6 +119,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
 
       await userDoc.update({
         'following_subjects': FieldValue.arrayUnion(followingSubjects),
+        'registrationStep': 2,
       });
 
       print('登録された教科: $followingSubjects');
@@ -200,6 +213,17 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
       ),
       body: Column(
         children: [
+          const SizedBox(height: 10),
+          const Text(
+            '学習内容を決めよう！',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color.fromARGB(255, 50, 50, 50),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -334,6 +358,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
             padding: const EdgeInsets.all(16.0),
             child: _buildAuthenticationButton(context, '保存', _saveSelectedSubject),
           ),
+          const SizedBox(height: 20),
         ],
       ),
     );

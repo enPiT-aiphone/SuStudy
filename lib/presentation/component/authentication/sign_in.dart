@@ -87,6 +87,19 @@ class _SignInScreenState extends State<SignInScreen> {
               context,
               'サインイン',
               () async {
+
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+                      ),
+                    );
+                  },
+                );
+
                 setState(() {
                   _errorMessage = null; // エラーが発生する前にリセット
                 });
@@ -122,6 +135,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         .set({
                       'email': user.email,
                       'auth_uid': user.uid,
+                      'registrationStep': 0,
                     });
                     // InformationRegistrationScreenに遷移
                   Navigator.pushReplacement(
