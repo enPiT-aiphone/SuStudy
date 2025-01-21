@@ -293,7 +293,7 @@ class _InformationRegistrationScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Scaffold(backgroundColor: Colors.white,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60.0), // AppBarの高さを設定
         child: Container(

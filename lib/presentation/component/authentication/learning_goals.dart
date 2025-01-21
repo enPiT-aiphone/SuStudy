@@ -164,6 +164,7 @@ Future<void> _saveGoals() async {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double imageWidth = screenWidth > 600 ? 600 : screenWidth;
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60.0),
         child: Container(
@@ -191,6 +192,7 @@ Future<void> _saveGoals() async {
       ),
       body: Column(
         children: [
+          
           const SizedBox(height: 10),
           const Text(
             '今日の学習目標を立てよう！',
@@ -219,17 +221,13 @@ Future<void> _saveGoals() async {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       ListTile(
-                        title: Text('目標設定'),
+                        title: Text(
+                          selectedGoals[subject]?? '目標設定',
+                          style: const TextStyle(fontSize: 18),
+                          ),
                         trailing: const Icon(Icons.keyboard_arrow_down),
                         onTap: () => _selectGoal(subject),
                       ),
-                      if (selectedGoals[subject] != null)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Text(
-                            '  ${selectedGoals[subject]}',
-                          ),
-                        ),
                       if (_errors[subject] != null)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
