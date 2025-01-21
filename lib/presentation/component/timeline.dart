@@ -133,8 +133,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
     try {
       int count = 0;
       for (var userId in _groupMemberIds) {
-        final normalizedTierProgress = await fetchTierProgress(userId, '全体');
-        if (normalizedTierProgress >= 1) {
+        final progressData = await fetchTierProgress(userId, '全体');
+        final normalizedTierProgress = progressData['normalizedTierProgress'];
+        if (normalizedTierProgress != null && normalizedTierProgress >= 1) {
           count++;
         }
       }
