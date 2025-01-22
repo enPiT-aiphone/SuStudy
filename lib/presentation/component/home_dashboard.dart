@@ -529,19 +529,19 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
                     Text(
                       "$userNameさん、ナイスログイン！",
                       style: const TextStyle(
-                        fontSize: 25,
+                        fontSize: 23,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     const Text(
                       "今日も学習を重ねていこう",
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         color: Color.fromARGB(255, 130, 130, 130),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -560,12 +560,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     const Divider(color: Color.fromARGB(255, 200, 200, 200)),
                     const SizedBox(height: 10),
                     Text(
                       _getDisplayDate(),
-                      style: const TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 13),
                     ),
                   ],
                 ),
@@ -594,7 +594,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color.fromARGB(255, 100, 100, 100),
-                  fontSize: 13,
+                  fontSize: 12,
                 ),
               ),
               Text(
@@ -703,7 +703,7 @@ Widget _buildProgressSection() {
               ];
               final color = (cycles < 5) ? colors[cycles] : colors.last;
               return Positioned(
-                bottom: 0,
+                bottom: -1,
                 child: Text(
                   "$displayValue%",
                   style: TextStyle(
@@ -810,22 +810,17 @@ Widget _buildProgressSection() {
               // （デフォルトのtitleTextFormatterまたはheaderTitleBuilderを使わない場合は削除）
               
               // ▼ 前月アイコンと次月アイコンにマージンを入れる
-              leftChevronMargin: const EdgeInsets.only(left: 8.0),
-              rightChevronMargin: const EdgeInsets.only(right: 8.0),
-
-              // ▼ 前月アイコンと次月アイコンにパディングを入れる場合はこちら
-              // leftChevronPadding: const EdgeInsets.all(8.0),
-              // rightChevronPadding: const EdgeInsets.all(8.0),
-
+              leftChevronMargin: const EdgeInsets.only(left: 0.0),
+              rightChevronMargin: const EdgeInsets.only(right: 0.0),
               // ▼ アイコン自体のサイズを変更
               leftChevronIcon: const Icon(
                 Icons.chevron_left,
-                size: 24,  // 矢印を大きめに
+                size: 18,  // 矢印を大きめに
                 color: Colors.black,
               ),
               rightChevronIcon: const Icon(
                 Icons.chevron_right,
-                size: 24,  // 矢印を大きめに
+                size: 18,  // 矢印を大きめに
                 color: Colors.black,
               ),
 
