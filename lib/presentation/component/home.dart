@@ -300,17 +300,45 @@ class _HomeScreenState extends State<HomeScreen>
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return false;
 
-    final now = DateTime.now();
-    final docId = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(user.uid)
+          .get();
 
-    final docRef = FirebaseFirestore.instance
-        .collection('Users')
-        .doc(user.uid)
-        .collection('record')
-        .doc(docId);
+      if (!userDoc.exists) {
+        print("ユーザードキュメントが存在しません");
+        return false;
+      }
 
-    final snap = await docRef.get();
-    return snap.exists;
+      final data = userDoc.data();
+      if (data == null || !data.containsKey('login_history')) {
+        print("login_historyフィールドが存在しません");
+        return false;
+      }
+
+      final List<dynamic> loginHistory = data['login_history'] ?? [];
+
+      // 今日の日付
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      // login_historyに今日の日付が含まれるかチェック
+      for (var timestamp in loginHistory) {
+        if (timestamp is Timestamp) {
+          final loginDate = timestamp.toDate();
+          final normalizedDate = DateTime(loginDate.year, loginDate.month, loginDate.day);
+          if (normalizedDate == today) {
+            return true; // 今日の日付が存在する場合
+          }
+        }
+      }
+
+      return false; // 今日の日付が存在しない場合
+    } catch (e) {
+      print("エラー: $e");
+      return false;
+    }
   }
 
   // ---------------------------
@@ -1569,7 +1597,6 @@ Widget _buildDrawer() {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print("DEBUG: ユーザーがログインしていません");
         return 0;
       }
 
@@ -1587,31 +1614,25 @@ Widget _buildDrawer() {
       final docSnapshot = await docRef.get();
 
       if (!docSnapshot.exists) {
-        print("DEBUG: ドキュメントが存在しません");
         return 0;
       }
 
       final data = docSnapshot.data();
       if (data == null) {
-        print("DEBUG: ドキュメントデータが null です");
         return 0;
       }
 
-      print("DEBUG: ドキュメントデータ => $data");
 
       int solvedCount = 0;
 
       data.forEach((key, value) {
-        print("DEBUG: Key = $key, Value = $value");
         if (key.startsWith('t_solved_count_') && value is int) {
           solvedCount += value;
         }
       });
 
-      print("DEBUG: t_solved_xxxフィールドの合計値: $solvedCount");
       return solvedCount;
     } catch (e) {
-      print("DEBUG: checkSolvedCountエラー: $e");
       return 0;
     }
   }

@@ -172,6 +172,13 @@ class _InformationRegistrationScreenState
           'login_history': <Timestamp>[],
           't_solved_count': 0, 
           'registrationStep': 1,
+          'coachMarks': {
+            'dashActivity': false,
+            'dashProgress': false,
+            'dataTab': false,
+            'fabLongPress': false,
+            'fabSolve': false,
+          },
         });
 
         // サブコレクションを作成
