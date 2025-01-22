@@ -541,7 +541,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
                         color: Color.fromARGB(255, 130, 130, 130),
                       ),
                     ),
-                    const SizedBox(height: 10),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -560,7 +559,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
                     const Divider(color: Color.fromARGB(255, 200, 200, 200)),
                     const SizedBox(height: 10),
                     Text(
@@ -703,7 +701,7 @@ Widget _buildProgressSection() {
               ];
               final color = (cycles < 5) ? colors[cycles] : colors.last;
               return Positioned(
-                bottom: -1,
+                bottom: 0,
                 child: Text(
                   "$displayValue%",
                   style: TextStyle(
