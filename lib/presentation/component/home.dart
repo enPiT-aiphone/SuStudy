@@ -1109,6 +1109,8 @@ class _HomeScreenState extends State<HomeScreen>
               ? const Color.fromARGB(255, 68, 68, 68)
               : Colors.white,
           unselectedItemColor: const Color.fromARGB(255, 68, 68, 68),
+          selectedLabelStyle: const TextStyle(fontSize: 12.0),
+          unselectedLabelStyle: const TextStyle(fontSize: 10.0),
           items: [
             const BottomNavigationBarItem(
               icon: Icon(Icons.home),
@@ -1174,7 +1176,7 @@ class _HomeScreenState extends State<HomeScreen>
           tab,
           style: TextStyle(
             color: selected ? Colors.white : Colors.black,
-            fontSize: 14,
+            fontSize: selected ? 14 : 12,
           ),
         ),
       ),
@@ -1310,7 +1312,7 @@ Widget _buildDrawer() {
                       onTap: () {
                         setState(() {
                           _isProfileVisible = true;
-                          _profileUserId = userViewModel.userId;
+                          _profileUserId = _currentUserId;
                         });
                         Navigator.pop(context);
                       },
@@ -1368,23 +1370,25 @@ Widget _buildDrawer() {
                               '@${userViewModel.userId}',
                               style: const TextStyle(
                                 color: Color.fromARGB(179, 160, 160, 160),
-                                fontSize: 14,
+                                fontSize: 13,
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 9),
                             Row(
                               children: [
                                 Text(
                                   'フォロワー: ${userViewModel.followers}',
                                   style: const TextStyle(
                                     color: Color.fromARGB(255, 100, 100, 100),
+                                    fontSize: 12,
                                   ),
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: 6),
                                 Text(
                                   'フォロー中: ${userViewModel.following}',
                                   style: const TextStyle(
                                     color: Color.fromARGB(255, 100, 100, 100),
+                                    fontSize: 12,
                                   ),
                                 ),
                               ],
@@ -1394,51 +1398,93 @@ Widget _buildDrawer() {
                               'フォロー中の教科: ${userViewModel.followingSubjects.join(', ')}',
                               style: const TextStyle(
                                 color: Color.fromARGB(255, 100, 100, 100),
+                                fontSize: 12,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.person),
-                      title: const Text('プロフィール'),
-                      onTap: () {
-                        setState(() {
-                          _isProfileVisible = true;
-                          _profileUserId = userViewModel.userId;
-                        });
-                        Navigator.pop(context);
-                      },
+                    Container(
+                      constraints: const BoxConstraints(
+                        maxHeight: 45, // 最大高さを設定
+                      ),
+                      child:ListTile(
+                        leading: Icon(
+                          Icons.person,
+                          size: 23, // アイコンサイズを小さく
+                        ),
+                        title: Text(
+                          'プロフィール',
+                          style: const TextStyle(
+                            fontSize: 15, // 文字サイズを小さく
+                          ),
+                        ),
+                        onTap: () {
+                          setState(() {
+                            _isProfileVisible = true;
+                            _profileUserId = userViewModel.userId;
+                          });
+                          Navigator.pop(context);
+                        },
+                      ),
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.settings),
-                      title: const Text('設定'),
-                      onTap: () => Navigator.pop(context),
+                    Container(
+                      constraints: const BoxConstraints(
+                        maxHeight: 45, // 最大高さを設定
+                      ),
+                      child:ListTile(
+                        leading: Icon(
+                          Icons.settings,
+                          size: 23,
+                        ),
+                        title: Text(
+                          '設定',
+                          style: const TextStyle(
+                            fontSize: 15,
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                        },
+                      ),
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.logout),
-                      title: const Text('ログアウト'),
-                      onTap: () async {
-                        try {
-                          await FirebaseAuth.instance.signOut();
-                          FirebaseAuth.instance.authStateChanges().listen(
-                            (User? user) {
-                              if (user == null) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => AuthenticationScreen(),
-                                  ),
-                                );
-                              }
-                            },
-                          );
-                          print('ログアウト成功');
-                        } catch (e) {
-                          print('ログアウトエラー: $e');
-                        }
-                      },
+                    Container(
+                      constraints: const BoxConstraints(
+                        maxHeight: 45, // 最大高さを設定
+                      ),
+                      child:ListTile(
+                        leading: Icon(
+                          Icons.logout,
+                          size: 23,
+                        ),                      
+                        title: Text(
+                          'ログアウト',
+                          style: const TextStyle(
+                            fontSize: 15,
+                          ),
+                        ),                      
+                        onTap: () async {
+                          try {
+                            await FirebaseAuth.instance.signOut();
+                            FirebaseAuth.instance.authStateChanges().listen(
+                              (User? user) {
+                                if (user == null) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AuthenticationScreen(),
+                                    ),
+                                  );
+                                }
+                              },
+                            );
+                            print('ログアウト成功');
+                          } catch (e) {
+                            print('ログアウトエラー: $e');
+                          }
+                        },
+                      ),
                     ),
                   ],
                 ),
