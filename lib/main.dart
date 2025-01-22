@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb; // kIsWebを使用してWe
 import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
 import 'presentation/component/authentication/registration_subjects.dart';
 import 'presentation/component/authentication/learning_goals.dart';
+import 'presentation/component/user_view_model.dart'; 
 
 
 void main() async {
@@ -22,6 +23,7 @@ void main() async {
       providers: [
         // ChangeNotifierProviderを使用してBadgeViewModelを提供
         ChangeNotifierProvider(create: (_) => BadgeViewModel()),
+        ChangeNotifierProvider(create: (_) => UserViewModel()),
       ],
       // アプリのルートとしてMyAppを指定
       child: MyApp(),
@@ -144,6 +146,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter App',
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         fontFamily: 'NotoSansJP',
         primarySwatch: Colors.blue,
