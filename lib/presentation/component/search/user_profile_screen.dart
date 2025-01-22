@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'edit_user_profile.dart';
 import 'follow_follower_list.dart';
+import '../user_view_model.dart'; //
+import 'package:provider/provider.dart';
 
 
 class UserProfileScreen extends StatefulWidget {
@@ -353,6 +355,7 @@ Future<void> _loadUserData() async {
 
   @override
   Widget build(BuildContext context) {
+    final userViewModel = context.watch<UserViewModel>();
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(40.0), // AppBarの高さを設定
@@ -708,3 +711,5 @@ Future<void> _loadUserData() async {
     );
   }
 }
+
+

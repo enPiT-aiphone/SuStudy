@@ -171,6 +171,14 @@ class _InformationRegistrationScreenState
           'following_subjects': [], // 空のリスト
           'login_history': <Timestamp>[],
           't_solved_count': 0, 
+          'registrationStep': 1,
+          'coachMarks': {
+            'dashActivity': false,
+            'dashProgress': false,
+            'dataTab': false,
+            'fabLongPress': false,
+            'fabSolve': false,
+          },
         });
 
         // サブコレクションを作成
@@ -292,7 +300,7 @@ class _InformationRegistrationScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Scaffold(backgroundColor: Colors.white,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60.0), // AppBarの高さを設定
         child: Container(
@@ -432,18 +440,14 @@ class _InformationRegistrationScreenState
                         trailing: const Icon(Icons.keyboard_arrow_down),
                         onTap: () => _selectSubOccupation(_jobIndustries),
                       ),
-                    const SizedBox(height: 20),
-                  _buildAuthenticationButton(
-                      context,
-                      '保存',
-                      () async {
-                        await _saveUserInfo(); // ユーザー情報を保存する関数
-                      },
-                    ),
-                    const SizedBox(height: 20),
                   ],
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: _buildAuthenticationButton(context, '保存', _saveUserInfo),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

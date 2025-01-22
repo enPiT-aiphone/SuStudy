@@ -1,366 +1,531 @@
-// 必要なパッケージのインポート
-import '/import.dart'; // アプリ全体で使用するインポートファイル
-import 'package:table_calendar/table_calendar.dart'; // カレンダーUI用のパッケージ
-import 'package:intl/intl.dart'; // 日付フォーマット用のパッケージ
-import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthをインポート
+import '/import.dart'; // プロジェクト固有のimport
+import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
-// DashboardScreenクラスの宣言
-class DashboardScreen extends StatefulWidget {
-  final String selectedTab; // 選択されたタブの名前を保持する変数
-  final String selectedCategory; // 選択されたカテゴリの名前を保持する変数
-  final Function(int) onLoginStreakCalculated; // コールバック関数を追加
+class HomeDashboardScreen extends StatefulWidget {
+  final String selectedTab;
+  final String selectedCategory;
+  final Function(int) onLoginStreakCalculated;
+  final VoidCallback onDashCoachMarkFinished;
 
-  // コンストラクタで初期化
-  const DashboardScreen({super.key, 
-    required this.selectedTab, 
-    required this.selectedCategory, 
+  const HomeDashboardScreen({
+    super.key,
+    required this.selectedTab,
+    required this.selectedCategory,
     required this.onLoginStreakCalculated,
-    });
+    required this.onDashCoachMarkFinished,
+  });
 
   @override
-  _DashboardScreenState createState() => _DashboardScreenState();
+  _HomeDashboardScreenState createState() => _HomeDashboardScreenState();
 }
 
-// DashboardScreenのステート管理用クラス
-class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
-  DateTime? _selectedDay; // 選択された日付を保持する変数
-  DateTime _focusedDay = DateTime.now(); // カレンダーのフォーカスされた日付
+class _HomeDashboardScreenState extends State<HomeDashboardScreen>
+    with SingleTickerProviderStateMixin {
+  // ---------------------------
+  // カレンダー関連
+  // ---------------------------
+  DateTime? _selectedDay;
+  DateTime _focusedDay = DateTime.now();
   Set<DateTime> _loggedInDays = {};
 
-  // ユーザー情報や進捗データを格納する変数
-  String userName = ""; // ユーザー名、初期値は空文字
-  int loginStreak = 0; // 連続ログイン日数
-  int longestStreak = 0; // 最長連続ログイン日数
-  int totalLogins = 0;       // 総ログイン回数
-  double tierProgress = 0.0; // 今日の達成度
-  double wordCount = 0; // 単語数
-  double tierProgress_all = 0.0; // 目標全体に対する達成度
-  List<String> _followingSubjects = []; // フォロー中の教科のリスト
+  // ---------------------------
+  // ユーザー情報・進捗
+  // ---------------------------
+  String userName = "";
+  int loginStreak = 0;
+  int longestStreak = 0;
+  int totalLogins = 0;
 
-  late AnimationController _controller; // アニメーションコントローラ
-  late Animation<double> _progressAnimation; // 今日の達成度のアニメーション
-  late Animation<double> _progressAllAnimation; // 目標達成度のアニメーション
-  late Future<void> _userDataFuture; // Futureを保持する変数
+  double tierProgress = 0.0;     // 今日の学習達成度
+  double tierProgressAll = 0.0;  // 目標への達成度
+  double wordCount = 0;          // 学習量 (教科ごとの想定値)
+  List<String> _followingSubjects = [];
+
+  // ---------------------------
+  // コーチマーク用キー
+  // ---------------------------
+  final GlobalKey progressSectionKey = GlobalKey(); // 進捗セクション
+  final GlobalKey activitySectionKey = GlobalKey(); // カレンダー
+
+  // チュートリアル表示済みフラグ
+  bool hasShownDashProgressCoach = false;
+  bool hasShownDashActivityCoach = false;
+
+  // コーチマークインスタンス
+  TutorialCoachMark? dashboardCoachMark;
+
+  // アニメーション (円形進捗表示)
+  late AnimationController _controller;
+  late Animation<double> _progressAnimation;
+  late Animation<double> _progressAllAnimation;
+
+  late Future<void> _userDataFuture;
 
   @override
   void initState() {
     super.initState();
 
-     // 非同期処理を初期化時に実行し、結果を保持
+    // 1) Firestoreからユーザーデータ取得
     _userDataFuture = _fetchUserData();
     fetchTierProgress();
 
-    // アニメーションコントローラの初期化
+    // 2) コーチマーク状態を読み込む
+    _fetchCoachMarksState().then((_) {
+      // 3) コーチマーク表示
+      _showDashboardCoachMarksIfNeeded();
+    });
+
+    // 4) アニメーション
     _controller = AnimationController(
-      duration: const Duration(seconds: 1), // 1秒間のア���メーション
-      vsync: this, // アニメーションの更新を同期
+      duration: const Duration(seconds: 1),
+      vsync: this,
     );
-
-    // 今日の達成度のアニメーションの定義
-    _progressAnimation = Tween<double>(begin: 0, end: tierProgress / 100)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic));
-    
-    // 目標達成度のアニメーションの定義
-    _progressAllAnimation = Tween<double>(begin: 0, end: tierProgress_all / 100)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic));
-
-    _controller.forward(); // アニメーションの再生開始
-  }
-
-  @override
-  void didUpdateWidget(DashboardScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // カテゴリが変更された場合、データを再取得してアニメーションを更新
-    if (oldWidget.selectedCategory != widget.selectedCategory) {
-      _userDataFuture = _fetchUserData();
-      fetchTierProgress();
-    }
-  }
-
-  // Firestoreからユーザーデータを取得する非同期関数
-  Future<void> _fetchUserData() async {
-    try {
-      // 現在のユーザーのUIDを取得
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null) {
-        final userId = currentUser.uid;
-
-        // Firestoreから特定のユーザーのデータを取得
-        final userSnapshot = await FirebaseFirestore.instance
-            .collection('Users')
-            .where('auth_uid', isEqualTo: userId)
-            .get();
-
-        if (userSnapshot.docs.isNotEmpty) {
-          final userData = userSnapshot.docs.first.data();
-          setState(() {
-            _followingSubjects = List<String>.from(userData['following_subjects'] ?? []); // フォロー中の教科
-          });
-        }
-        print(_followingSubjects);
-
-        if (userSnapshot.docs.isNotEmpty) {
-          final userData = userSnapshot.docs.first.data();
-          userName = userData['user_name'] ?? 'Unknown'; // ユーザー名がない場合、"Unknown"を代入
-          // login_historyを取得して計算
-
-
-        final loginHistory = userData['login_history'] ?? [];
-        _calculateLoginStats(loginHistory); // ここでログイン情報の計算
-          // ログイン記録をセットに保存
-          _loggedInDays = loginHistory
-              .map((timestamp) => (timestamp as Timestamp).toDate())
-              .map((date) => DateTime(date.year, date.month, date.day))
-              .toSet()
-              .cast<DateTime>(); // 型変換を追加
-        }
-      } else {
-        print('ユーザーがログインしていません');
-        userName = 'Unknown';
-      }
-    } catch (e) {
-      print('データ取得エラー: $e'); // データ取得エラーの際にコンソールに表示
-      userName = 'Unknown'; // エラー発生時は"Unknown"をセット
-    }
-  }
-
-Future<void> fetchTierProgress() async {
-  try {
-    final currentUser = FirebaseAuth.instance.currentUser;
-
-    if (currentUser == null) {
-      print('ユーザーがログインしていません');
-      return;
-    }
-
-    final userId = currentUser.uid;
-    final category = widget.selectedCategory;
-
-    // ユーザードキュメントを取得
-    final userDoc = await FirebaseFirestore.instance
-        .collection('Users')
-        .doc(userId)
-        .get();
-
-    if (!userDoc.exists) {
-      print('ユーザードキュメントが見つかりません');
-      return;
-    }
-
-    final followingSubjects =
-        List<String>.from(userDoc.data()?['following_subjects'] ?? []);
-
-    if (category == '全体'){
-      wordCount = 0;
-      for (final subject in followingSubjects){
-        wordCount += getTotalMinutes(subject);
-      }
-      print(wordCount);
-    }
-    else{
-      wordCount = getTotalMinutes(category);
-    }
-
-    // TOEICスコア部分を抽出
-    final toeicSubject = followingSubjects.firstWhere(
-      (subject) => subject.startsWith('TOEIC'),
-      orElse: () => '',
+    _progressAnimation = Tween<double>(begin: 0, end: tierProgress / 100).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
     );
-
-    if (toeicSubject.isEmpty) {
-      print('TOEIC情報がありません');
-      return;
-    }
-
-    final scoreMatch = RegExp(r'\d+').firstMatch(toeicSubject);
-    if (scoreMatch == null) {
-      print('TOEICスコアの形式が不正です');
-      return;
-    }
-
-    final today = DateTime.now();
-    final todayDate = DateFormat('yyyy-MM-dd').format(today);
-
-    // ▼ ここから修正開始：コレクション内すべてのドキュメントから合計を取る
-    // 選択中のカテゴリサブコレクション（例: .collection('TOEIC500点')）を取得
-    if (category == '全体'){
-      tierProgress = 0;
-      tierProgress_all = 0;
-      for (final subject in followingSubjects){
-        print('subject=$subject');
-        final categoryCollectionSnapshot = await FirebaseFirestore.instance
-        .collection('Users')
-        .doc(userId)
-        .collection('record')
-        .doc(todayDate)
-        .collection(subject)
-        .get();
-
-    // すべてのドキュメントの tierProgress_today, tierProgress_all を合計
-        for (final doc in categoryCollectionSnapshot.docs) {
-          final data = doc.data();
-          tierProgress += data['tierProgress_today'] ?? 0;
-          tierProgress_all += data['tierProgress_all'] ?? 0;
-        }
-      }
-    }else{
-      tierProgress = 0;
-      tierProgress_all = 0;
-      final categoryCollectionSnapshot = await FirebaseFirestore.instance
-        .collection('Users')
-        .doc(userId)
-        .collection('record')
-        .doc(todayDate)
-        .collection(category)
-        .get();
-
-    // すべてのドキュメントの tierProgress_today, tierProgress_all を合計
-      for (final doc in categoryCollectionSnapshot.docs) {
-       final data = doc.data();
-        tierProgress += data['tierProgress_today'] ?? 0;
-        tierProgress_all += data['tierProgress_all'] ?? 0;
-      }
-    }
-
-    // ゴールの取得（例: doc(todayDate) の中に "${category}_goal" フィールドがある想定）
-    final todayWordsGoalDocRef = FirebaseFirestore.instance
-        .collection('Users')
-        .doc(userId)
-        .collection('record')
-        .doc(todayDate);
-
-    final todayWordsGoalDocSnapshot = await todayWordsGoalDocRef.get();
-    final tierProgressTodayGoal = todayWordsGoalDocSnapshot.data()?['${category}_goal'] ?? 0;
-    double tierProgressGoal = 0;
-    for (final category in followingSubjects){
-      tierProgressGoal += todayWordsGoalDocSnapshot.data()?['${category}_goal'] ?? 0;
-    }
-
-    double normalizedTierProgressAll;
-    double normalizedTierProgress;
-
-    // tierProgress_all を単語数で割って計算
-    if (category == '全体'){
-      normalizedTierProgressAll = tierProgress_all / wordCount;
-    // 例: 「*2 する」というなら既存ロジックに合わせる
-      normalizedTierProgress = tierProgress / tierProgressGoal;
-    }else{
-      normalizedTierProgressAll = tierProgress_all / wordCount;
-    // 例: 「*2 する」というなら既存ロジックに合わせる
-      normalizedTierProgress = tierProgress / tierProgressTodayGoal;
-    }
-    // アニメーションを更新
-    setState(() {
-      _progressAllAnimation = Tween<double>(
-        begin: 0,
-        end: normalizedTierProgressAll.toDouble(),
-      ).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
-      );
-
-      _progressAnimation = Tween<double>(
-        begin: 0,
-        end: normalizedTierProgress.toDouble(),
-      ).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
-      );
-    });
-    _controller.forward(from: 0);
-    // ▲ ここまで修正
-
-    print('目標への達成度: $normalizedTierProgressAll'); // デバッグ用ログ
-  } catch (e) {
-    print('normalizedTierProgressAll 計算エラー: $e');
-  }
-}
-
-void _calculateLoginStats(List<dynamic> loginHistory) {
-  if (loginHistory.isEmpty) {
-    setState(() {
-      loginStreak = 0; // 今日までの連続ログイン日数
-      longestStreak = 0; // 最長連続ログイン日数
-      totalLogins = 0; // 総ログイン数
-    });
-    return;
-  }
-
-
-  final loginDates = loginHistory
-      .map((timestamp) => (timestamp as Timestamp).toDate())
-      .map((date) => DateTime(date.year, date.month, date.day))
-      .toSet()
-      .toList()
-    ..sort((a, b) => a.compareTo(b)); // 日付を昇順にソート
-
-  int currentStreak = 1; // 今日までの連続ログイン日数
-  int maxStreak = 1; // 最長連続ログイン日数
-  int total = loginDates.length; // 総ログイン日数
-  int todayStreak = 0; // 今日の連続ログイン日数
-
-  // 今日がログインしている場合
-  final today = DateTime.now();
-  final todayDate = DateTime(today.year, today.month, today.day);
-  
-  if (loginDates.first.isAtSameMomentAs(todayDate)) {
-    todayStreak = 1; // 今日もログインしているので連続日数は1
-  }
-
-  // ログイン履歴をチェックして連続性を計算
-  for (int i = 1; i < loginDates.length; i++) {
-    if (loginDates[i - 1].difference(loginDates[i]).inDays == -1) {
-      currentStreak++; // 連続している場合
-    } else {
-      maxStreak = currentStreak > maxStreak ? currentStreak : maxStreak; // 最長連続日数を更新
-      currentStreak = 1; // 途切れたらリセット
-    }
-  }
-
-  // 最後の連続日数を最長連続日数に反映
-  maxStreak = currentStreak > maxStreak ? currentStreak : maxStreak;
-
-  todayStreak=currentStreak;
-
-  // 最長連続ログイン日数と今日までの連続ログイン日数をセット
-  setState(() {
-    loginStreak = todayStreak; // 今日までの連続ログイン日数
-    longestStreak = maxStreak; // 最長連続ログイン日数
-    totalLogins = total; // 総ログイン数
-  });
-  // 計算結果をコールバック関数で渡す
-    widget.onLoginStreakCalculated(loginStreak);
-}
-
-  // 日付を表示するための関数
-  String _getDisplayDate() {
-    final displayDate = _selectedDay ?? DateTime.now(); // 選択されていない場合は今日の日付
-    return "${DateFormat('yyyy年M月d日').format(displayDate)}の${widget.selectedCategory}の記録データ閲覧画面";
+    _progressAllAnimation =
+        Tween<double>(begin: 0, end: tierProgressAll / 100).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+    );
+    _controller.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose(); // アニメーションコントローラの破棄
+    _controller.dispose();
+    // チュートリアルが中途半端に残らないように
+    dashboardCoachMark?.finish();
     super.dispose();
   }
 
- 
+  // -------------------------------------------------------------------------
+  // Firestore で dashProgress, dashActivity を管理
+  // -------------------------------------------------------------------------
+  Future<void> _fetchCoachMarksState() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(user.uid)
+          .get();
+
+      if (!docSnapshot.exists) return;
+
+      final data = docSnapshot.data() ?? {};
+      final coachMarks = data['coachMarks'] as Map<String, dynamic>?;
+
+      if (coachMarks != null) {
+        setState(() {
+          hasShownDashProgressCoach = coachMarks['dashProgress'] ?? false;
+          hasShownDashActivityCoach = coachMarks['dashActivity'] ?? false;
+        });
+      }
+    } catch (e) {
+      print('Dashboardコーチマーク状態の取得エラー: $e');
+    }
+  }
+
+  Future<void> _saveDashboardCoachMarkState({
+    bool? dashProgress,
+    bool? dashActivity,
+  }) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final updates = <String, dynamic>{};
+      if (dashProgress != null) updates['coachMarks.dashProgress'] = dashProgress;
+      if (dashActivity != null) updates['coachMarks.dashActivity'] = dashActivity;
+
+      if (updates.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(user.uid)
+            .update(updates);
+      }
+    } catch (e) {
+      print('Dashboardコーチマーク状態の保存エラー: $e');
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // ダッシュボードでのコーチマーク
+  // -------------------------------------------------------------------------
+  void _showDashboardCoachMarksIfNeeded() {
+    // 既に両方ともtrueなら何もしない
+    if (hasShownDashProgressCoach && hasShownDashActivityCoach) {
+      return;
+    }
+
+    // 進捗だけ未表示かどうか
+    final needProgress = !hasShownDashProgressCoach;
+    // カレンダーだけ未表示かどうか
+    final needActivity = !hasShownDashActivityCoach;
+
+    // 表示対象のTargetFocusを動的に組み立てる
+    final targets = <TargetFocus>[];
+
+    if (needProgress) {
+      targets.add(
+        TargetFocus(
+          identify: "DashProgress",
+          keyTarget: progressSectionKey,
+          shape: ShapeLightFocus.RRect,
+          focusAnimationDuration: Duration.zero,
+          //pulseAnimationDuration: Duration.zero,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              builder: (ctx, controller) => const Text(
+                '「目標への達成度」はあなたがフォローした教科\nをマスターするまでの達成度を表しています。\n'
+                '「今日の学習達成度」は、あなたが立てた目標\nへの達成度を表しています。',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (needActivity) {
+      targets.add(
+        TargetFocus(
+          identify: "DashActivity",
+          keyTarget: activitySectionKey,
+          shape: ShapeLightFocus.RRect,
+          focusAnimationDuration: Duration.zero,
+          //pulseAnimationDuration: Duration.zero,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              builder: (ctx, controller) => const Text(
+                'カレンダーの日付をタップするとその日の記録を閲覧できます',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (targets.isEmpty) {
+      return; // 何も表示しない
+    }
+
+    // TutorialCoachMarkを生成
+    dashboardCoachMark = TutorialCoachMark(
+      targets: targets,
+      // どこでもタップしたら次へ
+      onClickOverlay: (target) {
+        dashboardCoachMark?.next();
+        return true;
+      },
+      // skipボタンを表示しない
+      //showSkipInFront: false,
+      // 全ターゲットを見終わったら
+      onFinish: () {
+        setState(() {
+          if (needProgress) {
+            hasShownDashProgressCoach = true;
+          }
+          if (needActivity) {
+            hasShownDashActivityCoach = true;
+          }
+        });
+        _saveDashboardCoachMarkState(
+          dashProgress: needProgress ? true : null,
+          dashActivity: needActivity ? true : null,
+        );
+        widget.onDashCoachMarkFinished();
+      },
+      // 途中スキップ
+      onSkip: () {
+        setState(() {
+          if (needProgress) {
+            hasShownDashProgressCoach = true;
+          }
+          if (needActivity) {
+            hasShownDashActivityCoach = true;
+          }
+        });
+        _saveDashboardCoachMarkState(
+          dashProgress: needProgress ? true : null,
+          dashActivity: needActivity ? true : null,
+        );
+        widget.onDashCoachMarkFinished();
+        return true;
+      },
+    );
+
+    // 表示
+    dashboardCoachMark?.show(context: context);
+  }
+
+  // -------------------------------------------------------------------------
+  // Firestoreからユーザーデータを取得
+  // -------------------------------------------------------------------------
+  Future<void> _fetchUserData() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        print('ユーザーがログインしていません');
+        userName = 'Unknown';
+        return;
+      }
+      final userId = currentUser.uid;
+
+      final userSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .where('auth_uid', isEqualTo: userId)
+          .get();
+
+      if (userSnapshot.docs.isNotEmpty) {
+        final userData = userSnapshot.docs.first.data();
+        setState(() {
+          _followingSubjects =
+              List<String>.from(userData['following_subjects'] ?? []);
+        });
+
+        userName = userData['user_name'] ?? 'Unknown';
+        final loginHistory = userData['login_history'] ?? [];
+
+        // ログイン履歴から連続ログインなど計算
+        _calculateLoginStats(loginHistory);
+
+        // ログイン済み日リスト
+        _loggedInDays = loginHistory
+            .map((timestamp) => (timestamp as Timestamp).toDate())
+            .map((date) => DateTime(date.year, date.month, date.day))
+            .toSet()
+            .cast<DateTime>();
+      } else {
+        print('ユーザーが見つかりません');
+        userName = 'Unknown';
+      }
+    } catch (e) {
+      print('データ取得エラー: $e');
+      userName = 'Unknown';
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 「今日の達成度」「目標への達成度」を計算
+  // -------------------------------------------------------------------------
+  Future<void> fetchTierProgress() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        print('ユーザーがログインしていません');
+        return;
+      }
+      final userId = currentUser.uid;
+      final category = widget.selectedCategory;
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(userId)
+          .get();
+
+      if (!userDoc.exists) {
+        print('ユーザードキュメントが見つかりません');
+        return;
+      }
+
+      final followingSubjects =
+          List<String>.from(userDoc.data()?['following_subjects'] ?? []);
+
+      if (category == '全体') {
+        wordCount = 0;
+        for (final subject in followingSubjects) {
+          wordCount += getTotalMinutes(subject);
+        }
+      } else {
+        wordCount = getTotalMinutes(category);
+      }
+
+      final today = DateTime.now();
+      final todayDate = DateFormat('yyyy-MM-dd').format(today);
+
+      // リセット
+      tierProgress = 0;
+      tierProgressAll = 0;
+
+      if (category == '全体') {
+        for (final subject in followingSubjects) {
+          final colSnap = await FirebaseFirestore.instance
+              .collection('Users')
+              .doc(userId)
+              .collection('record')
+              .doc(todayDate)
+              .collection(subject)
+              .get();
+
+          for (final doc in colSnap.docs) {
+            final data = doc.data();
+            tierProgress += data['tierProgress_today'] ?? 0;
+            tierProgressAll += data['tierProgress_all'] ?? 0;
+          }
+        }
+      } else {
+        final colSnap = await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(userId)
+            .collection('record')
+            .doc(todayDate)
+            .collection(category)
+            .get();
+
+        for (final doc in colSnap.docs) {
+          final data = doc.data();
+          tierProgress += data['tierProgress_today'] ?? 0;
+          tierProgressAll += data['tierProgress_all'] ?? 0;
+        }
+      }
+
+      final todayDocSnap = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(userId)
+          .collection('record')
+          .doc(todayDate)
+          .get();
+
+      final tierProgressTodayGoal =
+          todayDocSnap.data()?['${category}_goal'] ?? 0;
+
+      double tierProgressGoal = 0;
+      for (final c in followingSubjects) {
+        tierProgressGoal += todayDocSnap.data()?['${c}_goal'] ?? 0;
+      }
+
+      double normalizedTierProgressAll = 0;
+      double normalizedTierProgress = 0;
+
+      if (category == '全体') {
+        normalizedTierProgressAll =
+            (wordCount == 0) ? 0 : (tierProgressAll / wordCount);
+        normalizedTierProgress =
+            (tierProgressGoal == 0) ? 0 : (tierProgress / tierProgressGoal);
+      } else {
+        normalizedTierProgressAll =
+            (wordCount == 0) ? 0 : (tierProgressAll / wordCount);
+        normalizedTierProgress = (tierProgressTodayGoal == 0)
+            ? 0
+            : (tierProgress / tierProgressTodayGoal);
+      }
+
+      // アニメーション更新
+      setState(() {
+        _progressAllAnimation = Tween<double>(
+          begin: 0,
+          end: normalizedTierProgressAll.toDouble(),
+        ).animate(
+          CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+        );
+
+        _progressAnimation = Tween<double>(
+          begin: 0,
+          end: normalizedTierProgress.toDouble(),
+        ).animate(
+          CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+        );
+      });
+      _controller.forward(from: 0);
+    } catch (e) {
+      print('fetchTierProgressエラー: $e');
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // ログイン記録を解析
+  // -------------------------------------------------------------------------
+  void _calculateLoginStats(List<dynamic> loginHistory) {
+    if (loginHistory.isEmpty) {
+      setState(() {
+        loginStreak = 0;
+        longestStreak = 0;
+        totalLogins = 0;
+      });
+      return;
+    }
+
+    final loginDates = loginHistory
+        .map((timestamp) => (timestamp as Timestamp).toDate())
+        .map((date) => DateTime(date.year, date.month, date.day))
+        .toSet()
+        .toList()
+      ..sort();
+
+    int currentStreak = 1;
+    int maxStreak = 1;
+    final total = loginDates.length;
+    int todayStreak = 0;
+
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    if (loginDates.isNotEmpty && loginDates.first == todayDate) {
+      todayStreak = 1;
+    }
+
+    for (int i = 1; i < loginDates.length; i++) {
+      final diff = loginDates[i].difference(loginDates[i - 1]).inDays;
+      if (diff == 1) {
+        currentStreak++;
+      } else {
+        if (currentStreak > maxStreak) {
+          maxStreak = currentStreak;
+        }
+        currentStreak = 1;
+      }
+    }
+    if (currentStreak > maxStreak) {
+      maxStreak = currentStreak;
+    }
+    todayStreak = currentStreak;
+
+    setState(() {
+      loginStreak = todayStreak;
+      longestStreak = maxStreak;
+      totalLogins = total;
+    });
+    widget.onLoginStreakCalculated(loginStreak);
+  }
+
+  // -------------------------------------------------------------------------
+  // UI生成
+  // -------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: _userDataFuture, // 初期化時に設定したFutureを使用
+      future: _userDataFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),)); // データ取得中のインジケーター
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+            ),
+          );
         } else if (snapshot.hasError) {
-          return Center(child: Text('データ取得エラー: ${snapshot.error}')); // エラーが発生した場合の表示
+          return Center(child: Text('データ取得エラー: ${snapshot.error}'));
         } else {
-          // データ取得後のUI表示
           return Scaffold(
+            backgroundColor: Colors.white,
             body: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [                    // ユーザーの名前を表示
+                  children: [
                     Text(
                       "$userNameさん、ナイスログイン！",
                       style: const TextStyle(
@@ -377,19 +542,27 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // 統計、進捗、活動セクション
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: Align(alignment: Alignment.center, child: _buildStatSection())),
-                        Expanded(child: Align(alignment: Alignment.center, child: _buildProgressSection())),
-                        Expanded(child: Align(alignment: Alignment.center, child: _buildActivitySection())),
+                        Expanded(child: _buildStatSection()),
+                        Expanded(
+                          child: Container(
+                            key: progressSectionKey,
+                            child: _buildProgressSection(),
+                          ),
+                        ),
+                        Expanded(
+                          child: Container(
+                            key: activitySectionKey,
+                            child: _buildActivitySection(),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
                     const Divider(color: Color.fromARGB(255, 200, 200, 200)),
                     const SizedBox(height: 10),
-                    // 日付情報の表示
                     Text(
                       _getDisplayDate(),
                       style: const TextStyle(fontSize: 16),
@@ -404,69 +577,73 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
     );
   }
 
+  // -------------------------------------------------------------------------
+  // 統計
+  // -------------------------------------------------------------------------
   Widget _buildStatSection() {
-  return Column(
-    children: [
-      const SizedBox(height: 8),
-      SizedBox(
-        height: 200,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Text(
-              "連続ログイン日数",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 100, 100, 100),
-                fontSize: 13,
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 200,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                "連続ログイン日数",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 100, 100, 100),
+                  fontSize: 13,
+                ),
               ),
-            ),
-            Text(
-              "$loginStreak日",
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const Text(
-              "最高連続ログイン日数",
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 130, 130, 130),
+              Text(
+                "$loginStreak日",
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-            ),
-            Text(
-              "$longestStreak日",
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 130, 130, 130),
+              const Text(
+                "最高連続ログイン日数",
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 130, 130, 130),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              "総ログイン回数",
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 130, 130, 130),
+              Text(
+                "$longestStreak日",
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 130, 130, 130),
+                ),
               ),
-            ),
-            Text(
-              "$totalLogins回",
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 130, 130, 130),
+              const SizedBox(height: 10),
+              const Text(
+                "総ログイン回数",
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 130, 130, 130),
+                ),
               ),
-            ),
-          ],
+              Text(
+                "$totalLogins回",
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 130, 130, 130),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
-  // 今日の進捗と目標達成度のUIセクション
+  // -------------------------------------------------------------------------
+  // 進捗 (今日の学習達成度・目標への達成度)
+  // -------------------------------------------------------------------------
   Widget _buildProgressSection() {
     return Column(
       children: [
@@ -474,7 +651,6 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
         Stack(
           alignment: Alignment.center,
           children: [
-            // 目標達成度の円形インジケーター
             AnimatedBuilder(
               animation: _progressAllAnimation,
               builder: (context, child) {
@@ -504,18 +680,17 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
             AnimatedBuilder(
               animation: _progressAllAnimation,
               builder: (context, child) {
-                final value = _progressAllAnimation.value;
-                final displayValue = (value * 100).toInt() % 100;
-                final cycles = (value * 100).toInt() ~/ 100;
+                final val = _progressAllAnimation.value;
+                final displayValue = (val * 100).toInt() % 100;
+                final cycles = (val * 100).toInt() ~/ 100;
                 final colors = [
-                  const Color(0xFF0ABAB5), // 1周目: 緑
-                  const Color(0xFFFF8C00), // 2周目: オレンジ
-                  const Color(0xFFFF0000), // 3周目: 赤
-                  const Color(0xFFFF69B4), // 4周目: ピンク
-                  const Color(0xFFFFD700), // 5周目: 黄色
+                  const Color(0xFF0ABAB5),
+                  const Color(0xFFFF8C00),
+                  const Color(0xFFFF0000),
+                  const Color(0xFFFF69B4),
+                  const Color(0xFFFFD700),
                 ];
-                final color = cycles < 5 ? colors[cycles] : colors.last;
-                
+                final color = (cycles < 5) ? colors[cycles] : colors.last;
                 return Positioned(
                   bottom: 0,
                   child: Text(
@@ -523,26 +698,24 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
-                      color: color
+                      color: color,
                     ),
                   ),
                 );
               },
             ),
-            // 今日の進捗の円形インジケーター
             AnimatedBuilder(
               animation: _progressAnimation,
               builder: (context, child) {
-                final value = _progressAnimation.value;
-                final cycles = (value * 100).toInt() ~/ 100;
+                final val = _progressAnimation.value;
+                final cycles = (val * 100).toInt() ~/ 100;
                 final colors = [
-                  const Color(0xFF0ABAB5), // 1周目: 緑
-                  const Color(0xFFFF8C00), // 2周目: オレンジ
-                  const Color(0xFFFF0000), // 3周目: 赤
-                  const Color(0xFFFF69B4), // 4周目: ピンク
-                  const Color(0xFFFFD700), // 5周目: 黄色
+                  const Color(0xFF0ABAB5),
+                  const Color(0xFFFF8C00),
+                  const Color(0xFFFF0000),
+                  const Color(0xFFFF69B4),
+                  const Color(0xFFFFD700),
                 ];
-                
                 return Stack(
                   children: [
                     for (int i = 0; i <= cycles; i++)
@@ -551,7 +724,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                           width: 90,
                           height: 90,
                           child: CircularProgressIndicator(
-                            value: i < cycles ? 1.0 : value % 1.0,
+                            value: (i < cycles) ? 1.0 : (val % 1.0),
                             strokeWidth: 5,
                             backgroundColor: Colors.grey[200],
                             valueColor: AlwaysStoppedAnimation<Color>(colors[i]),
@@ -565,7 +738,7 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  _selectedDay == null || isSameDay(_selectedDay, DateTime.now())
+                  (_selectedDay == null || isSameDay(_selectedDay, DateTime.now()))
                       ? "今日の学習達成度"
                       : "${DateFormat('yyyy年M月d日').format(_selectedDay!)}\n学習達成度",
                   textAlign: TextAlign.center,
@@ -579,9 +752,13 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                 AnimatedBuilder(
                   animation: _progressAnimation,
                   builder: (context, child) {
+                    final v = (_progressAnimation.value * 100).toInt();
                     return Text(
-                      "${(_progressAnimation.value * 100).toInt()}%",
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+                      "$v%",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
                     );
                   },
                 ),
@@ -593,7 +770,9 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
     );
   }
 
-  // カレンダーを表示するアクティビティセクション
+  // -------------------------------------------------------------------------
+  // カレンダー (Activity セクション)
+  // -------------------------------------------------------------------------
   Widget _buildActivitySection() {
     return Column(
       children: [
@@ -614,11 +793,15 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
               titleTextFormatter: (date, locale) {
                 return '${DateFormat('yyyy年', locale).format(date)}\n${DateFormat('M月', locale).format(date)}';
               },
-              titleTextStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              titleTextStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
               decoration: const BoxDecoration(color: Colors.transparent),
             ),
             daysOfWeekStyle: DaysOfWeekStyle(
-              dowTextFormatter: (date, locale) => DateFormat.E(locale).format(date)[0],
+              dowTextFormatter: (date, locale) =>
+                  DateFormat.E(locale).format(date)[0],
               weekdayStyle: const TextStyle(fontSize: 12),
               weekendStyle: const TextStyle(fontSize: 12, color: Colors.red),
             ),
@@ -637,9 +820,8 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
               setState(() {
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
-
-                // 選択された日付の進捗を計算
-                _calculateProgressForSelectedDay(); // 進捗を計算するメソッドを呼び出す
+                // 選択された日付の進捗を再計算
+                _calculateProgressForSelectedDay();
               });
             },
             calendarBuilders: CalendarBuilders(
@@ -648,17 +830,25 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                   children: [
                     Text(
                       DateFormat('yyyy年').format(date),
-                      style: const TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.grey),
+                      style: const TextStyle(
+                        fontSize: 7,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
                     ),
                     Text(
                       DateFormat('M月').format(date),
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
                     ),
                   ],
                 );
               },
               defaultBuilder: (context, day, focusedDay) {
-                // ログイン記録の日付を`images/redfire.png`で表示
+                // ログイン記録がある日を `images/redfire.png` で表示
                 final isLoggedInDay = _loggedInDays.contains(
                   DateTime(day.year, day.month, day.day),
                 );
@@ -687,7 +877,11 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                   alignment: Alignment.center,
                   child: Text(
                     DateFormat.d().format(day),
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 );
               },
@@ -700,7 +894,11 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
                   alignment: Alignment.center,
                   child: Text(
                     DateFormat.d().format(day),
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 );
               },
@@ -719,154 +917,146 @@ void _calculateLoginStats(List<dynamic> loginHistory) {
     );
   }
 
-
-
-  // 選択された日付に基づいて達成度を計算するメソッドを実装
-void _calculateProgressForSelectedDay() async {
-  if (_selectedDay == null) return;
-
-  final selectedDate = DateFormat('yyyy-MM-dd').format(_selectedDay!);
-  final currentUser = FirebaseAuth.instance.currentUser;
-
-  if (currentUser == null) {
-    print('ユーザーがログインしていません');
-    return;
+  // -------------------------------------------------------------------------
+  // 選択された日付の表示
+  // -------------------------------------------------------------------------
+  String _getDisplayDate() {
+    final displayDate = _selectedDay ?? DateTime.now();
+    return "${DateFormat('yyyy年M月d日').format(displayDate)}の${widget.selectedCategory}の記録データ閲覧画面";
   }
 
-  final userId = currentUser.uid;
-  final category = widget.selectedCategory;
+  // -------------------------------------------------------------------------
+  // 選択された日付の進捗計算
+  // -------------------------------------------------------------------------
+  void _calculateProgressForSelectedDay() async {
+    if (_selectedDay == null) return;
 
-  try {
-    // ▼ ここから修正開始：当日のサブコレクションをすべて取得
-    final selectedDaySnapshot = await FirebaseFirestore.instance
-        .collection('Users')
-        .doc(userId)
-        .collection('record')
-        .doc(selectedDate)
-        .collection(category)
-        .get();
+    final selectedDate = DateFormat('yyyy-MM-dd').format(_selectedDay!);
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      print('ユーザーがログインしていません');
+      return;
+    }
 
-    // サブコレクションが存在するかを判断
-    if (selectedDaySnapshot.docs.isNotEmpty) {
-      // すべてのドキュメントから tierProgress_today と tierProgress_all を合計
-      double sumTierProgressToday = 0.0;
-      double sumTierProgressAll = 0.0;
-      for (final doc in selectedDaySnapshot.docs) {
-        final data = doc.data();
-        sumTierProgressToday += data['tierProgress_today'] ?? 0;
-        sumTierProgressAll += data['tierProgress_all'] ?? 0;
-      }
+    final userId = currentUser.uid;
+    final category = widget.selectedCategory;
 
-      // ゴールの取得
-      final selectedDayGoalDoc = await FirebaseFirestore.instance
+    try {
+      final selectedDaySnapshot = await FirebaseFirestore.instance
           .collection('Users')
           .doc(userId)
           .collection('record')
           .doc(selectedDate)
+          .collection(category)
           .get();
 
-      final tierProgressTodayGoal = selectedDayGoalDoc.data()?['${category}_goal'] ?? 0;
+      if (selectedDaySnapshot.docs.isNotEmpty) {
+        double sumToday = 0.0;
+        double sumAll = 0.0;
 
-      // 正規化計算
-      final normalizedTierProgressAll = sumTierProgressAll / wordCount;
-      final normalizedTierProgress = tierProgressTodayGoal == 0
-          ? 0
-          : sumTierProgressToday / (tierProgressTodayGoal * 2);
+        for (final doc in selectedDaySnapshot.docs) {
+          final data = doc.data();
+          sumToday += data['tierProgress_today'] ?? 0;
+          sumAll += data['tierProgress_all'] ?? 0;
+        }
 
-      setState(() {
-        _progressAllAnimation = Tween<double>(
-          begin: 0,
-          end: normalizedTierProgressAll.toDouble(),
-        ).animate(
-          CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
-        );
-
-        _progressAnimation = Tween<double>(
-          begin: 0,
-          end: normalizedTierProgress.toDouble(),
-        ).animate(
-          CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
-        );
-      });
-      _controller.forward(from: 0);
-
-      print('選択された日の目標への達成度: $normalizedTierProgressAll');
-    } else {
-      // ▼ ここからは「前日のデータを参照する」既存処理を残す
-      // 前日など直近のデータを参照する
-      final previousDocSnapshot = await FirebaseFirestore.instance
-          .collection('Users')
-          .doc(userId)
-          .collection('record')
-          .where(FieldPath.documentId, isLessThan: selectedDate) // 選択日より前
-          .orderBy(FieldPath.documentId, descending: true)
-          .limit(1)
-          .get();
-
-      double normalizedTierProgressAll = 0;
-
-      if (previousDocSnapshot.docs.isNotEmpty) {
-        final previousDocId = previousDocSnapshot.docs.first.id; 
-
-        // 前日のサブコレクションから tierProgress_all を合計
-        final previousDaySnapshot = await FirebaseFirestore.instance
+        final selectedDayGoalDoc = await FirebaseFirestore.instance
             .collection('Users')
             .doc(userId)
             .collection('record')
-            .doc(previousDocId)
-            .collection(category)
+            .doc(selectedDate)
             .get();
 
-        double sumTierProgressAll = 0.0;
-        for (final doc in previousDaySnapshot.docs) {
-          sumTierProgressAll += doc.data()['tierProgress_all'] ?? 0;
+        final tierProgressTodayGoal =
+            selectedDayGoalDoc.data()?['${category}_goal'] ?? 0;
+
+        final normalizedTierProgressAll = (wordCount == 0)
+            ? 0
+            : (sumAll / wordCount);
+        final normalizedTierProgress = (tierProgressTodayGoal == 0)
+            ? 0
+            : (sumToday / (tierProgressTodayGoal * 2));
+
+        setState(() {
+          _progressAllAnimation = Tween<double>(
+            begin: 0,
+            end: normalizedTierProgressAll.toDouble(),
+          ).animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+          );
+
+          _progressAnimation = Tween<double>(
+            begin: 0,
+            end: normalizedTierProgress.toDouble(),
+          ).animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+          );
+        });
+        _controller.forward(from: 0);
+      } else {
+        // 過去日の参照
+        final previousDocSnapshot = await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(userId)
+            .collection('record')
+            .where(FieldPath.documentId, isLessThan: selectedDate)
+            .orderBy(FieldPath.documentId, descending: true)
+            .limit(1)
+            .get();
+
+        double normalizedAll = 0;
+        if (previousDocSnapshot.docs.isNotEmpty) {
+          final prevId = previousDocSnapshot.docs.first.id;
+          final prevSnap = await FirebaseFirestore.instance
+              .collection('Users')
+              .doc(userId)
+              .collection('record')
+              .doc(prevId)
+              .collection(category)
+              .get();
+
+          double sumAll = 0;
+          for (final doc in prevSnap.docs) {
+            sumAll += doc.data()['tierProgress_all'] ?? 0;
+          }
+          normalizedAll = (wordCount == 0) ? 0 : (sumAll / wordCount);
         }
-        normalizedTierProgressAll = sumTierProgressAll / wordCount;
+        setState(() {
+          _progressAllAnimation = Tween<double>(
+            begin: 0,
+            end: normalizedAll.toDouble(),
+          ).animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+          );
+          _progressAnimation = Tween<double>(
+            begin: 0,
+            end: 0,
+          ).animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
+          );
+        });
+        _controller.forward(from: 0);
       }
-
-      setState(() {
-        _progressAllAnimation = Tween<double>(
-          begin: 0,
-          end: normalizedTierProgressAll.toDouble(),
-        ).animate(
-          CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
-        );
-
-        _progressAnimation = Tween<double>(
-          begin: 0,
-          end: 0, // 選択された日の学習進捗は0
-        ).animate(
-          CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
-        );
-      });
-      _controller.forward(from: 0);
-
-      print('選択された日のデータが無いため、直近データを適用しました');
+    } catch (e) {
+      print('選択された日のデータ取得エラー: $e');
     }
-    // ▲ ここまで修正
-  } catch (e) {
-    print('選択された日のデータ取得エラー: $e');
   }
-}
 
-// カテゴリーに基づく問題レベルを取得する関数
+  // -------------------------------------------------------------------------
+  // カテゴリに応じた学習量
+  // -------------------------------------------------------------------------
   double getTotalMinutes(String category) {
-    if (category == 'TOEIC300点'){
-      return 5+10;
-    }
-    else if (category == 'TOEIC500点'){
-      return 27+33+28;
-    }
-    else if (category == 'TOEIC700点'){
-      return 39.5+8;
-    }
-    else if (category == 'TOEIC900点'){
-      return 48+15+45;
-    }
-    else if (category == 'TOEIC990点'){
-      return 50+8;
-    }
-    else{
+    if (category == 'TOEIC300点') {
+      return 15; 
+    } else if (category == 'TOEIC500点') {
+      return 27 + 33 + 28;
+    } else if (category == 'TOEIC700点') {
+      return 39.5 + 8;
+    } else if (category == 'TOEIC900点') {
+      return 48 + 15 + 45;
+    } else if (category == 'TOEIC990点') {
+      return 58;
+    } else {
       return 1;
     }
   }
