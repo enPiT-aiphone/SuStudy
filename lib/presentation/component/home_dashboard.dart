@@ -807,9 +807,28 @@ Widget _buildProgressSection() {
             headerStyle: HeaderStyle(
               formatButtonVisible: false,
               titleCentered: true,
-              //titleTextFormatter: (date, locale) {
-              //  return '${DateFormat('yyyy年', locale).format(date)}\n${DateFormat('M月', locale).format(date)}';
-              //},
+              // （デフォルトのtitleTextFormatterまたはheaderTitleBuilderを使わない場合は削除）
+              
+              // ▼ 前月アイコンと次月アイコンにマージンを入れる
+              leftChevronMargin: const EdgeInsets.only(left: 8.0),
+              rightChevronMargin: const EdgeInsets.only(right: 8.0),
+
+              // ▼ 前月アイコンと次月アイコンにパディングを入れる場合はこちら
+              // leftChevronPadding: const EdgeInsets.all(8.0),
+              // rightChevronPadding: const EdgeInsets.all(8.0),
+
+              // ▼ アイコン自体のサイズを変更
+              leftChevronIcon: const Icon(
+                Icons.chevron_left,
+                size: 24,  // 矢印を大きめに
+                color: Colors.black,
+              ),
+              rightChevronIcon: const Icon(
+                Icons.chevron_right,
+                size: 24,  // 矢印を大きめに
+                color: Colors.black,
+              ),
+
               titleTextStyle: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
