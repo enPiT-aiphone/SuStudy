@@ -101,6 +101,18 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant HomeDashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // selectedCategoryが変更された場合にfetchTierProgressを再実行
+    if (oldWidget.selectedCategory != widget.selectedCategory) {
+      fetchTierProgress();
+    }
+  }
+
+
+
   // -------------------------------------------------------------------------
   // Firestore で dashProgress, dashActivity を管理
   // -------------------------------------------------------------------------
@@ -175,8 +187,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
         TargetFocus(
           identify: "DashProgress",
           keyTarget: progressSectionKey,
-          shape: ShapeLightFocus.RRect,
+          shape: ShapeLightFocus.Circle,
           focusAnimationDuration: Duration.zero,
+          unFocusAnimationDuration: Duration.zero,
           //pulseAnimationDuration: Duration.zero,
           contents: [
             TargetContent(
@@ -201,7 +214,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
           identify: "DashActivity",
           keyTarget: activitySectionKey,
           shape: ShapeLightFocus.RRect,
+          radius:10,
           focusAnimationDuration: Duration.zero,
+          unFocusAnimationDuration: Duration.zero,
           //pulseAnimationDuration: Duration.zero,
           contents: [
             TargetContent(
@@ -234,6 +249,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
       // skipボタンを表示しない
       //showSkipInFront: false,
       // 全ターゲットを見終わったら
+      pulseEnable: false,
       onFinish: () {
         setState(() {
           if (needProgress) {
@@ -250,6 +266,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
         widget.onDashCoachMarkFinished();
       },
       // 途中スキップ
+      hideSkip: true,
       onSkip: () {
         setState(() {
           if (needProgress) {

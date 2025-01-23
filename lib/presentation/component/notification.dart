@@ -43,7 +43,11 @@ class NotificationPage extends StatelessWidget {
             ),
           )
         : const Center( // 通知リストが空の場合
-            child: Text('通知はありません'), // メッセージを表示
+            child: Text('通知はありません',
+            style: TextStyle(
+                      fontSize: 14
+              ),
+             ), // メッセージを表示
           );
   }
 }

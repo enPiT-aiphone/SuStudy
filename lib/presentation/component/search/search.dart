@@ -371,7 +371,7 @@ class _SearchScreenState extends State<SearchScreen>
                               post['user_name'] != null
                                   ? post['user_name'][0]
                                   : '?',
-                              style: const TextStyle(fontSize: 25, color: Colors.black),
+                              style: const TextStyle(fontSize: 23, color: Colors.black),
                             ),
                           ),
                         ),
@@ -384,11 +384,11 @@ class _SearchScreenState extends State<SearchScreen>
                                 Text(
                                   post['user_name'] ?? 'Unknown',
                                   style: const TextStyle(
-                                      fontSize: 18, fontWeight: FontWeight.bold),
+                                      fontSize: 15, fontWeight: FontWeight.bold),
                                 ),
                                 Text(
                                   '@${post['user_id'] ?? 'ID Unknown'}',
-                                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
                                 ),
                               ],
                             ),
@@ -398,20 +398,18 @@ class _SearchScreenState extends State<SearchScreen>
                     ),
                     Text(
                       post['createdAt'] != null ? _timeAgo(post['createdAt']) : '',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
                 // 投稿本文
                 Padding(
                   padding: const EdgeInsets.only(left: 64.0),
                   child: Text(
                     post['description'] ?? '内容なし',
-                    style: const TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: 15),
                   ),
                 ),
-                const SizedBox(height: 10),
                 // いいねボタンなど
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -447,12 +445,22 @@ class _SearchScreenState extends State<SearchScreen>
       itemCount: listToDisplay.length,
       itemBuilder: (context, index) {
         final subjectName = listToDisplay[index];
-        return ListTile(
-          title: Text(subjectName),
-          onTap: () {
+        return Container(
+          constraints: const BoxConstraints(
+            maxHeight: 45, // 最大高さを設定
+            ),
+            child: ListTile(
+            title: Text(
+              subjectName,
+              style: const TextStyle(
+                fontSize: 15
+              )
+            ),
+            onTap: () {
             // Expanded で SubjectDetailsScreen を表示する
             _showSubjectDetails(subjectName);
-          },
+            },
+          ),
         );
       },
     );
@@ -510,15 +518,16 @@ class _SearchScreenState extends State<SearchScreen>
     return Scaffold(
       appBar: AppBar(
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(80.0), // 検索バー + タブバーの高さ
+          preferredSize: const Size.fromHeight(60.0), // 検索バー + タブバーの高さ
           child: Column(
             children: [
               // ===== 検索バー =====
               Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                 child: TextField(
                   decoration: InputDecoration(
                     hintText: '検索ワードを入力してください',
+                     hintStyle: const TextStyle(fontSize: 14),
                     suffixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -563,6 +572,12 @@ class _SearchScreenState extends State<SearchScreen>
                 indicatorColor: const Color(0xFF0ABAB5),
                 labelColor: const Color(0xFF0ABAB5),
                 unselectedLabelColor: Colors.grey,
+                labelStyle: const TextStyle(
+                  fontSize: 14, // 選択中のタブのテキストサイズ
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 12, // 非選択中のタブのテキストサイズ
+                ),
                 tabs: const [
                   Tab(text: '投稿'),
                   Tab(text: 'ユーザー'),

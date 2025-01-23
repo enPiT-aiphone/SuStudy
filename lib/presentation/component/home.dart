@@ -284,6 +284,7 @@ class _HomeScreenState extends State<HomeScreen>
         _saveCoachMarkState(dataTab: true);
         return true;
       },
+      hideSkip: true,
       onSkip: () {
         print('[DataTabCoach] skipped');
         setState(() => hasShownDataTabCoach = true);
@@ -394,6 +395,7 @@ class _HomeScreenState extends State<HomeScreen>
         _saveCoachMarkState(fabSolve: true);
         return true;
       },
+      hideSkip: true,
       onSkip: () {
         print('[FabSolveCoach] skipped');
         setState(() => hasShownFabSolveCoach = true);
@@ -436,7 +438,7 @@ class _HomeScreenState extends State<HomeScreen>
               align: ContentAlign.top,
               builder: (context, controller) {
                 return const Text(
-                  '長押しすると、タイムラインに文章を投稿することもできます',
+                  '長押しすると、タイムラインにあなたの気づきを投稿することもできます',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -458,6 +460,7 @@ class _HomeScreenState extends State<HomeScreen>
         _saveCoachMarkState(fabLongPress: true);
         return true;
       },
+      hideSkip: true,
       onSkip: () {
         print('[FabLongPressCoach] skipped');
         setState(() => hasShownFabLongPressCoach = true);
