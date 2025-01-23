@@ -76,18 +76,21 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
       _errors.clear(); // エラーをリセット
 
       if (selectedMainCategory == null) {
+        Navigator.of(context).pop();
         _errors['mainCategory'] = 'メインカテゴリーを選択してください';
         hasError = true;
       }
 
       if (selectedSubCategory == null &&
           subCategories.containsKey(selectedMainCategory ?? '')) {
+        Navigator.of(context).pop();
         _errors['subCategory'] = 'サブカテゴリーを選択してください';
         hasError = true;
       }
 
       if (selectedScore == null &&
           scoreCategories.containsKey(selectedSubCategory ?? '')) {
+        Navigator.of(context).pop();
         _errors['scoreCategory'] = 'スコアカテゴリーを選択してください';
         hasError = true;
       }
@@ -129,6 +132,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
         MaterialPageRoute(builder: (context) => LearningGoalsScreen(userId: widget.userId)),
       );
     } catch (e) {
+      Navigator.of(context).pop();
       print('エラーが発生しました: $e');
     }
   }

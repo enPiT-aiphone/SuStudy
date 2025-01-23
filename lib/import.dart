@@ -21,7 +21,7 @@ export 'pages/English_Skills/TOEFL/Words/Word/add_word_toefl.dart';
 export 'pages/English_Skills/TOEFL/Words/Word/view_word_toefl.dart';
 export 'presentation/component/home.dart';
 export 'presentation/component/home_dashboard.dart';
-export 'presentation/component/badge_view_model.dart';
+export 'presentation/component/notification/badge_view_model.dart';
 export 'presentation/component/authentication/authentication.dart';
 export 'presentation/component/authentication/log_in.dart';
 export 'presentation/component/authentication/sign_in.dart';

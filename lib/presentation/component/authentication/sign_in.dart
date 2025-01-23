@@ -107,6 +107,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
                 // パスワードと確認用パスワードが一致しているかチェック
                 if (_password != _confirmPassword) {
+                  Navigator.of(context).pop();
                   setState(() {
                     _errorMessage = 'パスワードが一致しません。';
                   });
@@ -116,6 +117,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 // パスワードが英文字と数字を含むか確認
                 if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]+$')
                     .hasMatch(_password)) {
+                  Navigator.of(context).pop();
                   setState(() {
                     _errorMessage = 'パスワードには少なくとも英字と数字の両方を含めてください。';
                   });
@@ -139,6 +141,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       'registrationStep': 0,
                     });
                     // InformationRegistrationScreenに遷移
+                  Navigator.of(context).pop();
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
@@ -147,6 +150,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   );
                   }
                 } on FirebaseAuthException catch (e) {
+                  Navigator.of(context).pop();
                   // エラーメッセージを設定
                   setState(() {
                     if (e.code == 'email-already-in-use') {
@@ -160,6 +164,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     }
                   });
                 } catch (e) {
+                  Navigator.of(context).pop();
                   setState(() {
                     _errorMessage = '予期しないエラーが発生しました。';
                   });

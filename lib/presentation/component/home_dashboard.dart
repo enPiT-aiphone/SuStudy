@@ -587,7 +587,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
                     HomeDashboardGraph(
                     selectedCategory: widget.selectedCategory,
                     selectedDay: _selectedDay, 
-                  ),
+                    ),
+                    const SizedBox(height: 200),
                   ],
                 ),
               ),
