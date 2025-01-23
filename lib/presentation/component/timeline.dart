@@ -35,8 +35,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
   void initState() {
     super.initState();
     _fetchCurrentUser().then((_) async{
-      _fetchFollowingUsers();
-      _initializeGroupData().then((_){
+      await _fetchFollowingUsers();
+      await _initializeGroupData().then((_){
         if (_isGrouped == true) {
         _fetchGroupMemberProgress();
         }
