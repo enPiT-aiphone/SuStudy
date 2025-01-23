@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../utils/progress_utils.dart';
 import '../../utils/fetchGroup.dart';
+import 'reply_screen.dart';
 
 class TimelineScreen extends StatefulWidget {
   final String selectedTab;
@@ -379,9 +380,29 @@ Future<void> _fetchTimelinePosts({bool isFetchingMore = false}) async {
                               ),
                               itemBuilder: (context, index) {
                                 final post = _timelinePosts[index];
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12.0, horizontal: 16.0),
+                                return GestureDetector(
+                                  onTap:(){
+                                    // 左スワイプ時に返信の処理を実行
+                                     Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ReplyScreen(post: post),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12.0),  // 枠の内側の余白
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8.0),  // 枠の角を丸くする
+                                      color: Colors.white,  // 枠の背景色
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.grey.withOpacity(0.2),
+                                          blurRadius: 4.0,
+                                          offset: Offset(0, 2), // 枠の影の位置
+                                        ),
+                                      ],
+                                    ),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -489,6 +510,7 @@ Future<void> _fetchTimelinePosts({bool isFetchingMore = false}) async {
                                       ),
                                     ],
                                   ),
+                                )
                                 );
                               },
                             ),
