@@ -362,10 +362,14 @@ Future<void> _fetchTimelinePosts({bool isFetchingMore = false}) async {
                     ],
                     Expanded(
                       child: _timelinePosts.isEmpty
-                          ? Center(
-                              child: Text(_isGrouped != true
-                                  ? (widget.selectedTab == 'フォロー中' ? 'フォロー中のユーザーがいません' : 'グループに所属していません')
-                                  : '投稿がありません'))
+                      ? Center(
+                          child: Text(widget.selectedTab == '最新'
+                              ? '投稿がありません'
+                              : (_isGrouped != true
+                                  ? (widget.selectedTab == 'フォロー中'
+                                      ? 'フォロー中のユーザーがいません'
+                                      : 'グループに所属していません')
+                                  : '投稿がありません')))
                           : ListView.separated(
                               itemCount: _timelinePosts.length,
                               separatorBuilder: (context, index) => Divider(
