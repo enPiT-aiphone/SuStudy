@@ -195,8 +195,6 @@ class _NewPostScreenState extends State<NewPostScreen> {
                   ],
                 ),
               ),
-
-              // 中央にカード配置
               Padding(
                 padding: const EdgeInsets.all(16.0),
                     child: Card(
