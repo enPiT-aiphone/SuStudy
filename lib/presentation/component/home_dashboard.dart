@@ -101,6 +101,18 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant HomeDashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // selectedCategoryが変更された場合にfetchTierProgressを再実行
+    if (oldWidget.selectedCategory != widget.selectedCategory) {
+      fetchTierProgress();
+    }
+  }
+
+
+
   // -------------------------------------------------------------------------
   // Firestore で dashProgress, dashActivity を管理
   // -------------------------------------------------------------------------
@@ -175,8 +187,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
         TargetFocus(
           identify: "DashProgress",
           keyTarget: progressSectionKey,
-          shape: ShapeLightFocus.RRect,
+          shape: ShapeLightFocus.Circle,
           focusAnimationDuration: Duration.zero,
+          unFocusAnimationDuration: Duration.zero,
           //pulseAnimationDuration: Duration.zero,
           contents: [
             TargetContent(
@@ -201,7 +214,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
           identify: "DashActivity",
           keyTarget: activitySectionKey,
           shape: ShapeLightFocus.RRect,
+          radius:10,
           focusAnimationDuration: Duration.zero,
+          unFocusAnimationDuration: Duration.zero,
           //pulseAnimationDuration: Duration.zero,
           contents: [
             TargetContent(
@@ -234,6 +249,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
       // skipボタンを表示しない
       //showSkipInFront: false,
       // 全ターゲットを見終わったら
+      pulseEnable: false,
       onFinish: () {
         setState(() {
           if (needProgress) {
@@ -250,6 +266,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
         widget.onDashCoachMarkFinished();
       },
       // 途中スキップ
+      hideSkip: true,
       onSkip: () {
         setState(() {
           if (needProgress) {
@@ -529,19 +546,18 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
                     Text(
                       "$userNameさん、ナイスログイン！",
                       style: const TextStyle(
-                        fontSize: 25,
+                        fontSize: 23,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     const Text(
                       "今日も学習を重ねていこう",
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         color: Color.fromARGB(255, 130, 130, 130),
                       ),
                     ),
-                    const SizedBox(height: 20),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -560,12 +576,11 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
                     const Divider(color: Color.fromARGB(255, 200, 200, 200)),
                     const SizedBox(height: 10),
                     Text(
                       _getDisplayDate(),
-                      style: const TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 13),
                     ),
                   ],
                 ),
@@ -594,7 +609,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color.fromARGB(255, 100, 100, 100),
-                  fontSize: 13,
+                  fontSize: 12,
                 ),
               ),
               Text(
@@ -644,131 +659,148 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
   // -------------------------------------------------------------------------
   // 進捗 (今日の学習達成度・目標への達成度)
   // -------------------------------------------------------------------------
-  Widget _buildProgressSection() {
-    return Column(
-      children: [
-        const SizedBox(height: 50),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            AnimatedBuilder(
-              animation: _progressAllAnimation,
-              builder: (context, child) {
-                return SizedBox(
-                  width: 140,
-                  height: 140,
-                  child: CircularProgressIndicator(
-                    value: _progressAllAnimation.value,
-                    strokeWidth: 5,
-                    backgroundColor: Colors.grey[200],
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
-                  ),
-                );
-              },
+Widget _buildProgressSection() {
+  // 1) 画面幅を取得
+  final screenWidth = MediaQuery.of(context).size.width;
+
+  // 2) それぞれの円の直径を計算し、最大値でクランプ
+  final diameterAll = (screenWidth * 0.3).clamp(0, 140);  // 外側(目標への達成度)
+  final diameterProgress = (screenWidth * 0.2).clamp(0, 90); // 内側(今日の学習達成度)
+
+  return Column(
+    children: [
+      const SizedBox(height: 50),
+      Stack(
+        alignment: Alignment.center,
+        children: [
+          // --- 外側の円 (目標への達成度) ---
+          AnimatedBuilder(
+            animation: _progressAllAnimation,
+            builder: (context, child) {
+              return SizedBox(
+                width: diameterAll.toDouble(),
+                height: diameterAll.toDouble(),
+                child: CircularProgressIndicator(
+                  value: _progressAllAnimation.value,
+                  strokeWidth: 5,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
+                ),
+              );
+            },
+          ),
+          // 目標への達成度のラベル (例: "目標への達成度")
+          const Positioned(
+            top: 9,
+            child: Text(
+              "目標への達成度",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 9,
+                color: Color.fromARGB(255, 100, 100, 100),
+              ),
             ),
-            const Positioned(
-              top: 9,
-              child: Text(
-                "目標への達成度",
-                style: TextStyle(
+          ),
+
+          // --- 外側の円の数値表示 ---
+          AnimatedBuilder(
+            animation: _progressAllAnimation,
+            builder: (context, child) {
+              final val = _progressAllAnimation.value;
+              final displayValue = (val * 100).toInt() % 100;
+              final cycles = (val * 100).toInt() ~/ 100;
+              final colors = [
+                const Color(0xFF0ABAB5),
+                const Color(0xFFFF8C00),
+                const Color(0xFFFF0000),
+                const Color(0xFFFF69B4),
+                const Color(0xFFFFD700),
+              ];
+              final color = (cycles < 5) ? colors[cycles] : colors.last;
+              return Positioned(
+                bottom: 0,
+                child: Text(
+                  "$displayValue%",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: color,
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // --- 内側の円 (今日の学習達成度) ---
+          AnimatedBuilder(
+            animation: _progressAnimation,
+            builder: (context, child) {
+              final val = _progressAnimation.value;
+              final cycles = (val * 100).toInt() ~/ 100;
+              final colors = [
+                const Color(0xFF0ABAB5),
+                const Color(0xFFFF8C00),
+                const Color(0xFFFF0000),
+                const Color(0xFFFF69B4),
+                const Color(0xFFFFD700),
+              ];
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  for (int i = 0; i <= cycles; i++)
+                    if (i < 5)
+                      SizedBox(
+                        width: diameterProgress.toDouble(),  // 内側の円サイズ
+                        height: diameterProgress.toDouble(),
+                        child: CircularProgressIndicator(
+                          value: (i < cycles) ? 1.0 : (val % 1.0),
+                          strokeWidth: 5,
+                          backgroundColor: Colors.grey[200],
+                          valueColor: AlwaysStoppedAnimation<Color>(colors[i]),
+                        ),
+                      ),
+                ],
+              );
+            },
+          ),
+
+          // --- 内側の円のテキスト (例: "今日の学習達成度") ---
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                (_selectedDay == null || isSameDay(_selectedDay, DateTime.now()))
+                    ? "今日の学習達成度"
+                    : "${DateFormat('yyyy年M月d日').format(_selectedDay!)}\n学習達成度",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 9,
                   color: Color.fromARGB(255, 100, 100, 100),
                 ),
               ),
-            ),
-            AnimatedBuilder(
-              animation: _progressAllAnimation,
-              builder: (context, child) {
-                final val = _progressAllAnimation.value;
-                final displayValue = (val * 100).toInt() % 100;
-                final cycles = (val * 100).toInt() ~/ 100;
-                final colors = [
-                  const Color(0xFF0ABAB5),
-                  const Color(0xFFFF8C00),
-                  const Color(0xFFFF0000),
-                  const Color(0xFFFF69B4),
-                  const Color(0xFFFFD700),
-                ];
-                final color = (cycles < 5) ? colors[cycles] : colors.last;
-                return Positioned(
-                  bottom: 0,
-                  child: Text(
-                    "$displayValue%",
-                    style: TextStyle(
+              const SizedBox(height: 5),
+              AnimatedBuilder(
+                animation: _progressAnimation,
+                builder: (context, child) {
+                  final v = (_progressAnimation.value * 100).toInt();
+                  return Text(
+                    "$v%",
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: color,
+                      fontSize: 24,
                     ),
-                  ),
-                );
-              },
-            ),
-            AnimatedBuilder(
-              animation: _progressAnimation,
-              builder: (context, child) {
-                final val = _progressAnimation.value;
-                final cycles = (val * 100).toInt() ~/ 100;
-                final colors = [
-                  const Color(0xFF0ABAB5),
-                  const Color(0xFFFF8C00),
-                  const Color(0xFFFF0000),
-                  const Color(0xFFFF69B4),
-                  const Color(0xFFFFD700),
-                ];
-                return Stack(
-                  children: [
-                    for (int i = 0; i <= cycles; i++)
-                      if (i < 5)
-                        SizedBox(
-                          width: 90,
-                          height: 90,
-                          child: CircularProgressIndicator(
-                            value: (i < cycles) ? 1.0 : (val % 1.0),
-                            strokeWidth: 5,
-                            backgroundColor: Colors.grey[200],
-                            valueColor: AlwaysStoppedAnimation<Color>(colors[i]),
-                          ),
-                        ),
-                  ],
-                );
-              },
-            ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  (_selectedDay == null || isSameDay(_selectedDay, DateTime.now()))
-                      ? "今日の学習達成度"
-                      : "${DateFormat('yyyy年M月d日').format(_selectedDay!)}\n学習達成度",
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 9,
-                    color: Color.fromARGB(255, 100, 100, 100),
-                  ),
-                ),
-                const SizedBox(height: 5),
-                AnimatedBuilder(
-                  animation: _progressAnimation,
-                  builder: (context, child) {
-                    final v = (_progressAnimation.value * 100).toInt();
-                    return Text(
-                      "$v%",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 
   // -------------------------------------------------------------------------
   // カレンダー (Activity セクション)
@@ -790,9 +822,23 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
             headerStyle: HeaderStyle(
               formatButtonVisible: false,
               titleCentered: true,
-              titleTextFormatter: (date, locale) {
-                return '${DateFormat('yyyy年', locale).format(date)}\n${DateFormat('M月', locale).format(date)}';
-              },
+              // （デフォルトのtitleTextFormatterまたはheaderTitleBuilderを使わない場合は削除）
+              
+              // ▼ 前月アイコンと次月アイコンにマージンを入れる
+              leftChevronMargin: const EdgeInsets.only(left: 0.0),
+              rightChevronMargin: const EdgeInsets.only(right: 0.0),
+              // ▼ アイコン自体のサイズを変更
+              leftChevronIcon: const Icon(
+                Icons.chevron_left,
+                size: 18,  // 矢印を大きめに
+                color: Colors.black,
+              ),
+              rightChevronIcon: const Icon(
+                Icons.chevron_right,
+                size: 18,  // 矢印を大きめに
+                color: Colors.black,
+              ),
+
               titleTextStyle: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -827,6 +873,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
             calendarBuilders: CalendarBuilders(
               headerTitleBuilder: (context, date) {
                 return Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       DateFormat('yyyy年').format(date),

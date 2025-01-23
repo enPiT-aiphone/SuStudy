@@ -47,7 +47,13 @@ class _GroupNavigationScreenState extends State<GroupNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('グループメニュー'),
+        title: const Text(
+          'グループメニュー',
+          style: TextStyle(
+            color: Colors.white, // 文字色を白に変更
+            fontSize: 18, // フォントサイズを小さく
+          ),
+        ),
         backgroundColor: const Color(0xFF0ABAB5),
       ),
       body: Center(
@@ -60,7 +66,13 @@ class _GroupNavigationScreenState extends State<GroupNavigationScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0ABAB5),
                 ),
-                child: const Text('グループを作成'),
+                child: const Text(
+                  'グループを作成',
+                  style: TextStyle(
+                    color: Colors.white, // 文字色を白に変更
+                    fontSize: 14, // フォントサイズを小さく
+                  ),
+                ),
               ),
             const SizedBox(height: 20),
             ElevatedButton(
@@ -68,7 +80,13 @@ class _GroupNavigationScreenState extends State<GroupNavigationScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0ABAB5),
               ),
-              child: const Text('グループ一覧'),
+              child: const Text(
+                'グループ一覧',
+                style: TextStyle(
+                  color: Colors.white, // 文字色を白に変更
+                  fontSize: 14, // フォントサイズを小さく
+                ),
+              ),
             ),
           ],
         ),
