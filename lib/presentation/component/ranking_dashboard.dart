@@ -320,13 +320,32 @@ class _RankingScreenState extends State<RankingScreen> {
           } else if (snapshot.hasError) {
             return Center(child: Text('データ取得エラー: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          // メッセージを表示する条件分岐
+          if (widget.selectedTab == 'フォロー中') {
+            return const Center(
+              child: Text(
+                'フォローしているユーザーがいません\n他のユーザーをフォローして競い合おう！',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+            );
+          } else if (widget.selectedTab == 'グループ') {
+            return const Center(
+              child: Text(
+                'グループに所属していません\nグループに所属し、仲間と高め合おう！',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+            );
+          } else {
             return const Center(
               child: Text(
                 'ランキングデータがありません',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(fontSize: 16, color: Colors.black54),
               ),
             );
           }
+        }
 
           final rankingData = snapshot.data!;
 

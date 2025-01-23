@@ -102,6 +102,7 @@ class _InformationRegistrationScreenState
         setState(() {
           _userIdError = 'このユーザーIDはすでに使われています';
         });
+        Navigator.pop(context);
         return;
       }
       
@@ -147,7 +148,7 @@ class _InformationRegistrationScreenState
       });
 
       if (hasError) {
-        Navigator.of(context).pop(); 
+        Navigator.pop(context);
         return; // エラーがある場合、保存処理を中断
       }
 
@@ -189,7 +190,8 @@ class _InformationRegistrationScreenState
           'timestamp': FieldValue.serverTimestamp(), // 現在のタイムスタンプ
         });
         await userDoc.collection('followers').doc('init').set({});
-
+      
+      Navigator.pop(context);
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -197,9 +199,10 @@ class _InformationRegistrationScreenState
         ),
       );
       } catch (e) {
+        Navigator.pop(context);
         print('エラーが発生しました: $e');
       }
-    }
+    }else{Navigator.pop(context);}
   }
 
     // オーバーレイで年齢を選択

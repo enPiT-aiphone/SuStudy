@@ -1,4 +1,4 @@
-import '../../import.dart'; // 必要なパッケージをインポートする
+import '../../../import.dart'; // 必要なパッケージをインポートする
 
 // NotificationPageクラスを定義し、StatelessWidgetを継承して静的なUIを作成
 class NotificationPage extends StatelessWidget {
