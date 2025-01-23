@@ -1061,9 +1061,7 @@ class _HomeScreenState extends State<HomeScreen>
             child: Stack(
               children: [
                 Positioned.fill(child: _buildBodyStack()),
-                if (!_isRecordPageVisible &&
-                    !_isPostCreateVisible &&
-                    _currentIndex != 2)
+                if (_currentIndex != 2)
                   Positioned(
                     bottom: 0,
                     left: 0,

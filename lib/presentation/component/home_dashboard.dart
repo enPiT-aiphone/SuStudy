@@ -3,6 +3,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'home_dashboard_graph.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
   final String selectedTab;
@@ -582,6 +583,11 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen>
                       _getDisplayDate(),
                       style: const TextStyle(fontSize: 13),
                     ),
+                    const SizedBox(height: 10),
+                    HomeDashboardGraph(
+                    selectedCategory: widget.selectedCategory,
+                    selectedDay: _selectedDay, 
+                  ),
                   ],
                 ),
               ),
@@ -969,7 +975,7 @@ Widget _buildProgressSection() {
   // -------------------------------------------------------------------------
   String _getDisplayDate() {
     final displayDate = _selectedDay ?? DateTime.now();
-    return "${DateFormat('yyyy年M月d日').format(displayDate)}の${widget.selectedCategory}の記録データ閲覧画面";
+    return "${DateFormat('yyyy年M月d日').format(displayDate)}の${widget.selectedCategory}の記録データ";
   }
 
   // -------------------------------------------------------------------------
@@ -1022,7 +1028,7 @@ Widget _buildProgressSection() {
             : (sumAll / wordCount);
         final normalizedTierProgress = (tierProgressTodayGoal == 0)
             ? 0
-            : (sumToday / (tierProgressTodayGoal * 2));
+            : (sumToday / (tierProgressTodayGoal));
 
         setState(() {
           _progressAllAnimation = Tween<double>(
