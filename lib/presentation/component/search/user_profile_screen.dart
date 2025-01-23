@@ -3,193 +3,89 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'edit_user_profile.dart';
 import 'follow_follower_list.dart';
-import '../user_view_model.dart'; //
+import '../user_view_model.dart';
 import 'package:provider/provider.dart';
-
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
-   final VoidCallback? onBack; // 戻るボタンが押された時の処理
+  final VoidCallback? onBack; // 戻るボタンが押された時の処理
 
-  const UserProfileScreen({super.key, required this.userId, this.onBack});
+  const UserProfileScreen({
+    super.key,
+    required this.userId,
+    this.onBack,
+  });
 
   @override
   _UserProfileScreenState createState() => _UserProfileScreenState();
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  String? _currentUserId; // 現在のユーザーID
-  List<Map<String, dynamic>> _posts = []; // 投稿データを管理するリスト
-  bool _isFollowed = false; // フォロー状態を管理
+  // -----------------------------
+  // 状態管理
+  // -----------------------------
+  String? _currentUserId;             // 現在のユーザーID
+  List<Map<String, dynamic>> _posts = []; // 投稿データ
+  bool _isFollowed = false;           // フォロー状態
   String _userName = '';
   String _bio = '';
   String _occupation = '';
   String _subOccupation = '';
 
+  // ScrollController を追加
+  final ScrollController _userProfileScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     _fetchCurrentUser();
-    _loadUserPosts(); // 投稿データの取得
-    _checkIfFollowed(); // フォロー状態を確認
+    _loadUserPosts();
+    _checkIfFollowed();
   }
 
-
-void _showFollowFollowerList(BuildContext context, String targetUserId, int initialTabIndex) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true, // 高さを調整可能にする
-    backgroundColor: Colors.transparent, // 背景色を透明にする
-    builder: (context) => Container(
-      height: MediaQuery.of(context).size.height * 0.8, // 画面の高さの80%
-      decoration: const BoxDecoration(
-        color: Colors.white, // 背景色を白に設定
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20.0),  // 左上の角を丸く
-          topRight: Radius.circular(20.0), // 右上の角を丸く
-        ),
-      ),
-      child: ClipRRect( // 角丸をしっかり適用するために追加
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20.0),
-          topRight: Radius.circular(20.0),
-        ),
-        child: FollowFollowerListScreen(
-          targetUserId: targetUserId,
-          initialTabIndex: initialTabIndex,
-        ),
-      ),
-    ),
-  );
-}
-
-
-
-  Future<void> _checkIfFollowed() async {
-  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-  if (currentUserId == null) return;
-
-  final followSnapshot = await FirebaseFirestore.instance
-      .collection('Users')
-      .doc(currentUserId)
-      .collection('follows')
-      .where('auth_uid', isEqualTo: widget.userId)
-      .get();
-
-  setState(() {
-    _isFollowed = followSnapshot.docs.isNotEmpty;
-  });
-}
-
-  Future<void> _followUser() async {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) return;
-
-    try {
-      final currentUserDoc =
-          FirebaseFirestore.instance.collection('Users').doc(currentUserId);
-
-      final targetUserDoc =
-        FirebaseFirestore.instance.collection('Users').doc(widget.userId);
-
-      if (!_isFollowed) {
-        // 自分のfollowsサブコレクションに追加
-        await currentUserDoc.collection('follows').doc(widget.userId).set({
-          'timestamp': FieldValue.serverTimestamp(),
-          'auth_uid': widget.userId,
-          'is_followed': true,
-        });
-
-        // 自分のfollow_countを+1
-        await currentUserDoc.update({
-          'follow_count': FieldValue.increment(1),
-        });
-
-        // 対象ユーザーのfollower_countを+1
-        await targetUserDoc.update({
-          'follower_count': FieldValue.increment(1),
-        });
-
-        // フォローされる側のfollowersサブコレクションに自分のuser_idを追加
-        await targetUserDoc.collection('followers').doc(currentUserId).set({
-          'timestamp': FieldValue.serverTimestamp(),
-          'auth_uid': currentUserId,
-          'is_isfollowed': true,
-        });
-
-        setState(() {
-          _isFollowed = true;
-        });
-
-      }
-    } catch (e) {
-      print('フォロー中にエラーが発生しました: $e');
-    }
+  @override
+  void dispose() {
+    // ScrollController を解放
+    _userProfileScrollController.dispose();
+    super.dispose();
   }
 
-  // フォロー解除処理
-  Future<void> _unfollowUser() async {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) return;
-
-    try {
-      final currentUserDoc =
-          FirebaseFirestore.instance.collection('Users').doc(currentUserId);
-
-      final targetUserDoc =
-        FirebaseFirestore.instance.collection('Users').doc(widget.userId);
-
-      if (_isFollowed) {
-
-        await currentUserDoc.collection('follows').doc(widget.userId).set({
-          'is_followed': false,
-        });
-    
-        // 自分のfollow_countを-1
-        await currentUserDoc.update({
-          'follow_count': FieldValue.increment(-1),
-        });
-
-        // 対象ユーザーのfollower_countを-1
-        await targetUserDoc.update({
-          'follower_count': FieldValue.increment(-1),
-        });
-
-        await targetUserDoc.collection('followers').doc(currentUserId).set({
-          'is_isfollowed': false,
-        });
-
-        setState(() {
-          _isFollowed = false;
-        });
-
-      }
-    } catch (e) {
-      print('フォロー解除中にエラーが発生しました: $e');
-    }
-  }
-
+  // -----------------------------
+  // データ取得系
+  // -----------------------------
   Future<void> _fetchCurrentUser() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      setState(() {
-        _currentUserId = user.uid;
-      });
+      setState(() => _currentUserId = user.uid);
     }
+  }
+
+  Future<void> _checkIfFollowed() async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) return;
+
+    final followSnapshot = await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(currentUserId)
+        .collection('follows')
+        .where('auth_uid', isEqualTo: widget.userId)
+        .get();
+
+    setState(() {
+      _isFollowed = followSnapshot.docs.isNotEmpty;
+    });
   }
 
   Future<Map<String, dynamic>> _fetchUserData() async {
     try {
-      // FirestoreのUsersコレクションからwidget.userIdのドキュメントを直接取得
       final userSnapshot = await FirebaseFirestore.instance
           .collection('Users')
-          .doc(widget.userId) // ドキュメントIDがwidget.userId
+          .doc(widget.userId)
           .get();
 
       if (userSnapshot.exists) {
         final userData = userSnapshot.data() as Map<String, dynamic>;
-
-        // following_subjectsがnullの場合は空のリストを設定
+        // following_subjects が null の場合は空リストに置き換え
         return {
           ...userData,
           'following_subjects': userData['following_subjects'] ?? [],
@@ -199,16 +95,16 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
         return {};
       }
     } catch (e) {
-      print('エラー: $e');
+      print('ユーザーデータ取得エラー: $e');
       return {};
     }
   }
 
   Future<List<Map<String, dynamic>>> _fetchUserPosts() async {
-    if (_currentUserId == null) return []; // ユーザーIDが取得できない場合は空リスト
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return [];
 
     try {
-      // postsサブコレクションから投稿データを取得
       final postsSnapshot = await FirebaseFirestore.instance
           .collection('Users')
           .doc(widget.userId)
@@ -216,27 +112,24 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
           .orderBy('createdAt', descending: true)
           .get();
 
-      // いいねの状態も含めて投稿データをリストにまとめる
-      final List<Future<Map<String, dynamic>?>> postFutures =
-          postsSnapshot.docs.map((postDoc) async {
-        final postData = postDoc.data();
-
-        // いいねの状態を取得
+      // 各投稿に対し、いいね状態も含めてまとめる
+      final futures = postsSnapshot.docs.map((postDoc) async {
+        final data = postDoc.data();
         final isLiked = await _checkIfLiked(postDoc.id);
 
         return {
           'id': postDoc.id,
-          'description': postData['description'] ?? '内容なし',
-          'like_count': postData['like_count'] ?? 0,
-          'createdAt': postData['createdAt'],
+          'description': data['description'] ?? '内容なし',
+          'like_count': data['like_count'] ?? 0,
+          'createdAt': data['createdAt'],
           'is_liked': isLiked,
         };
       }).toList();
 
-      final posts = await Future.wait(postFutures);
-      return posts.where((post) => post != null).cast<Map<String, dynamic>>().toList();
+      final results = await Future.wait(futures);
+      return results.cast<Map<String, dynamic>>();
     } catch (e) {
-      print('投稿データ取得中にエラーが発生しました: $e');
+      print('投稿データ取得中にエラー: $e');
       return [];
     }
   }
@@ -244,13 +137,12 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
   Future<void> _loadUserPosts() async {
     final posts = await _fetchUserPosts();
     setState(() {
-      _posts = posts; // 投稿データを更新
+      _posts = posts;
     });
   }
 
   Future<bool> _checkIfLiked(String postId) async {
     if (_currentUserId == null) return false;
-
     try {
       final likeDoc = await FirebaseFirestore.instance
           .collection('Users')
@@ -266,76 +158,152 @@ void _showFollowFollowerList(BuildContext context, String targetUserId, int init
     }
   }
 
-  // いいねの切り替え
-Future<void> _toggleLike(String postId, bool isLiked, int currentLikeCount) async {
-  if (_currentUserId == null) return;
+  // -----------------------------
+  // アクション系
+  // -----------------------------
+  Future<void> _followUser() async {
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) return;
 
-  try {
-    // Usersコレクションのpostsサブコレクション内の投稿参照
-    final postRef = FirebaseFirestore.instance
-        .collection('Users')
-        .doc(widget.userId)
-        .collection('posts')
-        .doc(postId);
+    try {
+      final currentUserDoc = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(currentUserId);
+      final targetUserDoc = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId);
 
-    // Timelineコレクション内の投稿参照
-    final timelinePostRef = FirebaseFirestore.instance
-        .collection('Timeline')
-        .doc(postId);
+      if (!_isFollowed) {
+        // 自分の follows に追加
+        await currentUserDoc.collection('follows').doc(widget.userId).set({
+          'timestamp': FieldValue.serverTimestamp(),
+          'auth_uid': widget.userId,
+          'is_followed': true,
+        });
+        // follow_count++
+        await currentUserDoc.update({
+          'follow_count': FieldValue.increment(1),
+        });
+        // 相手の follower_count++
+        await targetUserDoc.update({
+          'follower_count': FieldValue.increment(1),
+        });
+        // 相手の followers に追加
+        await targetUserDoc.collection('followers').doc(currentUserId).set({
+          'timestamp': FieldValue.serverTimestamp(),
+          'auth_uid': currentUserId,
+          'is_isfollowed': true,
+        });
 
-    // いいねの情報を保存するサブコレクション
-    final userLikeRef = FirebaseFirestore.instance
-        .collection('Users')
-        .doc(_currentUserId)
-        .collection('post_timeline_ids')
-        .doc(postId);
-
-    // いいねの処理
-    if (isLiked) {
-      // いいねを解除
-      await postRef.update({'like_count': currentLikeCount - 1});
-      await timelinePostRef.update({'like_count': FieldValue.increment(-1)});
-      await userLikeRef.set({'is_liked': false});
-    } else {
-      // いいねを追加
-      await postRef.update({'like_count': currentLikeCount + 1});
-      await timelinePostRef.update({'like_count': FieldValue.increment(1)});
-      await userLikeRef.set({'is_liked': true});
+        setState(() {
+          _isFollowed = true;
+        });
+      }
+    } catch (e) {
+      print('フォロー中にエラー: $e');
     }
-
-    // UIを更新
-    setState(() {
-    });
-  } catch (e) {
-    print('いいねの処理中にエラー: $e');
   }
-}
 
-Future<void> _loadUserData() async {
-  if (_currentUserId == null) return;
+  Future<void> _unfollowUser() async {
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) return;
 
-  try {
-    final userDoc = await FirebaseFirestore.instance
-        .collection('Users')
-        .doc(_currentUserId)
-        .get();
+    try {
+      final currentUserDoc = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(currentUserId);
+      final targetUserDoc = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId);
 
-    if (userDoc.exists) {
-      setState(() {
-        // 取得したデータを画面の状態に反映
+      if (_isFollowed) {
+        // 自分の follows を更新
+        await currentUserDoc.collection('follows').doc(widget.userId).set({
+          'is_followed': false,
+        }, SetOptions(merge: true));
+        // follow_count--
+        await currentUserDoc.update({
+          'follow_count': FieldValue.increment(-1),
+        });
+        // 相手の follower_count--
+        await targetUserDoc.update({
+          'follower_count': FieldValue.increment(-1),
+        });
+        // 相手の followers を更新
+        await targetUserDoc.collection('followers').doc(currentUserId).set({
+          'is_isfollowed': false,
+        }, SetOptions(merge: true));
+
+        setState(() {
+          _isFollowed = false;
+        });
+      }
+    } catch (e) {
+      print('フォロー解除中にエラー: $e');
+    }
+  }
+
+  Future<void> _toggleLike(String postId, bool isLiked, int currentLikeCount) async {
+    if (_currentUserId == null) return;
+    try {
+      final postRef = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId)
+          .collection('posts')
+          .doc(postId);
+
+      final timelinePostRef = FirebaseFirestore.instance
+          .collection('Timeline')
+          .doc(postId);
+
+      final userLikeRef = FirebaseFirestore.instance
+          .collection('Users')
+          .doc(_currentUserId)
+          .collection('post_timeline_ids')
+          .doc(postId);
+
+      if (isLiked) {
+        // いいね解除
+        await postRef.update({'like_count': currentLikeCount - 1});
+        await timelinePostRef.update({'like_count': FieldValue.increment(-1)});
+        await userLikeRef.set({'is_liked': false}, SetOptions(merge: true));
+      } else {
+        // いいね付与
+        await postRef.update({'like_count': currentLikeCount + 1});
+        await timelinePostRef.update({'like_count': FieldValue.increment(1)});
+        await userLikeRef.set({'is_liked': true}, SetOptions(merge: true));
+      }
+
+      setState(() {});
+    } catch (e) {
+      print('いいねの切り替えエラー: $e');
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(widget.userId)
+          .get();
+
+      if (userDoc.exists) {
         final data = userDoc.data();
-        _userName = data?['user_name'] ?? '';
-        _bio = data?['bio'] ?? '';
-        _occupation = data?['occupation'] ?? '';
-        _subOccupation = data?['sub_occupation'] ?? '';
-      });
+        setState(() {
+          _userName = data?['user_name'] ?? '';
+          _bio = data?['bio'] ?? '';
+          _occupation = data?['occupation'] ?? '';
+          _subOccupation = data?['sub_occupation'] ?? '';
+        });
+      }
+    } catch (e) {
+      print('ユーザーデータの再読み込み中にエラーが発生しました: $e');
     }
-  } catch (e) {
-    print('ユーザーデータの読み込み中にエラーが発生しました: $e');
   }
-}
 
-
+  // -----------------------------
+  // UI
+  // -----------------------------
   String _timeAgo(Timestamp timestamp) {
     final now = DateTime.now();
     final dateTime = timestamp.toDate();
@@ -352,367 +320,425 @@ Future<void> _loadUserData() async {
     }
   }
 
+  void _showFollowFollowerList(BuildContext context, String targetUserId, int initialTabIndex) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20.0),
+            topRight: Radius.circular(20.0),
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+          child: FollowFollowerListScreen(
+            targetUserId: targetUserId,
+            initialTabIndex: initialTabIndex,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final userViewModel = context.watch<UserViewModel>();
+
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(40.0), // AppBarの高さを設定
+        preferredSize: const Size.fromHeight(30.0),
         child: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back), // 戻る矢印
-            onPressed: widget.onBack ?? () {}, // onBackコールバックが設定されていれば実行
+            icon: const Icon(Icons.arrow_back),
+            onPressed: widget.onBack ?? () {},
           ),
         ),
       ),
-      body: FutureBuilder(
-        future: Future.wait([
-          _fetchUserData(),
-          _fetchUserPosts(),
-        ]),
-        builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator(valueColor:  AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),));
-          }
 
-          final userData = snapshot.data![0] as Map<String, dynamic>;
-          final userPosts = snapshot.data![1] as List<Map<String, dynamic>>;
-
-          if (userData.isEmpty) {
-            return const Center(child: Text('ユーザーが見つかりませんでした。'));
-          }
-
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ヘッダー
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start, // 上揃えにする
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF0ABAB5), width: 1.0),
-                      ),
-                      child: CircleAvatar(
-                        radius: 40,
-                        backgroundColor: Colors.white,
-                        child: Text(
-                          userData['user_name'] != null && userData['user_name'].isNotEmpty
-                              ? userData['user_name'][0]
-                              : '?',
-                          style: const TextStyle(fontSize: 30, color: Color(0xFF0ABAB5)),
-                        ),
-                      ),
+      // ▼ Scrollbar + SingleChildScrollView + controller
+      body: Scrollbar(
+        controller: _userProfileScrollController,
+        thumbVisibility: true, // スクロールバーを常に見せたい場合
+        interactive: false,    // もしドラッグ操作を無効化したい場合に設定
+        child: SingleChildScrollView(
+          controller: _userProfileScrollController,
+          child: FutureBuilder(
+            future: Future.wait([
+              _fetchUserData(),
+              _fetchUserPosts(),
+            ]),
+            builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
+              if (!snapshot.hasData) {
+                return const SizedBox(
+                  height: 200,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0ABAB5)),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            userData['user_name'] ?? '不明',
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                );
+              }
+
+              final userData = snapshot.data![0] as Map<String, dynamic>;
+              final userPosts = snapshot.data![1] as List<Map<String, dynamic>>;
+
+              if (userData.isEmpty) {
+                return const Center(child: Text('ユーザーが見つかりませんでした。'));
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ------------------------
+                  // ヘッダー (ユーザー情報)
+                  // ------------------------
+                  Container(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // アバター
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFF0ABAB5), width: 1.0),
                           ),
-                          const SizedBox(height: 4),
-                          // user_idをWrapで折り返しさせずに表示
-                          Wrap(
+                          child: CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Colors.white,
+                            child: Text(
+                              userData['user_name'] != null &&
+                                      userData['user_name'].isNotEmpty
+                                  ? userData['user_name'][0]
+                                  : '?',
+                              style: const TextStyle(
+                                fontSize: 30,
+                                color: Color(0xFF0ABAB5),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // ユーザー名 + プロフィール操作
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '@${userData['user_id']}',
+                                userData['user_name'] ?? '不明',
                                 style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Color.fromARGB(179, 160, 160, 160),
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
+                              ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                children: [
+                                  Text(
+                                    '@${userData['user_id']}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color.fromARGB(179, 160, 160, 160),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              if (_currentUserId != null)
+                                if (userData['auth_uid'] == _currentUserId)
+                                  OutlinedButton(
+                                    onPressed: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => EditProfileScreen(),
+                                        ),
+                                      );
+                                      if (result == true) {
+                                        _loadUserData();
+                                      }
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: Colors.grey),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8, horizontal: 20),
+                                    ),
+                                    child: const Text(
+                                      'プロフィール編集',
+                                      style: TextStyle(color: Colors.black, fontSize: 14),
+                                    ),
+                                  )
+                                else
+                                  ElevatedButton(
+                                    onPressed: _isFollowed
+                                        ? _unfollowUser
+                                        : _followUser,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _isFollowed
+                                          ? Colors.grey
+                                          : Color(0xFF0ABAB5),
+                                    ),
+                                    child: Text(
+                                      _isFollowed ? 'フォロー解除' : 'フォローする',
+                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    ),
+                                  ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ------------------------
+                  // プロフィール詳細
+                  // ------------------------
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (userData['bio'] != null && userData['bio'].isNotEmpty) ...[
+                          Text(
+                            userData['bio'],
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 5),
+                        ],
+                        // フォロワー/フォロー中
+                        Row(
+                          children: [
+                            const Text(
+                              'フォロワー: ',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color.fromARGB(179, 100, 100, 100),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                _showFollowFollowerList(context, widget.userId, 0);
+                              },
+                              child: Text(
+                                '${userData['follower_count'] ?? 0}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            const Text(
+                              'フォロー中: ',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color.fromARGB(179, 100, 100, 100),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                _showFollowFollowerList(context, widget.userId, 1);
+                              },
+                              child: Text(
+                                '${userData['follow_count'] ?? 0}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        // フォロー中の教科
+                        if (userData['following_subjects'] != null &&
+                            (userData['following_subjects'] as List).isNotEmpty) ...[
+                          const Text(
+                            'フォロー中の教科: ',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color.fromARGB(179, 100, 100, 100),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8.0,
+                            runSpacing: 8.0,
+                            children: (userData['following_subjects'] as List)
+                                .map<Widget>((subject) => Text(
+                                      subject,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.black,
+                                      ),
+                                    ))
+                                .toList(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // ------------------------
+                  // 投稿一覧
+                  // ------------------------
+                  const Divider(thickness: 1),
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text(
+                      '投稿',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (userPosts.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Text(
+                          'まだ投稿がありません',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: userPosts.length,
+                      separatorBuilder: (context, index) => Divider(
+                        color: Colors.grey[300],
+                        thickness: 1,
+                        height: 1,
+                      ),
+                      itemBuilder: (context, index) {
+                        final post = userPosts[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12.0, horizontal: 16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // ユーザー情報表示部分
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 27,
+                                        backgroundColor: Colors.grey[200],
+                                        child: Text(
+                                          userData['user_name'] != null
+                                              ? userData['user_name'][0]
+                                              : '?',
+                                          style: const TextStyle(
+                                            fontSize: 23,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                userData['user_name'],
+                                                style: const TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Text(
+                                                '@${userData['user_id']}',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    post['createdAt'] != null
+                                        ? _timeAgo(post['createdAt'])
+                                        : '',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              // 投稿の内容
+                              Padding(
+                                padding: const EdgeInsets.only(left: 64.0),
+                                child: Text(
+                                  post['description'] ?? '内容なし',
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                              ),
+                              // いいねボタンといいね数
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      (post['is_liked'] ?? false)
+                                          ? Icons.thumb_up_alt
+                                          : Icons.thumb_up_alt_outlined,
+                                      color: (post['is_liked'] ?? false)
+                                          ? Colors.blue
+                                          : Colors.grey,
+                                    ),
+                                    onPressed: () {
+                                      _toggleLike(
+                                        post['id'],
+                                        post['is_liked'] ?? false,
+                                        post['like_count'] ?? 0,
+                                      ).then((_) {
+                                        setState(() {
+                                          post['is_liked'] = !(post['is_liked'] ?? false);
+                                          post['like_count'] = post['is_liked']
+                                              ? (post['like_count'] ?? 0) + 1
+                                              : (post['like_count'] ?? 0) - 1;
+                                        });
+                                      });
+                                    },
+                                  ),
+                                  Text('${post['like_count'] ?? 0}'),
+                                ],
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          if (_currentUserId != null)
-                            if (userData['auth_uid'] == _currentUserId)
-                              OutlinedButton(
-                                onPressed: () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => EditProfileScreen(), // プロフィール編集画面
-                                    ),
-                                  );
-
-                                  // 戻ってきた時にデータを再読み込みする
-                                  if (result == true) {
-                                    _loadUserData(); // Firestoreから最新データを再読み込みする関数を呼び出す
-                                  }
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Colors.grey),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
-                                ),
-                                child: const Text(
-                                  'プロフィール編集',
-                                  style: TextStyle(color: Colors.black, fontSize: 14),
-                                ),
-                              )
-                            else
-                              ElevatedButton(
-                                onPressed: _isFollowed ? _unfollowUser : _followUser,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      _isFollowed ? Colors.grey : const Color(0xFF0ABAB5),
-                                ),
-                                child: Text(
-                                  _isFollowed ? 'フォロー解除' : 'フォローする',
-                                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                                ),
-                              ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  ],
-                ),
-              ),
-                // プロフィール情報
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (userData['bio'] != null && userData['bio'].isNotEmpty) ...[
-                        Text(
-                          userData['bio'],
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(height: 5),
-                      ],
-                      // フォロワーとフォロー中の情報を表示
-                      Row(
-                        children: [
-                          const Text(
-                            'フォロワー: ',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color.fromARGB(179, 100, 100, 100),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              _showFollowFollowerList(context, widget.userId, 0); // フォロワーリストを表示
-                            },
-                            child: Text(
-                              '${userData['follower_count'] ?? 0}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 20), // スペースを追加
-                          const Text(
-                            'フォロー中: ',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color.fromARGB(179, 100, 100, 100),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              _showFollowFollowerList(context, widget.userId, 1); // フォロー中リストを表示
-                            },
-                            child: Text(
-                              '${userData['follow_count'] ?? 0}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 5), // スペース追加
-                      // フォロー中の教科
-                      if (userData['following_subjects'] != null &&
-                          (userData['following_subjects'] as List).isNotEmpty) ...[
-                        const Text(
-                          'フォロー中の教科: ',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color.fromARGB(179, 100, 100, 100),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8.0, // 教科間の横のスペース
-                          runSpacing: 8.0, // 教科間の縦のスペース
-                          children: (userData['following_subjects'] as List)
-                              .map<Widget>((subject) => Text(
-                                    subject,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.black, // テキストカラー
-                                    ),
-                                  ))
-                              .toList(),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-
-                // 投稿リスト
-                const Divider(thickness: 1),
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text(
-                    '投稿',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                userPosts.isEmpty
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text(
-                            'まだ投稿がありません',
-                            style: TextStyle(
-                            fontSize: 14
-                            ),
-                          ),
-                        ),
-                      )
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: userPosts.length,
-                        separatorBuilder: (context, index) => Divider(
-                          color: Colors.grey[300], // 線の色
-                          thickness: 1, // 線の太さ
-                          height: 1, // 線の高さ
-                        ),
-                        itemBuilder: (context, index) {
-                          final post = userPosts[index];
-
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 12.0, horizontal: 16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // ユーザー情報表示部分
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 27,
-                                          backgroundColor: Colors.grey[200],
-                                          child: Text(
-                                            userData['user_name'] != null
-                                                ? userData['user_name'][0]
-                                                : '?',
-                                            style: const TextStyle(
-                                              fontSize: 23,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  userData['user_name'],
-                                                  style: const TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '@${userData['user_id']}',
-                                                  style: const TextStyle(
-                                                    fontSize: 11,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    Text(
-                                      post['createdAt'] != null
-                                          ? _timeAgo(post['createdAt'])
-                                          : '',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                // 投稿の内容
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 64.0),
-                                  child: Text(
-                                    post['description'] ?? '内容なし',
-                                    style: const TextStyle(fontSize: 15),
-                                  ),
-                                ),
-                                // いいねボタンといいね数
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(
-                                        (post['is_liked'] ?? false) // nullの場合はfalse
-                                            ? Icons.thumb_up_alt
-                                            : Icons.thumb_up_alt_outlined,
-                                        color: (post['is_liked'] ?? false) ? Colors.blue : Colors.grey,
-                                      ),
-                                      onPressed: () {
-                                        _toggleLike(
-                                          post['id'],
-                                          post['is_liked'] ?? false, // nullならfalseを渡す
-                                          post['like_count'] ?? 0,
-                                        ).then((_) {
-                                          setState(() {
-                                            post['is_liked'] = !(post['is_liked'] ?? false);
-                                            post['like_count'] = post['is_liked']
-                                                ? (post['like_count'] ?? 0) + 1
-                                                : (post['like_count'] ?? 0) - 1;
-                                          });
-                                        });
-                                      },
-                                    ),
-                                    Text('${post['like_count'] ?? 0}'), // nullの場合に0を表示
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      )
-              ],
-            ),
-          );
-        },
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 }
-
-

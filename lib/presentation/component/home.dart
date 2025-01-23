@@ -27,6 +27,7 @@ import 'package:sustudy_add/main.dart' show saveTokenToSubcollection;
 
 import 'home_dashboard.dart'; // 「ダッシュボード」画面
 import 'user_view_model.dart';
+import 'reply_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -70,6 +71,9 @@ class _HomeScreenState extends State<HomeScreen>
   String _selectedCategory = '';
   String _selectedTab = '最新';
 
+  bool _isUserProfileVisible = false; 
+  String? _userprofileUserId;
+
   // Firebase user info
   String _accountName = '';
   String _accountId = '';
@@ -78,6 +82,9 @@ class _HomeScreenState extends State<HomeScreen>
   int _follows = 0;
   List<String> _followingSubjects = [];
   List<dynamic> _loginHistory = [];
+
+  bool _isReplyScreenVisible = false;          // ReplyScreen を表示中かどうか
+  Map<String, dynamic>? _replyPost;           // 返信先の投稿データ
 
   // Safariの動的高さ対応
   double _browserHeight = (html.window.innerHeight ?? 0).toDouble();
@@ -917,6 +924,13 @@ class _HomeScreenState extends State<HomeScreen>
             _profileUserId = userId;
           });
         },
+        onReplyRequested: (post) {
+          // タイムライン投稿をタップ→返信画面を表示
+          setState(() {
+            _isReplyScreenVisible = true;
+            _replyPost = post;
+          });
+        },
       );
     } else if (_currentIndex == 1) {
       return RankingScreen(
@@ -1068,7 +1082,7 @@ class _HomeScreenState extends State<HomeScreen>
             child: Stack(
               children: [
                 Positioned.fill(child: _buildBodyStack()),
-                if (_currentIndex != 2)
+                if (!_isUserProfileVisible &&!_isProfileVisible &&!_isReplyScreenVisible &&_currentIndex != 2)
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -1097,6 +1111,8 @@ class _HomeScreenState extends State<HomeScreen>
               _isProfileVisible = false;
               _isGroupShowVisible = false;
               _isGroupCreateVisible = false;
+              _isReplyScreenVisible = false;
+              _isUserProfileVisible = false;
               _currentIndex = index;
             });
 
@@ -1142,7 +1158,7 @@ class _HomeScreenState extends State<HomeScreen>
           ],
         ),
       ),
-      floatingActionButton: _isRecordPageVisible || _isPostCreateVisible
+      floatingActionButton: (_isRecordPageVisible || _isPostCreateVisible || _isReplyScreenVisible || _isProfileVisible || _isUserProfileVisible)
           ? null
           : _buildFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -1208,6 +1224,34 @@ class _HomeScreenState extends State<HomeScreen>
             selectedCategory: _selectedCategory,
             onPostSubmitted: () {
               setState(() => _isPostCreateVisible = false);
+            },
+          )
+        else if (_isReplyScreenVisible && _replyPost != null)
+          ReplyScreen(
+            post: _replyPost!,
+            onBack: () {
+              // 戻る操作
+              setState(() {
+                _isReplyScreenVisible = false;
+                _replyPost = null; // クリア
+              });
+            },
+            onUserProfileRequested: (userId) {
+              setState(() {
+                _isReplyScreenVisible = false; // 返信画面は閉じる
+                _isUserProfileVisible = true;
+                _userprofileUserId = userId; // 対象ユーザーIDをセット
+              });
+            },
+          )
+        else if (_isUserProfileVisible && _userprofileUserId != null)
+          UserProfileScreen(
+            userId: _userprofileUserId!,
+            onBack: () {
+              setState(() {
+                _isUserProfileVisible = false;
+                _userprofileUserId = null; // クリア
+              });
             },
           ),
       ],
