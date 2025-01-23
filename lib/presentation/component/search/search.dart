@@ -149,10 +149,12 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   Future<void> _performSearch() async {
-    setState(() {
-      _isLoading = true;
+    if (_searchQuery.isEmpty) {
+      setState(() {
       _searchResults = [];
     });
+    return; // 空の検索ワードの場合は何も表示しない
+  }
 
     try {
       final normalizedQuery = _normalizeString(_searchQuery);
