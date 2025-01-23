@@ -11,11 +11,13 @@ import '../../utils/fetchGroup.dart';
 class RankingScreen extends StatefulWidget {
   final String selectedTab;
   final String selectedCategory;
+  final Function(String userId) onUserProfileTap; // コールバック関数を追加
 
   const RankingScreen({
     super.key,
     required this.selectedTab,
     required this.selectedCategory,
+    required this.onUserProfileTap
   });
 
   @override
@@ -373,19 +375,11 @@ class _RankingScreenState extends State<RankingScreen> {
                       '${user['tSolvedCount']} pt',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
+                    
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => UserProfileScreen(
-                            userId: user['auth_uid'],
-                            onBack: () {
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ),
-                      );
-                    },
+                      // プロフィール表示のコールバックを実行
+                      widget.onUserProfileTap(user['auth_uid']);
+                   },
                   );
                 },
               )),

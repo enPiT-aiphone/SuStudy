@@ -922,6 +922,12 @@ class _HomeScreenState extends State<HomeScreen>
       return RankingScreen(
         selectedTab: _selectedTab,
         selectedCategory: _selectedCategory,
+        onUserProfileTap: (userId) {
+          setState(() {
+            _isProfileVisible = true;
+            _profileUserId = userId;
+          });
+        },
       );
     } else if (_currentIndex == 2) {
       return const SearchScreen();
