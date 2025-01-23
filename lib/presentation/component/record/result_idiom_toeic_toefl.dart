@@ -244,7 +244,37 @@ class _ResultPage_IdiomState extends State<ResultPage_Idiom> with SingleTickerPr
     );
   }
 
-  void _showIdiomDetailsDialog(BuildContext context, QueryDocumentSnapshot idiomData) {
+  Widget _buildDetailRow(String label, String? value) {
+  if (value == null || value.isEmpty) return Container();
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            '$label:',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            softWrap: true,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 16),
+            softWrap: true,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showIdiomDetailsDialog(BuildContext context, QueryDocumentSnapshot idiomData) {
   showDialog(
     context: context,
     builder: (context) {
@@ -254,14 +284,17 @@ class _ResultPage_IdiomState extends State<ResultPage_Idiom> with SingleTickerPr
           children: [
             Row(
               children: [
-                Text(
-                  '${idiomData['Idioms']} ',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 30,
+                Flexible(
+                  child: Text(
+                    '${idiomData['Idioms']} ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 30,
+                    ),
+                    softWrap: true,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                
               ],
             ),
             const SizedBox(height: 16),
@@ -278,21 +311,18 @@ class _ResultPage_IdiomState extends State<ResultPage_Idiom> with SingleTickerPr
                     '意味: ',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: FractionallySizedBox(
-                        widthFactor: 0.85,
-                        child: Text(
-                          '${idiomData['Explanation']}',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
+                  Flexible(
+                    child: Text(
+                      '${idiomData['Explanation']}',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
-              _buildDetailRow('発音記号', idiomData['Phonetic_Symbols']), // 発音記号も追加
+              const SizedBox(height: 8),
+              _buildDetailRow('発音記号', idiomData['Phonetic_Symbols']),
               _buildDetailRow('類義語', idiomData['Word_Synonyms']),
             ],
           ),
@@ -309,28 +339,4 @@ class _ResultPage_IdiomState extends State<ResultPage_Idiom> with SingleTickerPr
     },
   );
 }
-
-
-  Widget _buildDetailRow(String label, String? value) {
-    if (value == null || value.isEmpty) return Container();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(value),
-          ),
-        ],
-      ),
-    );
-  }
 }
