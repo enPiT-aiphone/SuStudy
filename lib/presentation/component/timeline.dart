@@ -7,10 +7,11 @@ import '../../utils/fetchGroup.dart';
 
 class TimelineScreen extends StatefulWidget {
   final String selectedTab;
+  final String selectedCategory;
   final Function(String userId) onUserProfileTap; // コールバック関数を追加
 
   const TimelineScreen(
-      {super.key, required this.selectedTab, required this.onUserProfileTap});
+      {super.key, required this.selectedTab, required this.selectedCategory, required this.onUserProfileTap});
 
   @override
   _TimelineScreenState createState() => _TimelineScreenState();
@@ -33,15 +34,18 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchCurrentUser();
-    _fetchFollowingUsers();
-    _initializeGroupData().then((_){
-      if (_isGrouped == true) {
+    _fetchCurrentUser().then((_) async{
+      _fetchFollowingUsers();
+      _initializeGroupData().then((_){
+        if (_isGrouped == true) {
         _fetchGroupMemberProgress();
-      }
+        }
+      _fetchTimelinePosts();
+      });
     });
-    _fetchTimelinePosts();
   }
+
+  
 
   // 現在のユーザーIDを取得
   Future<void> _fetchCurrentUser() async {
@@ -109,96 +113,103 @@ class _TimelineScreenState extends State<TimelineScreen> {
     }
   }
 
-  // Timelineコレクションから投稿を取得
-  Future<void> _fetchTimelinePosts({bool isFetchingMore = false}) async {
-    if (_isFetchingMore) return;
-    setState(() {
-      _isFetchingMore = true;
-      if (!isFetchingMore) _isLoading = true;
-    });
+Future<void> _fetchTimelinePosts({bool isFetchingMore = false}) async {
+  if (_isFetchingMore) return;
 
-    try {
-      Query query = FirebaseFirestore.instance
-          .collection('Timeline')
-          .orderBy('createdAt', descending: true);
+  setState(() {
+    _isFetchingMore = true;
+    if (!isFetchingMore) _isLoading = true;
+  });
 
-      if (widget.selectedTab == 'フォロー中' && _followingUserIds.isNotEmpty) {
-        query = query.where('auth_uid', whereIn: _followingUserIds);
-      } else if (widget.selectedTab == 'グループ' && _groupMemberIds.isNotEmpty) {
-        query = query.where('auth_uid', whereIn: _groupMemberIds);
-      }
+  try {
+    Query query = FirebaseFirestore.instance
+        .collection('Timeline')
+        .orderBy('createdAt', descending: true);
 
-      query = query.limit(_fetchLimit);
+    // タブごとのクエリ設定
+    if (widget.selectedTab == 'フォロー中' && _followingUserIds.isNotEmpty) {
+      query = query.where('auth_uid', whereIn: _followingUserIds);
+    } else if (widget.selectedTab == 'グループ' && _groupMemberIds.isNotEmpty) {
+      query = query.where('auth_uid', whereIn: _groupMemberIds);
+    }
 
-      if (_lastDocument != null && isFetchingMore) {
-        query = query.startAfterDocument(_lastDocument!);
-      }
+    // カテゴリーごとのクエリ設定
+    if (widget.selectedCategory != '全体') {
+      query = query.where('category', isEqualTo: widget.selectedCategory);
+    }
 
-      final timelineSnapshot = await query.get();
+    query = query.limit(_fetchLimit);
 
-      if (timelineSnapshot.docs.isNotEmpty) {
-        final List<Map<String, dynamic>> newPosts = [];
-        final List<String> userIds = timelineSnapshot.docs
-            .map((doc) =>
-                (doc.data() as Map<String, dynamic>)['auth_uid'] as String)
-            .toList();
+    if (_lastDocument != null && isFetchingMore) {
+      query = query.startAfterDocument(_lastDocument!);
+    }
 
-        final usersSnapshot = await FirebaseFirestore.instance
-            .collection('Users')
-            .where('auth_uid', whereIn: userIds)
-            .get();
+    final timelineSnapshot = await query.get();
 
-        final Map<String, Map<String, dynamic>> usersMap = {
-          for (var userDoc in usersSnapshot.docs)
-            userDoc.data()['auth_uid']: userDoc.data()
-        };
+    if (timelineSnapshot.docs.isNotEmpty) {
+      final List<Map<String, dynamic>> newPosts = [];
+      final List<String> userIds = timelineSnapshot.docs
+          .map((doc) =>
+              (doc.data() as Map<String, dynamic>)['auth_uid'] as String)
+          .toList();
 
-        for (var postDoc in timelineSnapshot.docs) {
-          final postData = postDoc.data() as Map<String, dynamic>;
+      final usersSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .where('auth_uid', whereIn: userIds)
+          .get();
 
-          if (widget.selectedTab == 'フォロー中' &&
-              !_followingUserIds.contains(postData['auth_uid'])) {
-            continue;
-          } else if (widget.selectedTab == 'グループ' &&
-              !_groupMemberIds.contains(postData['auth_uid'])) {
-            continue;
-          }
+      final Map<String, Map<String, dynamic>> usersMap = {
+        for (var userDoc in usersSnapshot.docs)
+          userDoc.data()['auth_uid']: userDoc.data()
+      };
 
-          final userData = usersMap[postData['auth_uid']];
-          if (userData == null) continue;
-
-          newPosts.add({
-            'post_id': postDoc.id,
-            'description': postData['description'],
-            'user_name': userData['user_name'],
-            'auth_uid': userData['auth_uid'],
-            'user_id': userData['user_id'],
-            'createdAt': postData['createdAt'],
-            'like_count': postData['like_count'],
-            'is_liked': await _checkIfLiked(postDoc.id),
-          });
+      for (var postDoc in timelineSnapshot.docs) {
+        final postData = postDoc.data() as Map<String, dynamic>;
+        // フィルタリング
+        if (widget.selectedTab == 'フォロー中' &&
+            !_followingUserIds.contains(postData['auth_uid'])) {
+          continue;
+        } else if (widget.selectedTab == 'グループ' &&
+            !_groupMemberIds.contains(postData['auth_uid'])) {
+          continue;
         }
 
-        setState(() {
-          _timelinePosts.addAll(newPosts);
-          _lastDocument = timelineSnapshot.docs.last;
-          _isFetchingMore = false;
-          if (!isFetchingMore) _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _isFetchingMore = false;
-          if (!isFetchingMore) _isLoading = false;
+        final userData = usersMap[postData['auth_uid']];
+        if (userData == null) continue;
+
+        newPosts.add({
+          'post_id': postDoc.id,
+          'description': postData['description'],
+          'user_name': userData['user_name'],
+          'auth_uid': userData['auth_uid'],
+          'user_id': userData['user_id'],
+          'createdAt': postData['createdAt'],
+          'like_count': postData['like_count'],
+          'is_liked': await _checkIfLiked(postDoc.id),
         });
       }
-    } catch (e) {
-      print('タイムラインデータの取得中にエラーが発生しました: $e');
+
+      setState(() {
+        _timelinePosts.addAll(newPosts);
+        _lastDocument = timelineSnapshot.docs.last;
+        _isFetchingMore = false;
+        if (!isFetchingMore) _isLoading = false;
+      });
+    } else {
       setState(() {
         _isFetchingMore = false;
-        _isLoading = false;
+        if (!isFetchingMore) _isLoading = false;
       });
     }
+  } catch (e) {
+    print('タイムラインデータの取得中にエラーが発生しました: $e');
+    setState(() {
+      _isFetchingMore = false;
+      _isLoading = false;
+    });
   }
+}
+
 
   // 投稿がいいねされているか確認
   Future<bool> _checkIfLiked(String postId) async {
@@ -287,7 +298,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
   void didUpdateWidget(TimelineScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.selectedTab != oldWidget.selectedTab) {
+    if (widget.selectedTab != oldWidget.selectedTab || widget.selectedCategory != oldWidget.selectedCategory) {
       setState(() {
         _timelinePosts.clear(); // タイムライン投稿をクリア
         _lastDocument = null; // 最後のドキュメントもリセット

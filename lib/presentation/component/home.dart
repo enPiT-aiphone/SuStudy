@@ -505,7 +505,7 @@ class _HomeScreenState extends State<HomeScreen>
           _followingSubjects = List<String>.from(userData['following_subjects'] ?? []);
           _loginHistory = userData['login_history'] ?? [];
           if (_followingSubjects.isNotEmpty) {
-            _selectedCategory = _followingSubjects[0];
+            _selectedCategory = '全体';
           }
         });
 
@@ -910,6 +910,7 @@ class _HomeScreenState extends State<HomeScreen>
     } else if (_currentIndex == 0) {
       return TimelineScreen(
         selectedTab: _selectedTab,
+        selectedCategory: _selectedCategory,
         onUserProfileTap: (userId) {
           setState(() {
             _isProfileVisible = true;
