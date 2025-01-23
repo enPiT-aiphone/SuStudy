@@ -7,10 +7,11 @@ class NewPostScreen extends StatefulWidget {
   final String selectedCategory;
   final VoidCallback? onPostSubmitted;
 
-  const NewPostScreen({super.key, 
+  const NewPostScreen({
+    Key? key,
     required this.selectedCategory,
     this.onPostSubmitted,
-  });
+  }) : super(key: key);
 
   @override
   _NewPostScreenState createState() => _NewPostScreenState();
@@ -123,7 +124,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
               color: _isButtonEnabled
                   ? const Color(0xFF0ABAB5)
                   : Colors.grey), // ボーダー色
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
@@ -139,41 +140,139 @@ class _NewPostScreenState extends State<NewPostScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('記録なし投稿'),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => HomeScreen()),
-              (route) => false,
-            );
-          },
+      // 背景にグラデーション
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.white,
+              Colors.white, // 明るい水色
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
-        actions: [
-          _buildPostButton(context, '投稿', () {
-            final postContent = postController.text.trim();
-            if (postContent.isNotEmpty) {
-              _submitPost(postContent);
-            }
-          }),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: postController,
-              maxLines: 5,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'ここに投稿内容を入力してください',
+        child: SafeArea(
+          child: Column(
+            children: [
+              // AppBar的な上部エリア
+              Container(
+                height: 60,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: const BoxDecoration(
+                  color: Colors.white10, // 半透明で重ねる
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // 閉じるボタン
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.black54),
+                      onPressed: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (context) => HomeScreen()),
+                          (route) => false,
+                        );
+                      },
+                    ),
+                    // タイトル
+                    const Text(
+                      '投稿を作成',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    // 投稿ボタン
+                    _buildPostButton(context, '投稿', () {
+                      final postContent = postController.text.trim();
+                      if (postContent.isNotEmpty) {
+                        _submitPost(postContent);
+                      }
+                    }),
+                  ],
+                ),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                    child: Card(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 20,
+                      ),
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            // アイコン + テキスト
+                            Row(
+                              children: [
+                                const Icon(Icons.edit_note, size: 28, color: Color(0xFF0ABAB5)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '今日の気づきや学んだことを投稿してみよう！',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            // テキストフィールド
+                            TextField(
+                              controller: postController,
+                              maxLines: 8,
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.comment),
+                                fillColor: Colors.grey[200],
+                                filled: true,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide.none,
+                                ),
+                                hintText: 'ここに投稿内容を入力してください',
+                                hintStyle: TextStyle(color: Colors.grey[500]),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            // 選択中のカテゴリを表示（任意）
+                            Container(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '投稿カテゴリ: ${widget.selectedCategory}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // 下部にちょっとしたアピール
+                            const Text(
+                              'みんなの学びをシェアして、\n相互に刺激を受け合おう！',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+              ),
+            ],
+          ),
         ),
       ),
     );
