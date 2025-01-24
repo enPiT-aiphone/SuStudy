@@ -45,6 +45,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -68,10 +69,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   OverlayEntry? _overlayEntry;
   bool _isNotificationVisible = false;
+  bool _isMailVisible = false;
   String _selectedCategory = '';
   String _selectedTab = '最新';
 
-  bool _isUserProfileVisible = false; 
+  bool _isUserProfileVisible = false;
   String? _userprofileUserId;
 
   // Firebase user info
@@ -83,8 +85,8 @@ class _HomeScreenState extends State<HomeScreen>
   List<String> _followingSubjects = [];
   List<dynamic> _loginHistory = [];
 
-  bool _isReplyScreenVisible = false;          // ReplyScreen を表示中かどうか
-  Map<String, dynamic>? _replyPost;           // 返信先の投稿データ
+  bool _isReplyScreenVisible = false; // ReplyScreen を表示中かどうか
+  Map<String, dynamic>? _replyPost; // 返信先の投稿データ
 
   // Safariの動的高さ対応
   double _browserHeight = (html.window.innerHeight ?? 0).toDouble();
@@ -95,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen>
   // コーチマーク管理
   TutorialCoachMark? tutorialCoachMark;
   final GlobalKey dataTabKey = GlobalKey(); // データタブ
-  final GlobalKey fabKey = GlobalKey();     // FAB
+  final GlobalKey fabKey = GlobalKey(); // FAB
 
   // コーチマーク表示済み
   bool hasShownDataTabCoach = false;
@@ -137,11 +139,13 @@ class _HomeScreenState extends State<HomeScreen>
     );
     _scaleAnimation = TweenSequence([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0, end: 1.05).chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween<double>(begin: 0, end: 1.05)
+            .chain(CurveTween(curve: Curves.easeOut)),
         weight: 170,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.05, end: 1).chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween<double>(begin: 1.05, end: 1)
+            .chain(CurveTween(curve: Curves.easeIn)),
         weight: 50,
       ),
     ]).animate(_animationController);
@@ -202,12 +206,12 @@ class _HomeScreenState extends State<HomeScreen>
 
       if (coachMarks != null) {
         setState(() {
-          hasShownDataTabCoach   = coachMarks['dataTab']     ?? false;
-          hasShownFabSolveCoach  = coachMarks['fabSolve']    ?? false;
+          hasShownDataTabCoach = coachMarks['dataTab'] ?? false;
+          hasShownFabSolveCoach = coachMarks['fabSolve'] ?? false;
           hasShownFabLongPressCoach = coachMarks['fabLongPress'] ?? false;
 
-          hasShownDashProgress   = coachMarks['dashProgress'] ?? false;
-          hasShownDashActivity   = coachMarks['dashActivity'] ?? false;
+          hasShownDashProgress = coachMarks['dashProgress'] ?? false;
+          hasShownDashActivity = coachMarks['dashActivity'] ?? false;
         });
       }
     } catch (e) {
@@ -225,9 +229,10 @@ class _HomeScreenState extends State<HomeScreen>
       if (user == null) return;
 
       final updates = <String, dynamic>{};
-      if (dataTab != null)       updates['coachMarks.dataTab']       = dataTab;
-      if (fabSolve != null)      updates['coachMarks.fabSolve']      = fabSolve;
-      if (fabLongPress != null)  updates['coachMarks.fabLongPress']  = fabLongPress;
+      if (dataTab != null) updates['coachMarks.dataTab'] = dataTab;
+      if (fabSolve != null) updates['coachMarks.fabSolve'] = fabSolve;
+      if (fabLongPress != null)
+        updates['coachMarks.fabLongPress'] = fabLongPress;
 
       if (updates.isNotEmpty) {
         await FirebaseFirestore.instance
@@ -256,51 +261,51 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     if (!hasShownDataTabCoach && hasTodayRecord) {
-    print('[DataTabCoach] showing...');
-    tutorialCoachMark = TutorialCoachMark(
-      targets: [
-        TargetFocus(
-          identify: "DataTab",
-          keyTarget: dataTabKey,
-          shape: ShapeLightFocus.Circle,
-          focusAnimationDuration: Duration.zero,
-          contents: [
-            TargetContent(
-              align: ContentAlign.top,
-              builder: (context, controller) {
-                return const Text(
-                  '「データ」から今日の達成度を確認しよう！',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
-      onClickOverlay: (_) {
-        tutorialCoachMark?.finish();
-        return true;
-      },
-      onFinish: () {
-        print('[DataTabCoach] finished');
-        setState(() => hasShownDataTabCoach = true);
-        _saveCoachMarkState(dataTab: true);
-        return true;
-      },
-      hideSkip: true,
-      onSkip: () {
-        print('[DataTabCoach] skipped');
-        setState(() => hasShownDataTabCoach = true);
-        _saveCoachMarkState(dataTab: true);
-        return true;
-      },
-    );
+      print('[DataTabCoach] showing...');
+      tutorialCoachMark = TutorialCoachMark(
+        targets: [
+          TargetFocus(
+            identify: "DataTab",
+            keyTarget: dataTabKey,
+            shape: ShapeLightFocus.Circle,
+            focusAnimationDuration: Duration.zero,
+            contents: [
+              TargetContent(
+                align: ContentAlign.top,
+                builder: (context, controller) {
+                  return const Text(
+                    '「データ」から今日の達成度を確認しよう！',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+        onClickOverlay: (_) {
+          tutorialCoachMark?.finish();
+          return true;
+        },
+        onFinish: () {
+          print('[DataTabCoach] finished');
+          setState(() => hasShownDataTabCoach = true);
+          _saveCoachMarkState(dataTab: true);
+          return true;
+        },
+        hideSkip: true,
+        onSkip: () {
+          print('[DataTabCoach] skipped');
+          setState(() => hasShownDataTabCoach = true);
+          _saveCoachMarkState(dataTab: true);
+          return true;
+        },
+      );
 
-    tutorialCoachMark?.show(context: context);
+      tutorialCoachMark?.show(context: context);
     }
   }
 
@@ -335,7 +340,8 @@ class _HomeScreenState extends State<HomeScreen>
       for (var timestamp in loginHistory) {
         if (timestamp is Timestamp) {
           final loginDate = timestamp.toDate();
-          final normalizedDate = DateTime(loginDate.year, loginDate.month, loginDate.day);
+          final normalizedDate =
+              DateTime(loginDate.year, loginDate.month, loginDate.day);
           if (normalizedDate == today) {
             return true; // 今日の日付が存在する場合
           }
@@ -504,12 +510,13 @@ class _HomeScreenState extends State<HomeScreen>
         final userData = userSnapshot.docs.first.data();
         setState(() {
           _accountName = userData['user_name'] ?? 'Unknown';
-          _accountId   = userData['user_id']   ?? 'ID Unknown';
+          _accountId = userData['user_id'] ?? 'ID Unknown';
           _currentUserId = userData['auth_uid'] ?? 'uid Unknown';
           _userNumber = userData['user_number'] ?? 0;
-          _followers  = userData['follower_count'];
-          _follows    = userData['follow_count'];
-          _followingSubjects = List<String>.from(userData['following_subjects'] ?? []);
+          _followers = userData['follower_count'];
+          _follows = userData['follow_count'];
+          _followingSubjects =
+              List<String>.from(userData['following_subjects'] ?? []);
           _loginHistory = userData['login_history'] ?? [];
           if (_followingSubjects.isNotEmpty) {
             _selectedCategory = '全体';
@@ -534,7 +541,8 @@ class _HomeScreenState extends State<HomeScreen>
     final todayDate = DateTime(today.year, today.month, today.day);
     for (var ts in _loginHistory) {
       final loginDate = (ts as Timestamp).toDate();
-      final normalizedDate = DateTime(loginDate.year, loginDate.month, loginDate.day);
+      final normalizedDate =
+          DateTime(loginDate.year, loginDate.month, loginDate.day);
       if (normalizedDate == todayDate) return true;
     }
     return false;
@@ -561,9 +569,7 @@ class _HomeScreenState extends State<HomeScreen>
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text('通知を許可して問題の通知やリアクションを受け取る'),
-        content: const Text(
-          '「次の画面で通知を許可」ボタンを押すと、\nブラウザから通知許可ダイアログが表示されます。'
-        ),
+        content: const Text('「次の画面で通知を許可」ボタンを押すと、\nブラウザから通知許可ダイアログが表示されます。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -584,9 +590,8 @@ class _HomeScreenState extends State<HomeScreen>
   // ウェルカム
   void _showWelcomeDialog(String userId, {required bool isFirstLogin}) {
     final toeicLevel = _extractToeicLevel(_followingSubjects);
-    final titleMessage = isFirstLogin
-        ? '$_accountNameさん、初めまして！'
-        : '$_accountNameさん、おかえりなさい！';
+    final titleMessage =
+        isFirstLogin ? '$_accountNameさん、初めまして！' : '$_accountNameさん、おかえりなさい！';
     final contentMessage = isFirstLogin
         ? 'まず今日のログイン問題に取り組んで\nログインカウントを貯めていこう！🔥'
         : '今日もログイン問題に取り組んで\nログインカウントを貯めていこう！🔥';
@@ -663,7 +668,8 @@ class _HomeScreenState extends State<HomeScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TOEICWordQuiz(level: level, questionType: 'random'),
+        builder: (context) =>
+            TOEICWordQuiz(level: level, questionType: 'random'),
       ),
     );
   }
@@ -708,16 +714,34 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+// メールOverlay
+  void _toggleMailOverlay(BuildContext ctx) {
+    if (_isMailVisible) {
+      _animationController.reverse().then((_) => _removeOverlay());
+    } else {
+      _showMailOverlay(ctx);
+      _animationController.reset();
+      _animationController.forward();
+    }
+  }
+
   void _showOverlay(BuildContext ctx) {
     _overlayEntry = _createOverlayEntry();
     Overlay.of(ctx).insert(_overlayEntry!);
     _isNotificationVisible = true;
   }
 
+  void _showMailOverlay(BuildContext ctx) {
+    _overlayEntry = _createMailOverlayEntry();
+    Overlay.of(ctx).insert(_overlayEntry!);
+    _isMailVisible = true;
+  }
+
   void _removeOverlay() {
     _overlayEntry?.remove();
     _overlayEntry = null;
     _isNotificationVisible = false;
+    _isMailVisible = false;
   }
 
   OverlayEntry _createOverlayEntry() {
@@ -760,16 +784,16 @@ class _HomeScreenState extends State<HomeScreen>
                           return NotificationPage(
                             notifications: badgeViewModel.notifications,
                             onNotificationTap: (docId) async {
-                              final selectedNotification = badgeViewModel
-                                  .notifications
-                                  .firstWhere(
+                              final selectedNotification =
+                                  badgeViewModel.notifications.firstWhere(
                                 (notif) => notif['id'] == docId,
                                 orElse: () => {},
                               );
                               if (selectedNotification.isNotEmpty) {
-                                final level =
-                                    selectedNotification['level'] ?? 'up_to_500';
-                                await badgeViewModel.markNotificationAsRead(docId);
+                                final level = selectedNotification['level'] ??
+                                    'up_to_500';
+                                await badgeViewModel
+                                    .markNotificationAsRead(docId);
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -785,6 +809,55 @@ class _HomeScreenState extends State<HomeScreen>
                           );
                         },
                       ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  OverlayEntry _createMailOverlayEntry() {
+    return OverlayEntry(
+      builder: (ctx) => Stack(
+        children: [
+          GestureDetector(
+            onTap: () => _toggleMailOverlay(ctx),
+            child: Container(color: Colors.transparent),
+          ),
+          Positioned(
+            top: kToolbarHeight + 10,
+            right: 50,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              alignment: Alignment.topRight,
+              child: FadeTransition(
+                opacity: _opacityAnimation,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 250,
+                    height: 300,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        '未読のメールはありません',
+                        style: TextStyle(fontSize: 14),
+                      ), // メッセージを表示
                     ),
                   ),
                 ),
@@ -893,6 +966,7 @@ class _HomeScreenState extends State<HomeScreen>
       _overlayEntry = _createGroupNavigationOverlay();
       Overlay.of(ctx).insert(_overlayEntry!);
       _isNotificationVisible = true;
+      _isMailVisible = true;
       _animationController.reset();
       _animationController.forward();
     }
@@ -952,7 +1026,7 @@ class _HomeScreenState extends State<HomeScreen>
         selectedCategory: _selectedCategory,
         onLoginStreakCalculated: _onLoginStreakCalculated,
         onDashCoachMarkFinished: () {
-        // DashProgress と DashActivity が完了したことを反映
+          // DashProgress と DashActivity が完了したことを反映
           setState(() {
             hasShownDashProgress = true;
             hasShownDashActivity = true;
@@ -990,7 +1064,8 @@ class _HomeScreenState extends State<HomeScreen>
                 elevation: 0,
                 automaticallyImplyLeading: false,
                 backgroundColor: Colors.transparent,
-                expandedHeight: (_currentIndex == 2 || _currentIndex == 3) ? 70 : 100,
+                expandedHeight:
+                    (_currentIndex == 2 || _currentIndex == 3) ? 70 : 100,
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
                     decoration: BoxDecoration(
@@ -1016,7 +1091,8 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 10.0),
+                          padding: const EdgeInsets.only(
+                              left: 16.0, right: 16.0, top: 10.0),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1026,7 +1102,9 @@ class _HomeScreenState extends State<HomeScreen>
                                   backgroundColor: Colors.white,
                                   radius: 18,
                                   child: Text(
-                                    _accountName.isNotEmpty ? _accountName[0] : '?',
+                                    _accountName.isNotEmpty
+                                        ? _accountName[0]
+                                        : '?',
                                     style: const TextStyle(
                                       fontSize: 20,
                                       color: Color(0xFF0ABAB5),
@@ -1052,7 +1130,9 @@ class _HomeScreenState extends State<HomeScreen>
                               _buildNotificationIcon(),
                               IconButton(
                                 icon: const Icon(Icons.mail),
-                                onPressed: () {},
+                                onPressed: () {
+                                  _toggleMailOverlay(ctx);
+                                },
                               ),
                             ],
                           ),
@@ -1082,7 +1162,10 @@ class _HomeScreenState extends State<HomeScreen>
             child: Stack(
               children: [
                 Positioned.fill(child: _buildBodyStack()),
-                if (!_isUserProfileVisible &&!_isProfileVisible &&!_isReplyScreenVisible &&_currentIndex != 2)
+                if (!_isUserProfileVisible &&
+                    !_isProfileVisible &&
+                    !_isReplyScreenVisible &&
+                    _currentIndex != 2)
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -1158,7 +1241,11 @@ class _HomeScreenState extends State<HomeScreen>
           ],
         ),
       ),
-      floatingActionButton: (_isRecordPageVisible || _isPostCreateVisible || _isReplyScreenVisible || _isProfileVisible || _isUserProfileVisible)
+      floatingActionButton: (_isRecordPageVisible ||
+              _isPostCreateVisible ||
+              _isReplyScreenVisible ||
+              _isProfileVisible ||
+              _isUserProfileVisible)
           ? null
           : _buildFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -1283,12 +1370,14 @@ class _HomeScreenState extends State<HomeScreen>
                 totalWidth += bw;
               }
 
-              final barWidth = (totalWidth < maxBarWidth) ? totalWidth : maxBarWidth;
+              final barWidth =
+                  (totalWidth < maxBarWidth) ? totalWidth : maxBarWidth;
 
               return Container(
                 width: barWidth,
                 margin: const EdgeInsets.only(left: 8.0, right: 8.0),
-                padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10.0, horizontal: 8.0),
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: const BorderRadius.horizontal(
@@ -1347,259 +1436,263 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-Widget _buildDrawer() {
-  return Consumer<UserViewModel>(
-    builder: (context, userViewModel, child) {
-      return SizedBox(
-        width: MediaQuery.of(context).size.width * 0.8,
-        child: Drawer(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _isProfileVisible = true;
-                          _profileUserId = _currentUserId;
-                        });
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(0xFF0ABAB5),
-                              Color.fromARGB(255, 255, 255, 255),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: Colors.white,
-                              radius: 30,
-                              child: Text(
-                                userViewModel.userName.isNotEmpty
-                                    ? userViewModel.userName[0]
-                                    : '?',
-                                style: const TextStyle(
-                                  fontSize: 35,
-                                  color: Color(0xFF0ABAB5),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                if (_loginStreak < 8)
-                                  Container()
-                                else if (_loginStreak < 15)
-                                  Image.asset('images/smallCrown.png', width: 24, height: 24)
-                                else if (_loginStreak < 22)
-                                  Image.asset('images/middleCrown.png', width: 24, height: 24)
-                                else
-                                  Image.asset('images/bigCrown.png', width: 24, height: 24),
-                                const SizedBox(width: 5),
-                                Text(
-                                  userViewModel.userName,
-                                  style: const TextStyle(
-                                    color: Color.fromARGB(255, 100, 100, 100),
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              '@${userViewModel.userId}',
-                              style: const TextStyle(
-                                color: Color.fromARGB(179, 160, 160, 160),
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 9),
-                            Row(
-                              children: [
-                                Text(
-                                  'フォロワー: ${userViewModel.followers}',
-                                  style: const TextStyle(
-                                    color: Color.fromARGB(255, 100, 100, 100),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'フォロー中: ${userViewModel.following}',
-                                  style: const TextStyle(
-                                    color: Color.fromARGB(255, 100, 100, 100),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'フォロー中の教科: ${userViewModel.followingSubjects.join(', ')}',
-                              style: const TextStyle(
-                                color: Color.fromARGB(255, 100, 100, 100),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Container(
-                      constraints: const BoxConstraints(
-                        maxHeight: 45, // 最大高さを設定
-                      ),
-                      child:ListTile(
-                        leading: Icon(
-                          Icons.person,
-                          size: 23, // アイコンサイズを小さく
-                        ),
-                        title: Text(
-                          'プロフィール',
-                          style: const TextStyle(
-                            fontSize: 15, // 文字サイズを小さく
-                          ),
-                        ),
+  Widget _buildDrawer() {
+    return Consumer<UserViewModel>(
+      builder: (context, userViewModel, child) {
+        return SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          child: Drawer(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      GestureDetector(
                         onTap: () {
                           setState(() {
                             _isProfileVisible = true;
-                            _profileUserId = userViewModel.userId;
+                            _profileUserId = _currentUserId;
                           });
                           Navigator.pop(context);
                         },
-                      ),
-                    ),
-                    Container(
-                      constraints: const BoxConstraints(
-                        maxHeight: 45, // 最大高さを設定
-                      ),
-                      child:ListTile(
-                        leading: Icon(
-                          Icons.settings,
-                          size: 23,
-                        ),
-                        title: Text(
-                          '設定',
-                          style: const TextStyle(
-                            fontSize: 15,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Color(0xFF0ABAB5),
+                                Color.fromARGB(255, 255, 255, 255),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
                           ),
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ),
-                    Container(
-                      constraints: const BoxConstraints(
-                        maxHeight: 45, // 最大高さを設定
-                      ),
-                      child:ListTile(
-                        leading: Icon(
-                          Icons.logout,
-                          size: 23,
-                        ),                      
-                        title: Text(
-                          'ログアウト',
-                          style: const TextStyle(
-                            fontSize: 15,
-                          ),
-                        ),                      
-                        onTap: () async {
-                          try {
-                            await FirebaseAuth.instance.signOut();
-                            FirebaseAuth.instance.authStateChanges().listen(
-                              (User? user) {
-                                if (user == null) {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => AuthenticationScreen(),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Colors.white,
+                                radius: 30,
+                                child: Text(
+                                  userViewModel.userName.isNotEmpty
+                                      ? userViewModel.userName[0]
+                                      : '?',
+                                  style: const TextStyle(
+                                    fontSize: 35,
+                                    color: Color(0xFF0ABAB5),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  if (_loginStreak < 8)
+                                    Container()
+                                  else if (_loginStreak < 15)
+                                    Image.asset('images/smallCrown.png',
+                                        width: 24, height: 24)
+                                  else if (_loginStreak < 22)
+                                    Image.asset('images/middleCrown.png',
+                                        width: 24, height: 24)
+                                  else
+                                    Image.asset('images/bigCrown.png',
+                                        width: 24, height: 24),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    userViewModel.userName,
+                                    style: const TextStyle(
+                                      color: Color.fromARGB(255, 100, 100, 100),
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                  );
-                                }
-                              },
-                            );
-                            print('ログアウト成功');
-                          } catch (e) {
-                            print('ログアウトエラー: $e');
-                          }
-                        },
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                '@${userViewModel.userId}',
+                                style: const TextStyle(
+                                  color: Color.fromARGB(179, 160, 160, 160),
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 9),
+                              Row(
+                                children: [
+                                  Text(
+                                    'フォロワー: ${userViewModel.followers}',
+                                    style: const TextStyle(
+                                      color: Color.fromARGB(255, 100, 100, 100),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'フォロー中: ${userViewModel.following}',
+                                    style: const TextStyle(
+                                      color: Color.fromARGB(255, 100, 100, 100),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'フォロー中の教科: ${userViewModel.followingSubjects.join(', ')}',
+                                style: const TextStyle(
+                                  color: Color.fromARGB(255, 100, 100, 100),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              if (_userNumber >= 1 && _userNumber <= 6)
-                ListTile(
-                  leading: const Icon(Icons.build),
-                  title: const Text('データベース管理フォーム'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (ctx) => const ViewFormSelection(),
+                      Container(
+                        constraints: const BoxConstraints(
+                          maxHeight: 45, // 最大高さを設定
+                        ),
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.person,
+                            size: 23, // アイコンサイズを小さく
+                          ),
+                          title: Text(
+                            'プロフィール',
+                            style: const TextStyle(
+                              fontSize: 15, // 文字サイズを小さく
+                            ),
+                          ),
+                          onTap: () {
+                            setState(() {
+                              _isProfileVisible = true;
+                              _profileUserId = userViewModel.userId;
+                            });
+                            Navigator.pop(context);
+                          },
+                        ),
                       ),
-                    );
-                  },
+                      // Container(
+                      //   constraints: const BoxConstraints(
+                      //     maxHeight: 45, // 最大高さを設定
+                      //   ),
+                      //   child: ListTile(
+                      //     leading: Icon(
+                      //       Icons.settings,
+                      //       size: 23,
+                      //     ),
+                      //     title: Text(
+                      //       '設定',
+                      //       style: const TextStyle(
+                      //         fontSize: 15,
+                      //       ),
+                      //     ),
+                      //     onTap: () {
+                      //       Navigator.pop(context);
+                      //     },
+                      //   ),
+                      // ),
+                      Container(
+                        constraints: const BoxConstraints(
+                          maxHeight: 45, // 最大高さを設定
+                        ),
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.logout,
+                            size: 23,
+                          ),
+                          title: Text(
+                            'ログアウト',
+                            style: const TextStyle(
+                              fontSize: 15,
+                            ),
+                          ),
+                          onTap: () async {
+                            try {
+                              await FirebaseAuth.instance.signOut();
+                              FirebaseAuth.instance.authStateChanges().listen(
+                                (User? user) {
+                                  if (user == null) {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            AuthenticationScreen(),
+                                      ),
+                                    );
+                                  }
+                                },
+                              );
+                              print('ログアウト成功');
+                            } catch (e) {
+                              print('ログアウトエラー: $e');
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              if (_userNumber == 1)
-                ListTile(
-                  leading: const Icon(Icons.add),
-                  title: const Text('単語を追加'),
-                  onTap: () async {
-                    try {
-                      await uploadWordsToFirestore();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('単語の追加が完了しました！')),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('単語の追加中にエラーが発生しました: $e'),
+                if (_userNumber >= 1 && _userNumber <= 6)
+                  ListTile(
+                    leading: const Icon(Icons.build),
+                    title: const Text('データベース管理フォーム'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => const ViewFormSelection(),
                         ),
                       );
-                    }
-                  },
-                ),
-              if (_userNumber == 4)
-                ListTile(
-                  leading: const Icon(Icons.add),
-                  title: const Text('文法を追加'),
-                  onTap: () async {
-                    try {
-                      await uploadGrammarToFirestore();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('文法の追加が完了しました！')),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('文法の追加中にエラーが発生しました: $e'),
-                        ),
-                      );
-                    }
-                  },
-                ),
-            ],
+                    },
+                  ),
+                if (_userNumber == 1)
+                  ListTile(
+                    leading: const Icon(Icons.add),
+                    title: const Text('単語を追加'),
+                    onTap: () async {
+                      try {
+                        await uploadWordsToFirestore();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('単語の追加が完了しました！')),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('単語の追加中にエラーが発生しました: $e'),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                if (_userNumber == 4)
+                  ListTile(
+                    leading: const Icon(Icons.add),
+                    title: const Text('文法を追加'),
+                    onTap: () async {
+                      try {
+                        await uploadGrammarToFirestore();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('文法の追加が完了しました！')),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('文法の追加中にエラーが発生しました: $e'),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
-
+        );
+      },
+    );
+  }
 
   Widget _buildFAB() {
     return Stack(
@@ -1719,7 +1812,6 @@ Widget _buildDrawer() {
       if (data == null) {
         return 0;
       }
-
 
       int solvedCount = 0;
 
