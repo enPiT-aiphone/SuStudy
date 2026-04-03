@@ -1,6 +1,6 @@
 # sustudy, (enPiT2024 アイホン)
 
-https://sustuday.netlify.app
+[https://sustuday.netlify.app](https://sustudy.netlify.app/)
 
 ## Getting Started
 
