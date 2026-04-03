@@ -1,6 +1,6 @@
 # sustudy, (enPiT2024 アイホン)
 
-A new Flutter project.
+https://sustuday.netlify.app
 
 ## Getting Started
 
